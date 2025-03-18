@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .app-container {
+    width: 375px; /* iPhone 17 设计宽度 */
+    max-width: 100%;
+    background-color: #f0f9ff; /* 背景颜色 */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  .task-item {
+    @apply flex items-center p-4 bg-white rounded-lg shadow-sm mb-2;
+  }
+  .nav-item {
+    @apply flex flex-col items-center justify-center text-xs text-gray-500;
+  }
+  .nav-item.active {
+    @apply text-black;
+  }
+  .btn-primary {
+    @apply bg-ocean-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-ocean-700 transition-colors;
+  }
+  .card {
+    @apply bg-white rounded-lg shadow-sm p-4;
+  }
+}
