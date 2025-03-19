@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
-import { AppState, AppAction, Task } from '../types';
+import { AppState, AppAction } from '../types';
 
 const initialState: AppState = {
   tasks: [
