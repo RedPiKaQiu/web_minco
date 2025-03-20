@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Pause, Play, Music, ChevronDown, ChevronUp, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Pause, Play, Music, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SailingPage = () => {
-  const navigate = useNavigate();
   const [isSailing, setIsSailing] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [time, setTime] = useState(5); // 5秒倒计时
