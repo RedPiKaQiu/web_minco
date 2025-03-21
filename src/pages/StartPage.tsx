@@ -7,6 +7,10 @@ const StartPage = () => {
   const handleStart = () => {
     navigate('/home');
   };
+  
+  const handleManualArrange = () => {
+    navigate('/empty-schedule');
+  };
 
   return (
     <div className="flex flex-col h-screen bg-white px-4 pt-16 pb-20">
@@ -49,7 +53,10 @@ const StartPage = () => {
       </div>
       
       {/* 手动安排 */}
-      <div className="text-center text-gray-500 mb-6">
+      <div 
+        className="text-center text-gray-500 mb-6 cursor-pointer"
+        onClick={handleManualArrange}
+      >
         手动安排
       </div>
       

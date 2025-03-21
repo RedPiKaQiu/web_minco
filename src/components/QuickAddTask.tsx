@@ -29,10 +29,9 @@ const QuickAddTask = () => {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-center bg-ocean-100 text-ocean-600 rounded-full px-4 py-2 text-sm font-medium"
+        className="flex items-center justify-center text-blue-500"
       >
-        <Plus size={16} className="mr-1" />
-        <span>添加任务</span>
+        <Plus size={24} />
       </button>
 
       <Dialog
