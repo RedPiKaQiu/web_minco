@@ -8,6 +8,7 @@ import IdeasPage from './pages/IdeasPage';
 import JournalPage from './pages/JournalPage';
 import ProfilePage from './pages/ProfilePage';
 import EmptySchedulePage from './pages/EmptySchedulePage'; // 新增
+import AiChatPage from './pages/AiChatPage'; // 新增聊天页面
 import BottomNavigation from './components/BottomNavigation';
 
 // 添加CSS样式，通过类名控制导航栏的隐藏
@@ -42,6 +43,7 @@ function App() {
             } />
             <Route path="/empty-schedule" element={<EmptySchedulePage />} /> {/* 新增空日程页面 */}
             <Route path="/sailing" element={<SailingPage />} />
+            <Route path="/ai-chat" element={<AiChatPage />} /> {/* 聊天页面 */}
             <Route path="/ideas" element={
               <>
                 <IdeasPage />
