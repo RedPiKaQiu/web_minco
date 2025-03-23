@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
-import QuickAddTask from '../components/QuickAddTask';
 import SailingButton from '../components/SailingButton';
 import { Anchor, Clock, MessageCircle, Plus } from 'lucide-react';
 import { Dialog } from '@headlessui/react';

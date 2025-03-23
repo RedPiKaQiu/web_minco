@@ -13,11 +13,11 @@ const AiChatPage = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [suggestions, setSuggestions] = useState([
+  const suggestions = [
     '看看这周有什么任务',
     '感觉目前状态有点卡住',
     '需要一点动力'
-  ]);
+  ];
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 隐藏底部导航栏
