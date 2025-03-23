@@ -53,7 +53,7 @@ const HomePage = () => {
         return (
           <div className="flex flex-col">
             {/* 时间轴任务 */}
-            <div className="space-y-3 mb-4">
+            <div className="space-y-3 mb-3">
               {scheduledTasks.map((task) => (
                 <TaskItem key={task.id} task={task} />
               ))}
@@ -61,8 +61,7 @@ const HomePage = () => {
             
             {/* 随时可做任务 */}
             {anytimeTasks.length > 0 && (
-              <div className="mt-5">
-                <h3 className="text-sm text-gray-500 mb-3">随时</h3>
+              <div className="mt-0">
                 <div className="space-y-3">
                   {anytimeTasks.map(task => (
                     <TaskItem key={task.id} task={task} />
@@ -151,7 +150,7 @@ const HomePage = () => {
                 key={tab}
                 className={`pb-1 ${
                   activeTab === tab 
-                    ? 'font-medium text-gray-900 border-b-2 border-gray-900 text-lg' 
+                    ? 'font-medium text-gray-900 border-gray-900 text-lg' 
                     : 'text-gray-500'
                 }`}
                 onClick={() => setActiveTab(tab)}
