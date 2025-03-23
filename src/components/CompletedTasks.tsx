@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import TaskItem from './TaskItem';
+import CompletedTaskItem from './CompletedTaskItem';
 
 const CompletedTasks = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -13,12 +13,12 @@ const CompletedTasks = () => {
   }
 
   return (
-    <div className="mt-4">
+    <div className="mt-6">
       <button
-        className="flex items-center text-gray-500 text-sm mb-2"
+        className="flex items-center text-gray-500 text-sm mb-3"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span>已完成 ({completedTasks.length})</span>
+        <span className="font-medium">已完成 ({completedTasks.length})</span>
         {isExpanded ? (
           <ChevronUp size={16} className="ml-1" />
         ) : (
@@ -27,10 +27,12 @@ const CompletedTasks = () => {
       </button>
       
       {isExpanded && (
-        <div className="space-y-2">
-          {completedTasks.map(task => (
-            <TaskItem key={task.id} task={task} />
-          ))}
+        <div className="bg-white rounded-xl shadow-sm mb-4">
+          <div className="divide-y divide-gray-100">
+            {completedTasks.map(task => (
+              <CompletedTaskItem key={task.id} task={task} />
+            ))}
+          </div>
         </div>
       )}
     </div>

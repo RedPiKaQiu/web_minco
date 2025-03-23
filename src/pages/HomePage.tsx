@@ -8,11 +8,14 @@ import { Anchor, Clock, MessageCircle, Plus } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 
+type TabType = '今日聚焦' | '时间轴' | '随时可做';
+
 const HomePage = () => {
   const { state, dispatch } = useAppContext();
   const [currentDate] = useState(new Date());
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('今日聚焦');
   const navigate = useNavigate();
   
   const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -45,6 +48,62 @@ const HomePage = () => {
     }
   };
 
+  const renderTasksByTab = () => {
+    switch (activeTab) {
+      case '今日聚焦':
+        return (
+          <div className="flex flex-col">
+            {/* 时间轴任务 */}
+            <div className="space-y-3 mb-4">
+              {scheduledTasks.map((task) => (
+                <TaskItem key={task.id} task={task} />
+              ))}
+            </div>
+            
+            {/* 随时可做任务 */}
+            {anytimeTasks.length > 0 && (
+              <div className="mt-5">
+                <h3 className="text-sm text-gray-500 mb-3">随时</h3>
+                <div className="space-y-3">
+                  {anytimeTasks.map(task => (
+                    <TaskItem key={task.id} task={task} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      case '时间轴':
+        return (
+          <div className="flex flex-col">
+            <div className="space-y-3">
+              {scheduledTasks.map((task) => (
+                <TaskItem key={task.id} task={task} />
+              ))}
+              {scheduledTasks.length === 0 && (
+                <p className="text-gray-500 text-center py-4">暂无时间轴任务</p>
+              )}
+            </div>
+          </div>
+        );
+      case '随时可做':
+        return (
+          <div className="flex flex-col">
+            <div className="space-y-3">
+              {anytimeTasks.map(task => (
+                <TaskItem key={task.id} task={task} />
+              ))}
+              {anytimeTasks.length === 0 && (
+                <p className="text-gray-500 text-center py-4">暂无随时可做任务</p>
+              )}
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="pb-20">
       {/* 顶部状态栏 */}
@@ -54,6 +113,12 @@ const HomePage = () => {
             <h1 className="text-xl font-bold">海况稳定，可以放心启航 ☀️</h1>
             <p className="text-gray-600 text-sm">{formattedDate}</p>
           </div>
+        </div>
+        
+        
+        {/* 用户提示语 */}
+        <div className="px-4 mb-3">
+          <p className="text-lg text-gray-800">Shell，接下来想做点什么呢？</p>
         </div>
         
         {/* 快速操作区 */}
@@ -78,38 +143,34 @@ const HomePage = () => {
         </div>
       </div>
       
-      {/* 今日聚焦 */}
-      <div className="px-4 mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="font-medium text-gray-900">今日聚焦</h2>
-          <div className="flex items-center text-xs text-gray-500">
-            <span>时间轴</span>
-            <span className="mx-2">|</span>
-            <span>随时可做</span>
+      {/* 任务标签页 */}
+      <div className="px-4 mt-4 flex flex-col min-h-[calc(100vh-330px)]">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex space-x-4">
+            {(['今日聚焦', '时间轴', '随时可做'] as const).map((tab) => (
+              <button
+                key={tab}
+                className={`pb-1 ${
+                  activeTab === tab 
+                    ? 'font-medium text-gray-900 border-b-2 border-gray-900 text-lg' 
+                    : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
         
-        {/* 时间轴任务 */}
-        <div className="space-y-2 mb-4">
-          {scheduledTasks.map(task => (
-            <TaskItem key={task.id} task={task} />
-          ))}
-        </div>
-        
-        {/* 随时可做任务 */}
-        {anytimeTasks.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm text-gray-500 mb-2">随时</h3>
-            <div className="space-y-2">
-              {anytimeTasks.map(task => (
-                <TaskItem key={task.id} task={task} />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* 根据标签显示任务 */}
+        {renderTasksByTab()}
         
         {/* 已完成任务 */}
         <CompletedTasks />
+        
+        {/* 添加弹性空间 */}
+        <div className="flex-grow"></div>
       </div>
       
       {/* 悬浮工具栏 */}
