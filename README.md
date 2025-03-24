@@ -1,28 +1,68 @@
-# React + TypeScript + Vite
+# Second Brain 任务管理应用
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+这是一个基于React + TypeScript + Vite开发的现代化任务管理应用。
 
-Currently, two official plugins are available:
+## 如何获取和运行项目
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 从GitHub获取代码
 
-## Expanding the ESLint configuration
+1. 克隆仓库到本地
+```bash
+git clone https://github.com/RedPiKaQiu/web_minco.git
+```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+2. 安装依赖
+```bash
+npm install
+```
+
+3. 本地运行
+```bash
+npm run dev
+```
+应用将在本地启动，通常在 http://localhost:5173 可以访问。
+
+4. 构建项目
+```bash
+npm run build
+```
+构建后的文件将输出到 `dist` 目录。
+
+## 项目部署
+
+本项目可以部署到Vercel平台：
+
+1. 在[Vercel](https://vercel.com)上注册账户并连接到你的GitHub仓库
+2. 导入该项目
+3. Vercel将自动检测React应用并进行配置
+4. 点击部署按钮即可完成部署
+
+## 技术栈
+
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Lucide React (图标库)
+- React Router
+- Headless UI
+
+## ESLint配置扩展
+
+如果你正在开发生产应用，我们建议更新配置以启用类型感知的lint规则：
 
 ```js
 export default tseslint.config({
   extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
+    // 移除 ...tseslint.configs.recommended 并替换为以下内容
     ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
+    // 或者使用这个以获取更严格的规则
     ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
+    // 可选，添加这个以获取风格规则
     ...tseslint.configs.stylisticTypeChecked,
   ],
   languageOptions: {
-    // other options...
+    // 其他选项...
     parserOptions: {
       project: ['./tsconfig.node.json', './tsconfig.app.json'],
       tsconfigRootDir: import.meta.dirname,
@@ -31,7 +71,7 @@ export default tseslint.config({
 })
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+你还可以安装 [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) 和 [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) 以获取React特定的lint规则：
 
 ```js
 // eslint.config.js
@@ -40,13 +80,13 @@ import reactDom from 'eslint-plugin-react-dom'
 
 export default tseslint.config({
   plugins: {
-    // Add the react-x and react-dom plugins
+    // 添加react-x和react-dom插件
     'react-x': reactX,
     'react-dom': reactDom,
   },
   rules: {
-    // other rules...
-    // Enable its recommended typescript rules
+    // 其他规则...
+    // 启用其推荐的typescript规则
     ...reactX.configs['recommended-typescript'].rules,
     ...reactDom.configs.recommended.rules,
   },
