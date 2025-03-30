@@ -1,46 +1,8 @@
-import { createContext, useContext, useReducer, ReactNode } from 'react';
-import { AppState, AppAction } from '../types';
+import { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import { AppState, AppAction, Task } from '../types';
 
 const initialState: AppState = {
-  tasks: [
-    {
-      id: '1',
-      title: '完成PPT制作',
-      completed: false,
-      startTime: '上午9:00',
-      endTime: '下午5:30',
-      duration: '2小时',
-    },
-    {
-      id: '2',
-      title: '和团队开会',
-      completed: false,
-      startTime: '上午10:00',
-      endTime: '上午11:30',
-      duration: '1小时30分',
-    },
-    {
-      id: '3',
-      title: '中午和Sarah吃饭',
-      completed: false,
-      startTime: '上午12:00',
-      endTime: '下午1:00',
-      duration: '1小时',
-    },
-    {
-      id: '4',
-      title: '下班后锻炼小时',
-      completed: false,
-      startTime: '下午6:00之后',
-      duration: '1小时',
-    },
-    {
-      id: '5',
-      title: '给妈妈挑生日礼物',
-      completed: false,
-      isAnytime: true,
-    }
-  ],
+  tasks: [],
   tickets: [
     {
       id: '1',
@@ -90,6 +52,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         ...state,
         focusMode: !state.focusMode,
       };
+    case 'SET_TASKS':
+      return {
+        ...state,
+        tasks: action.payload,
+      };
     default:
       return state;
   }
@@ -98,16 +65,51 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  addTask: (task: Omit<Task, 'id'>) => Promise<void>;
 }>({
   state: initialState,
   dispatch: () => null,
+  addTask: async () => {},
 });
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // 初始化时获取任务列表
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch('/api/tasks');
+        const tasks = await response.json();
+        console.log('Initial tasks loaded:', tasks);
+        dispatch({ type: 'SET_TASKS', payload: tasks });
+      } catch (error) {
+        console.error('Failed to fetch tasks:', error);
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  // 添加任务时调用 API
+  const addTask = async (task: Omit<Task, 'id'>) => {
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(task),
+      });
+      const newTask = await response.json();
+      dispatch({ type: 'ADD_TASK', payload: newTask });
+    } catch (error) {
+      console.error('Failed to add task:', error);
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, addTask }}>
       {children}
     </AppContext.Provider>
   );

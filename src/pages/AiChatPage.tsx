@@ -2,17 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Menu, Edit, Plus, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-type Message = {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-};
-
 const AiChatPage = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
+  const [messages, setMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const suggestions = [
     '看看这周有什么任务',
     '感觉目前状态有点卡住',
@@ -44,45 +38,35 @@ const AiChatPage = () => {
     navigate(-1);
   };
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
 
     // 添加用户消息
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: text,
-      isUser: true,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
+    setMessages(prev => [...prev, { role: 'user', content: input }]);
+    setLoading(true);
 
-    // 模拟机器人自动回复
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: '好的',
-        isUser: false,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMessage]);
-    }, 1000);
-  };
-
-  const handleSendMessage = () => {
-    sendMessage(inputText);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: input }),
+      });
+      
+      const data = await response.json();
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+    } finally {
+      setLoading(false);
+      setInput('');
     }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    sendMessage(suggestion);
+    setInput(suggestion);
   };
 
   return (
@@ -114,22 +98,23 @@ const AiChatPage = () => {
 
         {/* 消息列表 */}
         <div className="space-y-4">
-          {messages.map(message => (
+          {messages.map((msg, index) => (
             <div
-              key={message.id}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+              key={index}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
                 className={`max-w-[80%] p-3 rounded-lg ${
-                  message.isUser
+                  msg.role === 'user'
                     ? 'bg-blue-500 text-white rounded-tr-none'
                     : 'bg-white text-gray-800 rounded-tl-none shadow-sm'
                 }`}
               >
-                {message.content}
+                {msg.content}
               </div>
             </div>
           ))}
+          {loading && <div className="text-gray-500">AI正在思考...</div>}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -153,28 +138,27 @@ const AiChatPage = () => {
 
       {/* 底部输入框 */}
       <div className="p-4 bg-gray-100 border-t border-gray-200">
-        <div className="flex items-center bg-white rounded-full shadow-sm">
+        <form onSubmit={handleSubmit} className="flex items-center bg-white rounded-full shadow-sm">
           <button className="p-3 text-gray-500">
             <Plus size={24} />
           </button>
           <input
             type="text"
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="和MinCo聊聊吧"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             className="flex-1 px-3 py-3 bg-transparent focus:outline-none"
+            placeholder="和MinCo聊聊吧"
           />
           <button
-            onClick={handleSendMessage}
-            disabled={!inputText.trim()}
+            type="submit"
+            disabled={loading}
             className={`p-3 rounded-full ${
-              inputText.trim() ? 'text-blue-500' : 'text-gray-400'
+              loading ? 'text-gray-400' : 'text-blue-500'
             }`}
           >
             <Send size={24} />
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

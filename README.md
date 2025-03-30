@@ -1,94 +1,103 @@
-# Second Brain 任务管理应用
+# Second Brain Task Management Application - Backend API Implementation
 
-这是一个基于React + TypeScript + Vite开发的现代化任务管理应用。
+This is the backend API implementation version of the [web_minco](https://github.com/RedPiKaQiu/web_minco.git) project, using Vercel Serverless Functions to provide backend services, including task management and AI conversation functionality.
 
-## 如何获取和运行项目
+## Project Overview
 
-### 从GitHub获取代码
+This repository is forked from the original frontend project, with the following additions:
+- Backend API implementation using Vercel Serverless Functions
+- CRUD operations for task management
+- AI chat integration with API key support
+- Mock data support
 
-1. 克隆仓库到本地
+## Getting Started
+
+### Getting the Code from GitHub
+
+1. Clone the repository
 ```bash
-git clone https://github.com/RedPiKaQiu/web_minco.git
+git clone https://github.com/Rona-dt/web_minco_backend.git
+cd web_minco_backend
 ```
 
-2. 安装依赖
+2. Install dependencies
 ```bash
 npm install
+# Install necessary dependencies
+npm install express @types/express dotenv
+npm install openai
+npm install -g vercel # Install Vercel CLI
 ```
 
-3. 本地运行
+3. Configure environment variables
+Create a `.env` file and add:
+```
+API_KEY=<Replace with your API Key>
+```
+
+4. Run locally
 ```bash
-npm run dev
+vercel dev
 ```
-应用将在本地启动，通常在 http://localhost:5173 可以访问。
+The application will start locally, typically accessible at http://localhost:3000.
 
-4. 构建项目
+5. Build the project
 ```bash
 npm run build
 ```
-构建后的文件将输出到 `dist` 目录。
+Built files will be output to the `dist` directory.
 
-## 项目部署
+## Deployment
 
-本项目可以部署到Vercel平台：
+This project uses Vercel Serverless Functions for backend API implementation:
 
-1. 在[Vercel](https://vercel.com)上注册账户并连接到你的GitHub仓库
-2. 导入该项目
-3. Vercel将自动检测React应用并进行配置
-4. 点击部署按钮即可完成部署
+1. Register an account on [Vercel](https://vercel.com) and connect to your GitHub repository
+2. Import the project
+3. Add the `API_KEY` environment variable in your Vercel project settings
+4. Click deploy to complete deployment
 
-## 技术栈
+## API Documentation
+
+The project includes the following API endpoints:
+
+- `/api/tasks` - Task Management
+  - GET: Retrieve task list
+  - POST: Create new task
+- `/api/chat` - AI Conversation
+  - POST: Send message and receive AI response
+
+## Tech Stack
 
 - React 18
 - TypeScript
 - Vite
+- Express (Serverless Functions)
 - Tailwind CSS
-- Lucide React (图标库)
+- Lucide React (Icon library)
 - React Router
 - Headless UI
+- Vercel Serverless Functions
+- OpenAI API Integration
+- Node.js
 
-## ESLint配置扩展
+## Development Notes
 
-如果你正在开发生产应用，我们建议更新配置以启用类型感知的lint规则：
+1. Use `vercel dev` command for local development to support Serverless Functions
+2. API implementations are located in the `/api` directory
+3. Currently using mock data for development, may migrate to standalone backend service later
+4. The chat functionality (chat.ts) needs to be modified according to your specific AI model and API implementation
 
-```js
-export default tseslint.config({
-  extends: [
-    // 移除 ...tseslint.configs.recommended 并替换为以下内容
-    ...tseslint.configs.recommendedTypeChecked,
-    // 或者使用这个以获取更严格的规则
-    ...tseslint.configs.strictTypeChecked,
-    // 可选，添加这个以获取风格规则
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // 其他选项...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## Differences from Original Project
 
-你还可以安装 [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) 和 [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) 以获取React特定的lint规则：
+1. Added complete backend API implementation
+2. Integrated AI chat functionality
+3. Replaced pure frontend implementation with Vercel Serverless Functions
+4. Added mock data support
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Important Notes
 
-export default tseslint.config({
-  plugins: {
-    // 添加react-x和react-dom插件
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // 其他规则...
-    // 启用其推荐的typescript规则
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+- Ensure `.env` file is added to `.gitignore`
+- Local development must use `vercel dev` instead of `npm run dev`
+- Requires a Vercel account and Vercel CLI installation
+- Requires an API key for your chosen AI model
+- The chat implementation (chat.ts) needs to be modified based on your specific AI model and API requirements

@@ -24,7 +24,18 @@ export interface AppState {
   focusMode: boolean;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+  startTime?: string;
+  endTime?: string;
+  duration?: string;
+  isAnytime?: boolean;
+}
+
 export type AppAction = 
+  | { type: 'SET_TASKS'; payload: Task[] }
   | { type: 'ADD_TASK'; payload: Task }
   | { type: 'COMPLETE_TASK'; payload: string }
   | { type: 'DELETE_TASK'; payload: string }

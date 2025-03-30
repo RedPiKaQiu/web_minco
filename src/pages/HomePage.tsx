@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
@@ -30,20 +30,47 @@ const HomePage = () => {
     navigate('/ai-chat');
   };
   
-  const handleAddTask = (e: React.FormEvent) => {
+  // 获取任务列表
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        console.log('Fetching tasks...');
+        const response = await fetch('/api/tasks');
+        const tasks = await response.json();
+        console.log('Received tasks:', tasks);
+        dispatch({ type: 'SET_TASKS', payload: tasks });
+      } catch (error) {
+        console.error('Failed to fetch tasks:', error);
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  // 添加任务
+  const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (taskTitle.trim()) {
-      dispatch({
-        type: 'ADD_TASK',
-        payload: {
-          id: Date.now().toString(),
-          title: taskTitle,
-          completed: false,
-          isAnytime: true,
-        },
-      });
-      setTaskTitle('');
-      setIsAddTaskOpen(false);
+      try {
+        console.log('Adding new task:', taskTitle);
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: taskTitle,
+            isAnytime: true,
+          }),
+        });
+        const newTask = await response.json();
+        console.log('New task created:', newTask);
+        dispatch({ type: 'ADD_TASK', payload: newTask });
+        setTaskTitle('');
+        setIsAddTaskOpen(false);
+      } catch (error) {
+        console.error('Failed to add task:', error);
+      }
     }
   };
 
