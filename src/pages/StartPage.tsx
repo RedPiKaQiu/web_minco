@@ -1,15 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Ship, Pencil } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
 
 const StartPage = () => {
   const navigate = useNavigate();
+  const { dispatch } = useAppContext();
 
   const handleStart = () => {
     navigate('/home');
   };
   
   const handleManualArrange = () => {
-    navigate('/empty-schedule');
+    // 清空所有任务后再导航到主页
+    dispatch({ type: 'CLEAR_ALL_TASKS' });
+    navigate('/home');
   };
 
   return (

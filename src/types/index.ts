@@ -29,4 +29,5 @@ export type AppAction =
   | { type: 'COMPLETE_TASK'; payload: string }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'ADD_TICKET'; payload: Ticket }
-  | { type: 'TOGGLE_FOCUS_MODE' }; 
+  | { type: 'TOGGLE_FOCUS_MODE' }
+  | { type: 'CLEAR_ALL_TASKS' }; 

@@ -72,7 +72,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return {
         ...state,
         tasks: state.tasks.map(task => 
-          task.id === action.payload ? { ...task, completed: true } : task
+          task.id === action.payload ? { ...task, completed: !task.completed } : task
         ),
       };
     case 'DELETE_TASK':
@@ -89,6 +89,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       return {
         ...state,
         focusMode: !state.focusMode,
+      };
+    case 'CLEAR_ALL_TASKS':
+      return {
+        ...state,
+        tasks: [],
       };
     default:
       return state;
