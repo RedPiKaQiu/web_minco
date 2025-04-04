@@ -157,17 +157,22 @@ const HomePage = () => {
       <div className="bg-ocean-50 p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-xl font-bold">海况稳定，可以放心启航 ☀️</h1>
+            <h1 className="text-xl font-bold">
+            {hasAnyTasks ? "海况稳定，可以放心启航 ☀️" : "Shell，早上好。☀️"}
+            </h1>
             <p className="text-gray-600 text-sm">{formattedDate}</p>
           </div>
         </div>
         
         {/* 用户提示语 */}
+      {/* 悬浮工具栏 - 仅在有任务时显示 */}
+      {hasAnyTasks && (
         <div className="px-4 mb-3">
           <p className="text-lg text-gray-800">
-            {hasAnyTasks ? "Shell，接下来想做点什么呢？" : "Shell，早上好。"}
+            {"Shell，接下来想做点什么呢？"}
           </p>
         </div>
+      )}
         
         {/* 快速操作区 - 仅在有任务时显示 */}
         {hasAnyTasks && quickActionTask && (
@@ -191,7 +196,7 @@ const HomePage = () => {
                     : (quickActionTask.isAnytime ? '随时' : '')}
                 </span>
               </div>
-              <SailingButton text="启航" />
+              <SailingButton text="启航" task={quickActionTask} />
             </div>
           </div>
         )}

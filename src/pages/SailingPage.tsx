@@ -1,12 +1,54 @@
 import { useState, useEffect } from 'react';
-import { Pause, Play, Music, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { Pause, Play, Music, ChevronDown, ChevronUp, Clock, Book } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Task } from '../types';
+
+interface LocationState {
+  task?: Task;
+}
 
 const SailingPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { task } = (location.state as LocationState) || {};
+  
   const [isSailing, setIsSailing] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [time, setTime] = useState(5); // 5秒倒计时
+  const [time, setTime] = useState(5); // 默认5秒倒计时，将在开始时更新
   const [showDetails, setShowDetails] = useState(false); // 控制任务详情显示
+  const [isCompleted, setIsCompleted] = useState(false); // 控制是否显示完成状态
+  const [elapsedTimeText, setElapsedTimeText] = useState(''); // 记录航行用时
+  
+  // 提取任务信息，若无则使用默认值
+  const taskTitle = task?.title || '收集PPT相关数据资料';
+  const taskCategory = task?.category || '完成PPT制作';
+  const taskDuration = task?.duration || '10分钟';
+  
+  // 解析任务持续时间（如"10分钟"、"1小时30分"）转换为秒数
+  const parseTimeToSeconds = (timeStr: string): number => {
+    // 默认为10分钟（600秒）
+    if (!timeStr) return 600;
+    
+    let totalSeconds = 0;
+    
+    // 匹配小时
+    const hourMatch = timeStr.match(/(\d+)\s*小时/);
+    if (hourMatch) {
+      totalSeconds += parseInt(hourMatch[1]) * 3600;
+    }
+    
+    // 匹配分钟
+    const minuteMatch = timeStr.match(/(\d+)\s*分钟/);
+    if (minuteMatch) {
+      totalSeconds += parseInt(minuteMatch[1]) * 60;
+    }
+    
+    // 如果没有匹配到任何时间单位，默认为10分钟
+    if (totalSeconds === 0) return 600;
+    
+    return totalSeconds;
+  };
   
   // 通知App.tsx隐藏或显示底部导航栏
   useEffect(() => {
@@ -21,6 +63,9 @@ const SailingPage = () => {
     };
   }, [isRunning]);
   
+  // 记录初始任务时间，用于计算总用时
+  const [initialTime, setInitialTime] = useState(0);
+  
   useEffect(() => {
     let interval: number | undefined;
     
@@ -30,12 +75,19 @@ const SailingPage = () => {
       }, 1000);
     } else if (time === 0) {
       setIsRunning(false);
+      setIsCompleted(true);
+      
+      // 计算用时
+      const totalTimeSpent = initialTime;
+      const minutes = Math.floor(totalTimeSpent / 60);
+      const seconds = totalTimeSpent % 60;
+      setElapsedTimeText(`${minutes}分${seconds < 10 ? '0' : ''}${seconds}`);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, time]);
+  }, [isRunning, time, initialTime]);
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -44,8 +96,11 @@ const SailingPage = () => {
   };
   
   const startSailing = () => {
+    // 设置倒计时时间为任务持续时间
+    const durationInSeconds = parseTimeToSeconds(taskDuration);
+    setTime(durationInSeconds);
+    setInitialTime(durationInSeconds);
     setIsSailing(true);
-    setTime(5);
     setIsRunning(true);
   };
   
@@ -57,22 +112,101 @@ const SailingPage = () => {
     setShowDetails(!showDetails);
   };
   
+  const handleChatWithMinCo = () => {
+    navigate('/ai-chat');
+  };
+  
+  const handleViewNextTask = () => {
+    navigate('/home');
+  };
+  
+  // 完成页面 - 显示完成状态和按钮
+  if (isCompleted) {
+    return (
+      <div className="h-screen bg-white flex flex-col items-center px-6 pt-10">
+        {/* 图章和完成标记 */}
+        <div className="relative mb-6 mt-4">
+          <img 
+            src="/completed-stamp.png" 
+            alt="Completed" 
+            className="w-64 h-auto"
+            onError={(e) => {
+              // 如果图片加载失败，使用自定义SVG作为后备
+              e.currentTarget.style.display = 'none';
+              document.getElementById('fallback-stamp')?.classList.remove('hidden');
+            }}
+          />
+          <div id="fallback-stamp" className="hidden">
+            <svg viewBox="0 0 200 200" className="w-64 h-64">
+              <g transform="translate(100 100)">
+                <circle r="70" fill="#E2F1FA" />
+                <circle r="60" fill="#FFFFFF" stroke="#5EB0DE" strokeWidth="5" />
+                <path d="M-40,-5 L-15,20 L40,-30" stroke="#5EB0DE" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M-50,0 A50,50 0 1,1 50,0 A50,50 0 1,1 -50,0" fill="none" stroke="#5EB0DE" strokeWidth="2" strokeDasharray="2 2" />
+                <g transform="translate(-45 -60)">
+                  <rect width="90" height="25" rx="5" fill="#5EB0DE" />
+                  <text x="45" y="17" textAnchor="middle" fill="white" fontWeight="bold" fontSize="14">Completed</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+        
+        {/* 任务标题 */}
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-4">
+          {taskTitle}
+        </h1>
+        
+        {/* 任务信息 */}
+        <div className="flex items-center space-x-3 mb-1 text-gray-500">
+          <span className="text-sm">主任务</span>
+          <div className="bg-blue-50 px-3 py-1 rounded-full text-xs">
+            {taskCategory}
+          </div>
+        </div>
+        
+        <div className="flex items-center mb-12 text-gray-500">
+          <Clock size={14} className="mr-1" />
+          <span className="text-sm">航行用时{elapsedTimeText}</span>
+        </div>
+        
+        {/* 鼓励文本 */}
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">太棒了！一个好的开始</h2>
+          <p className="text-gray-500 text-sm mb-8">给自己一个小奖励，休息片刻，继续加油哦～</p>
+        </div>
+        
+        {/* 聊天按钮 */}
+        <button 
+          onClick={handleChatWithMinCo} 
+          className="text-blue-500 text-lg mb-6"
+        >
+          和MinCo聊聊
+        </button>
+        
+        {/* 查看下一个任务按钮 */}
+        <button
+          onClick={handleViewNextTask}
+          className="flex items-center text-gray-600 mt-4"
+        >
+          <Book size={18} className="mr-2" />
+          <span>查看下个子任务</span>
+        </button>
+      </div>
+    );
+  }
+  
   if (!isSailing) {
     // 初始页面 - 显示开始航行按钮
     return (
       <div className="h-screen bg-white flex flex-col px-4 pt-10">
         {/* 任务标题 */}
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">收集PPT相关数据资料</h1>
-        
-        <div className="flex items-center mt-2 mb-4 justify-center">
-          <div className="text-gray-600 mr-2">主任务</div>
-          <div className="bg-blue-50 px-3 py-1 rounded-full text-sm">完成PPT制作</div>
-        </div>
+        <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">{taskTitle}</h1>
         
         <div className="flex items-center justify-center mb-4">
           <div className="flex items-center text-gray-500">
             <Clock size={14} className="mr-1" />
-            <span>预计15分钟</span>
+            <span>预计{taskDuration}</span>
           </div>
         </div>
         
@@ -112,7 +246,7 @@ const SailingPage = () => {
             >
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="mb-6">
-                  <h3 className="font-medium text-lg mb-2">完成PPT制作</h3>
+                  <h3 className="font-medium text-lg mb-2">{taskCategory}</h3>
                   <p className="text-sm text-gray-600">
                     围绕当前设计行业的最新趋势展开分析，涵盖用户体验、视觉设计和交互设计三个方面
                   </p>
@@ -188,7 +322,7 @@ const SailingPage = () => {
       </div>
       
       {/* 任务标题 */}
-      <h1 className="text-3xl font-bold text-center text-gray-800 mt-16 mb-12">收集PPT相关数据资料</h1>
+      <h1 className="text-3xl font-bold text-center text-gray-800 mt-16 mb-12">{taskTitle}</h1>
       
       {/* 计时器 */}
       <div className="text-7xl font-bold mb-24 text-gray-800">
