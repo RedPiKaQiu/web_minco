@@ -3,11 +3,49 @@ import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
 import SailingButton from '../components/SailingButton';
-import { Anchor, Clock, MessageCircle, Plus } from 'lucide-react';
+import { Anchor, Clock, MessageCircle, Plus, MoreHorizontal, ArrowLeft } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 
 type TabType = '今日聚焦' | '时间轴' | '随时可做';
+
+// 辅助函数：将时间字符串转换为分钟数以便排序
+const timeToMinutes = (timeStr: string): number => {
+  if (!timeStr) return Infinity; // 如果没有时间，放到最后
+  
+  // 处理 "上午/下午/晚上" 格式的时间
+  let hours = 0;
+  let minutes = 0;
+  
+  if (timeStr.includes('上午')) {
+    const matches = timeStr.match(/上午\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = parseInt(matches[1]);
+      minutes = parseInt(matches[2] || '0');
+    }
+  } else if (timeStr.includes('下午')) {
+    const matches = timeStr.match(/下午\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = parseInt(matches[1]) + 12;
+      if (hours === 24) hours = 12; // 处理12小时制中的"下午12:00"
+      minutes = parseInt(matches[2] || '0');
+    }
+  } else if (timeStr.includes('晚上')) {
+    const matches = timeStr.match(/晚上\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = parseInt(matches[1]) + 12;
+      minutes = parseInt(matches[2] || '0');
+    }
+  } else if (timeStr.includes('中午')) {
+    const matches = timeStr.match(/中午\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = 12;
+      minutes = parseInt(matches[2] || '0');
+    }
+  }
+  
+  return hours * 60 + minutes;
+};
 
 const HomePage = () => {
   const { state, dispatch } = useAppContext();
@@ -24,7 +62,16 @@ const HomePage = () => {
   
   const activeTasks = state.tasks.filter(task => !task.completed);
   const anytimeTasks = activeTasks.filter(task => task.isAnytime);
-  const scheduledTasks = activeTasks.filter(task => !task.isAnytime);
+  
+  // 按开始时间排序的时间轴任务
+  const scheduledTasks = activeTasks
+    .filter(task => !task.isAnytime)
+    .sort((a, b) => {
+      // 按照开始时间从早到晚排序
+      const timeA = timeToMinutes(a.startTime || '');
+      const timeB = timeToMinutes(b.startTime || '');
+      return timeA - timeB;
+    });
   
   // 检查是否有任何任务（包括已完成的）
   const hasAnyTasks = state.tasks.length > 0;
@@ -46,6 +93,11 @@ const HomePage = () => {
 
   const openAiChat = () => {
     navigate('/ai-chat');
+  };
+  
+  const openNewTaskPage = () => {
+    navigate('/new-task');
+    setIsAddTaskOpen(false);
   };
   
   const handleAddTask = (e: React.FormEvent) => {
@@ -276,9 +328,18 @@ const HomePage = () => {
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-              添加新任务
-            </Dialog.Title>
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title className="text-lg font-medium text-gray-900">
+                添加新任务
+              </Dialog.Title>
+              <button
+                onClick={openNewTaskPage}
+                className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="更多选项"
+              >
+                <MoreHorizontal className="text-gray-500" size={20} />
+              </button>
+            </div>
             
             <form onSubmit={handleAddTask}>
               <input

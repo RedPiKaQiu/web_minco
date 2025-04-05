@@ -9,6 +9,7 @@ import JournalPage from './pages/JournalPage';
 import ProfilePage from './pages/ProfilePage';
 import EmptySchedulePage from './pages/EmptySchedulePage'; // 新增
 import AiChatPage from './pages/AiChatPage'; // 新增聊天页面
+import NewTaskPage from './pages/NewTaskPage';
 import BottomNavigation from './components/BottomNavigation';
 
 // 添加CSS样式，通过类名控制导航栏的隐藏
@@ -59,6 +60,7 @@ function App() {
                 <ProfilePage />
               </>
             } />
+            <Route path="/new-task" element={<NewTaskPage />} />
           </Routes>
           <div className="navigation-container">
             <BottomNavigation /> {/* 确保导航栏始终显示 */}
