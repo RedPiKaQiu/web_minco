@@ -36,15 +36,13 @@ const NewTaskPage = () => {
   const [selectedNature, setSelectedNature] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isRepeating, setIsRepeating] = useState(false);
-  const [date, setDate] = useState('今天');
+  const [date] = useState('今天');
   const [startTime, setStartTime] = useState('随时');
   const [time, setTime] = useState('30 分钟');
   const [priority, setPriority] = useState('');
-  const [subTasks, setSubTasks] = useState<string[]>([]);
   const [showAiGeneration, setShowAiGeneration] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
-  const [isAnytime, setIsAnytime] = useState(true);
   
   // 预设时间选项
   const timeOptions = [
@@ -118,7 +116,6 @@ const NewTaskPage = () => {
   // 处理开始时间选择
   const handleSelectStartTime = (selectedStartTime: string) => {
     setStartTime(selectedStartTime);
-    setIsAnytime(selectedStartTime === '随时');
     setIsStartTimePickerOpen(false);
   };
   

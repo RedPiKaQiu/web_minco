@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
 import SailingButton from '../components/SailingButton';
-import { Anchor, Clock, MessageCircle, Plus, MoreHorizontal, ArrowLeft } from 'lucide-react';
+import { Anchor, Clock, MessageCircle, Plus, MoreHorizontal } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 
