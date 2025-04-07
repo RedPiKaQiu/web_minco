@@ -14,7 +14,7 @@ const TaskItem = ({ task }: TaskItemProps) => {
   };
 
   return (
-    <div className="p-3 rounded-xl shadow-sm bg-white">
+    <div className="p-[var(--spacing-card)] rounded-[var(--radius-medium)] shadow-[var(--shadow-sm)] bg-card">
       <div className="flex justify-between items-center">
         <div className="flex-1">
           <div className="text-sm text-gray-500 mb-1">
@@ -26,7 +26,7 @@ const TaskItem = ({ task }: TaskItemProps) => {
               </>
             )}
           </div>
-          <h3 className="font-medium text-gray-900">{task.title}</h3>
+          <h3 className="font-medium text-gray-800">{task.title}</h3>
         </div>
 
         <div className="flex items-center self-center">
@@ -39,7 +39,7 @@ const TaskItem = ({ task }: TaskItemProps) => {
             onClick={handleComplete}
             className={`w-5 h-5 rounded-full border ${
               task.completed 
-                ? 'bg-ocean-500 border-ocean-500' 
+                ? 'bg-primary border-primary' 
                 : 'border-gray-300'
             } flex items-center justify-center`}
           >

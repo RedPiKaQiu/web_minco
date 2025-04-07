@@ -6,8 +6,8 @@ const BottomNavigation = () => {
   const path = location.pathname;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex justify-center bg-gray-50">
-      <div className="app-container flex justify-around items-center h-16 px-2 bg-white border-t border-gray-200">
+    <div className="fixed bottom-0 left-0 right-0 flex justify-center bg-app">
+      <div className="app-container flex justify-around items-center h-16 px-2 bg-nav border-t border-app-border">
         <Link to="/ideas" className={`nav-item ${path === '/ideas' ? 'active' : ''}`}>
           <Package size={20} />
           <span className="mt-1">想法仓库</span>
@@ -16,8 +16,8 @@ const BottomNavigation = () => {
           <Ship size={20} />
           <span className="mt-1">航行</span>
         </Link>
-        <Link to="/" className={`nav-item ${path === '/' ? 'active' : ''}`}>
-          <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center -mt-4">
+        <Link to="/home" className={`nav-item ${path === '/home' || path === '/' ? 'active' : ''}`}>
+          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center -mt-4">
             <Calendar size={20} className="text-white" />
           </div>
           <span className="mt-1">今日</span>

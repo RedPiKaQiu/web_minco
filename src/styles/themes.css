@@ -1,0 +1,202 @@
+/* 定义所有主题的基本设置和CSS变量 */
+
+/* 默认主题（使用原海洋主题的颜色） */
+.theme-default {
+  /* 主色调 */
+  --color-primary: #2196f3;  /* 修改为启航按钮的蓝色 */
+  --color-primary-light: #64b5f6;
+  --color-primary-dark: #1976d2;
+  
+  /* 背景色 */
+  --color-background: #f0f8ff;
+  --color-card-background: #ffffff;
+  
+  /* 快速操作区颜色 */
+  --color-quick-action-gradient-from: #e1f5fe;
+  --color-quick-action-gradient-to: #e3f2fd;
+  --color-quick-action-icon: #0288d1;
+  --color-quick-action-text: #1f2937;
+  
+  /* 文本颜色 */
+  --color-text: #1f2937;
+  --color-text-secondary: #6b7280;
+  
+  /* 边框颜色 */
+  --color-border: #e5e7eb;
+  
+  /* 导航栏颜色 */
+  --color-nav-background: #ffffff;
+  --color-nav-text: #6b7280;
+  --color-nav-text-active: #2196f3;
+  
+  /* 按钮颜色 */
+  --color-button-primary: #2196f3;
+  --color-button-primary-hover: #1976d2;
+  --color-button-text: #ffffff;
+  
+  /* 空状态按钮颜色 */
+  --color-empty-add-bg: #e3f2fd;
+  --color-empty-add-icon: #2196f3;
+  --color-empty-chat-icon: #64b5f6;
+  
+  /* 布局和间距 */
+  --spacing-card: 1rem;  /* 卡片内边距 */
+  --spacing-page: 1rem;  /* 页面边距 */
+  --spacing-gap: 0.75rem;  /* 元素间距 */
+  
+  /* 圆角 */
+  --radius-small: 0.375rem;  /* 小圆角 */
+  --radius-medium: 0.75rem;  /* 中等圆角 */
+  --radius-large: 1rem;      /* 大圆角 */
+  --radius-full: 9999px;     /* 全圆角（用于按钮） */
+  
+  /* 阴影效果 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  
+  /* 动画过渡 */
+  --transition-normal: 0.2s ease-in-out;
+  --transition-fast: 0.1s ease-in-out;
+  
+  /* 卡片样式 */
+  --card-padding: var(--spacing-card);
+  --card-radius: var(--radius-medium);
+  --card-shadow: var(--shadow-sm);
+  
+  /* 按钮样式 */
+  --button-height: 2.5rem;
+  --button-padding: 0 1rem;
+  --button-radius: var(--radius-full);
+  --button-shadow: var(--shadow-sm);
+}
+
+/* 落日主题 */
+.theme-sunset {
+  /* 主色调 */
+  --color-primary: #f59e0b;
+  --color-primary-light: #fbbf24;
+  --color-primary-dark: #d97706;
+  
+  /* 背景色 */
+  --color-background: #fff7ed;
+  --color-card-background: #ffffff;
+  
+  /* 快速操作区颜色 */
+  --color-quick-action-gradient-from: #fef3c7;
+  --color-quick-action-gradient-to: #fff7ed;
+  --color-quick-action-icon: #d97706;
+  --color-quick-action-text: #92400e;
+  
+  /* 文本颜色 */
+  --color-text: #7c2d12;
+  --color-text-secondary: #b45309;
+  
+  /* 边框颜色 */
+  --color-border: #fed7aa;
+  
+  /* 导航栏颜色 */
+  --color-nav-background: #fffbeb;
+  --color-nav-text: #b45309;
+  --color-nav-text-active: #92400e;
+  
+  /* 按钮颜色 */
+  --color-button-primary: #f59e0b;
+  --color-button-primary-hover: #d97706;
+  --color-button-text: #ffffff;
+  
+  /* 空状态按钮颜色 */
+  --color-empty-add-bg: #fef3c7;
+  --color-empty-add-icon: #f59e0b;
+  --color-empty-chat-icon: #fbbf24;
+  
+  /* 更圆润的风格 */
+  --radius-small: 0.5rem;
+  --radius-medium: 1rem;
+  --radius-large: 1.5rem;
+  
+  /* 更大的间距 */
+  --spacing-card: 1.25rem;
+  --spacing-page: 1.25rem;
+  --spacing-gap: 1rem;
+  
+  /* 更明显的阴影 */
+  --shadow-sm: 0 2px 4px rgba(251, 146, 60, 0.1);
+  --shadow-md: 0 6px 12px rgba(251, 146, 60, 0.15);
+}
+
+/* 森林主题 */
+.theme-forest {
+  /* 主色调 */
+  --color-primary: #22c55e;
+  --color-primary-light: #4ade80;
+  --color-primary-dark: #15803d;
+  
+  /* 背景色 */
+  --color-background: #f0fdf4;
+  --color-card-background: #ffffff;
+  
+  /* 文本颜色 */
+  --color-text: #14532d;
+  --color-text-secondary: #166534;
+  
+  /* 边框颜色 */
+  --color-border: #dcfce7;
+  
+  /* 导航栏颜色 */
+  --color-nav-background: #f0fdf4;
+  --color-nav-text: #166534;
+  --color-nav-text-active: #14532d;
+  
+  /* 按钮颜色 */
+  --color-button-primary: #22c55e;
+  --color-button-primary-hover: #15803d;
+  --color-button-text: #ffffff;
+  
+  /* 更方正的风格 */
+  --radius-small: 0.25rem;
+  --radius-medium: 0.5rem;
+  --radius-large: 0.75rem;
+  
+  /* 更紧凑的间距 */
+  --spacing-card: 0.875rem;
+  --spacing-page: 0.875rem;
+  --spacing-gap: 0.625rem;
+  
+  /* 更柔和的阴影 */
+  --shadow-sm: 0 1px 3px rgba(34, 197, 94, 0.05);
+  --shadow-md: 0 3px 6px rgba(34, 197, 94, 0.1);
+}
+
+/* 暗色主题 */
+.theme-dark {
+  /* 主色调 */
+  --color-primary: #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-dark: #2563eb;
+  
+  /* 背景色 */
+  --color-background: #1f2937;
+  --color-card-background: #374151;
+  
+  /* 文本颜色 */
+  --color-text: #f9fafb;
+  --color-text-secondary: #e5e7eb;
+  
+  /* 边框颜色 */
+  --color-border: #4b5563;
+  
+  /* 导航栏颜色 */
+  --color-nav-background: #111827;
+  --color-nav-text: #9ca3af;
+  --color-nav-text-active: #f3f4f6;
+  
+  /* 按钮颜色 */
+  --color-button-primary: #3b82f6;
+  --color-button-primary-hover: #2563eb;
+  --color-button-text: #ffffff;
+  
+  /* 深色主题特有的阴影 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+} 
