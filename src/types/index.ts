@@ -22,6 +22,7 @@ export interface AppState {
   tasks: Task[];
   tickets: Ticket[];
   focusMode: boolean;
+  uuid?: string;
 }
 
 export type AppAction = 
@@ -30,4 +31,5 @@ export type AppAction =
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'ADD_TICKET'; payload: Ticket }
   | { type: 'TOGGLE_FOCUS_MODE' }
-  | { type: 'CLEAR_ALL_TASKS' }; 
+  | { type: 'CLEAR_ALL_TASKS' }
+  | { type: 'SET_UUID'; payload: string }; 
