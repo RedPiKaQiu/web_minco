@@ -95,6 +95,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         ...state,
         tasks: [],
       };
+    case 'SET_UUID':
+      return {
+        ...state,
+        uuid: action.payload,
+      };
     default:
       return state;
   }
