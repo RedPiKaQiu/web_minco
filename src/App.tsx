@@ -8,7 +8,6 @@ import SailingPage from './pages/SailingPage';
 import IdeasPage from './pages/IdeasPage';
 import JournalPage from './pages/JournalPage';
 import ProfilePage from './pages/ProfilePage';
-import EmptySchedulePage from './pages/EmptySchedulePage'; // 新增
 import AiChatPage from './pages/AiChatPage'; // 新增聊天页面
 import NewTaskPage from './pages/NewTaskPage';
 import BottomNavigation from './components/BottomNavigation';
