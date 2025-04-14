@@ -1,27 +1,87 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Ship, Pencil } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { useEffect, useState } from 'react';
 
 const StartPage = () => {
   const navigate = useNavigate();
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
+  const [connectionStatus, setConnectionStatus] = useState<string>('');
+
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        // 使用一个固定的 mock UUID
+        const mockUuid = 'user-123';
+        
+        const response = await fetch('http://127.0.0.1:8000/api/test/connect_test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            uuid: mockUuid
+          })
+        });
+
+        const data = await response.json();
+        console.log('Connection test response:', data);
+
+        if (data.status === 'success') {
+          setConnectionStatus('连接成功');
+          // 使用发送的 mock UUID
+          dispatch({ type: 'SET_UUID', payload: mockUuid });
+          localStorage.setItem('minco_uuid', mockUuid);
+        } else {
+          setConnectionStatus('连接失败');
+        }
+      } catch (error) {
+        console.error('Connection test failed:', error);
+        setConnectionStatus('连接失败');
+      }
+    };
+
+    testConnection();
+  }, [dispatch]);
 
   const handleStart = () => {
     navigate('/home');
   };
   
   const handleManualArrange = () => {
-    // 清空所有任务后再导航到主页
     dispatch({ type: 'CLEAR_ALL_TASKS' });
     navigate('/home');
+  };
+
+  // Get current time to determine greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 6) return '凌晨好';
+    if (hour < 9) return '早上好';
+    if (hour < 12) return '上午好';
+    if (hour < 14) return '中午好';
+    if (hour < 18) return '下午好';
+    if (hour < 22) return '晚上好';
+    return '夜深了';
   };
 
   return (
     <div className="flex flex-col h-screen bg-white px-4 pt-16 pb-20">
       {/* 顶部问候语 */}
       <div className="text-left mb-32">
-        <h1 className="text-3xl font-bold mb-2">Shell, 早上好 <span className="text-4xl">☀️</span></h1>
-        <p className="text-gray-600">3月8日，星期六</p>
+        <h1 className="text-3xl font-bold mb-2">
+          {state.uuid ? `${state.uuid}，${getGreeting()}` : `${getGreeting()}`} 
+          <span className="text-4xl">☀️</span>
+        </h1>
+        <p className="text-gray-600">
+          {new Date().getMonth() + 1}月{new Date().getDate()}日，
+          {['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][new Date().getDay()]}
+        </p>
+        {connectionStatus && (
+          <p className={`text-sm mt-2 ${connectionStatus === '连接成功' ? 'text-green-500' : 'text-red-500'}`}>
+            {connectionStatus}
+          </p>
+        )}
       </div>
       
       {/* 蓝色渐变卡片 */}

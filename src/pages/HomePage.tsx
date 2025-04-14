@@ -3,11 +3,49 @@ import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
 import SailingButton from '../components/SailingButton';
-import { Anchor, Clock, MessageCircle, Plus } from 'lucide-react';
+import { Anchor, Clock, MessageCircle, Plus, MoreHorizontal } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 
 type TabType = '今日聚焦' | '时间轴' | '随时可做';
+
+// 辅助函数：将时间字符串转换为分钟数以便排序
+const timeToMinutes = (timeStr: string): number => {
+  if (!timeStr) return Infinity; // 如果没有时间，放到最后
+  
+  // 处理 "上午/下午/晚上" 格式的时间
+  let hours = 0;
+  let minutes = 0;
+  
+  if (timeStr.includes('上午')) {
+    const matches = timeStr.match(/上午\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = parseInt(matches[1]);
+      minutes = parseInt(matches[2] || '0');
+    }
+  } else if (timeStr.includes('下午')) {
+    const matches = timeStr.match(/下午\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = parseInt(matches[1]) + 12;
+      if (hours === 24) hours = 12; // 处理12小时制中的"下午12:00"
+      minutes = parseInt(matches[2] || '0');
+    }
+  } else if (timeStr.includes('晚上')) {
+    const matches = timeStr.match(/晚上\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = parseInt(matches[1]) + 12;
+      minutes = parseInt(matches[2] || '0');
+    }
+  } else if (timeStr.includes('中午')) {
+    const matches = timeStr.match(/中午\s*(\d+):(\d+)/);
+    if (matches) {
+      hours = 12;
+      minutes = parseInt(matches[2] || '0');
+    }
+  }
+  
+  return hours * 60 + minutes;
+};
 
 const HomePage = () => {
   const { state, dispatch } = useAppContext();
@@ -24,7 +62,16 @@ const HomePage = () => {
   
   const activeTasks = state.tasks.filter(task => !task.completed);
   const anytimeTasks = activeTasks.filter(task => task.isAnytime);
-  const scheduledTasks = activeTasks.filter(task => !task.isAnytime);
+  
+  // 按开始时间排序的时间轴任务
+  const scheduledTasks = activeTasks
+    .filter(task => !task.isAnytime)
+    .sort((a, b) => {
+      // 按照开始时间从早到晚排序
+      const timeA = timeToMinutes(a.startTime || '');
+      const timeB = timeToMinutes(b.startTime || '');
+      return timeA - timeB;
+    });
   
   // 检查是否有任何任务（包括已完成的）
   const hasAnyTasks = state.tasks.length > 0;
@@ -46,6 +93,11 @@ const HomePage = () => {
 
   const openAiChat = () => {
     navigate('/ai-chat');
+  };
+  
+  const openNewTaskPage = () => {
+    navigate('/new-task');
+    setIsAddTaskOpen(false);
   };
   
   const handleAddTask = (e: React.FormEvent) => {
@@ -76,15 +128,15 @@ const HomePage = () => {
           <div className="w-full max-w-md flex rounded-full overflow-hidden shadow-md">
             <button 
               onClick={() => setIsAddTaskOpen(true)}
-              className="flex-1 bg-[#E1F5FE] py-4 flex items-center justify-center"
+              className="flex-1 bg-[var(--color-empty-add-bg)] py-4 flex items-center justify-center"
             >
-              <Plus className="text-blue-500" size={20} />
+              <Plus className="text-[var(--color-empty-add-icon)]" size={20} />
             </button>
             <button
               onClick={openAiChat}
               className="flex-1 bg-white py-4 flex items-center justify-center"
             >
-              <MessageCircle className="text-sky-400" size={20} />
+              <MessageCircle className="text-[var(--color-empty-chat-icon)]" size={20} />
             </button>
           </div>
         </div>
@@ -152,30 +204,47 @@ const HomePage = () => {
   };
 
   return (
-    <div className="pb-20">
+    <div className="
+      pb-20 
+      bg-app 
+      px-[var(--spacing-page)]
+      space-y-[var(--spacing-gap)]
+    ">
       {/* 顶部状态栏 */}
-      <div className="bg-ocean-50 p-4 rounded-b-3xl">
+      <div className="bg-primary-light/20 p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-xl font-bold">海况稳定，可以放心启航 ☀️</h1>
-            <p className="text-gray-600 text-sm">{formattedDate}</p>
+            <h1 className="text-xl font-bold text-app">
+            {hasAnyTasks ? "海况稳定，可以放心启航 ☀️" : "Shell，早上好。☀️"}
+            </h1>
+            <p className="text-app-secondary text-sm">{formattedDate}</p>
           </div>
         </div>
         
         {/* 用户提示语 */}
+      {/* 悬浮工具栏 - 仅在有任务时显示 */}
+      {hasAnyTasks && (
         <div className="px-4 mb-3">
-          <p className="text-lg text-gray-800">
-            {hasAnyTasks ? "Shell，接下来想做点什么呢？" : "Shell，早上好。"}
+          <p className="text-lg text-app">
+            {"Shell，接下来想做点什么呢？"}
           </p>
         </div>
+      )}
         
         {/* 快速操作区 - 仅在有任务时显示 */}
         {hasAnyTasks && quickActionTask && (
-          <div className="bg-ocean-100 rounded-xl p-4 mb-2">
+          <div className="
+            bg-gradient-to-br 
+            from-[var(--color-quick-action-gradient-from)] 
+            to-[var(--color-quick-action-gradient-to)] 
+            rounded-[var(--radius-large)]
+            p-[var(--spacing-card)]
+            shadow-[var(--shadow-md)]
+          ">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center">
-                <Anchor className="text-ocean-600 mr-2" size={18} />
-                <span className="text-sm font-medium">{quickActionTask.title}</span>
+                <Anchor className="text-[var(--color-quick-action-icon)] mr-2" size={18} />
+                <span className="text-sm font-medium text-[var(--color-quick-action-text)]">{quickActionTask.title}</span>
               </div>
               <div className="flex items-center text-xs text-gray-500">
                 <Clock size={14} className="mr-1" />
@@ -191,7 +260,7 @@ const HomePage = () => {
                     : (quickActionTask.isAnytime ? '随时' : '')}
                 </span>
               </div>
-              <SailingButton text="启航" />
+              <SailingButton text="启航" task={quickActionTask} />
             </div>
           </div>
         )}
@@ -207,8 +276,8 @@ const HomePage = () => {
                   key={tab}
                   className={`pb-1 ${
                     activeTab === tab 
-                      ? 'font-medium text-gray-900 border-b-2 border-gray-900 text-lg' 
-                      : 'text-gray-500'
+                      ? 'font-medium text-app border-b-2 border-primary text-lg' 
+                      : 'text-app-secondary'
                   }`}
                   onClick={() => setActiveTab(tab)}
                 >
@@ -234,18 +303,18 @@ const HomePage = () => {
         <div className="fixed bottom-24 left-0 right-0 z-50 pointer-events-none" style={{ background: 'transparent' }}>
           <div className="app-container mx-auto flex justify-end bg-transparent" style={{ boxShadow: 'none' }}>
             <div className="mr-4 pointer-events-auto inline-flex bg-transparent" style={{ boxShadow: 'none' }}>
-              <div className="bg-white rounded-full shadow-md flex overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}>
+              <div className="bg-card rounded-full shadow-md flex overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}>
                 {/* 聊天按钮 */}
                 <button 
                   onClick={openAiChat} 
-                  className="p-4 flex items-center justify-center border-r border-gray-100"
+                  className="p-4 flex items-center justify-center border-r border-app-border"
                   aria-label="打开聊天"
                 >
-                  <MessageCircle className="text-sky-400" size={24} />
+                  <MessageCircle className="text-primary" size={24} />
                 </button>
                 
                 {/* 竖线分隔符 */}
-                <div className="w-[1px] bg-gray-200"></div>
+                <div className="w-[1px] bg-app-border"></div>
                 
                 {/* 添加任务按钮 */}
                 <button 
@@ -253,7 +322,7 @@ const HomePage = () => {
                   className="p-4 flex items-center justify-center"
                   aria-label="添加任务"
                 >
-                  <Plus className="text-blue-500" size={24} />
+                  <Plus className="text-primary" size={24} />
                 </button>
               </div>
             </div>
@@ -270,10 +339,19 @@ const HomePage = () => {
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-              添加新任务
-            </Dialog.Title>
+          <Dialog.Panel className="w-full max-w-md rounded-lg bg-card p-6">
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title className="text-lg font-medium text-app">
+                添加新任务
+              </Dialog.Title>
+              <button
+                onClick={openNewTaskPage}
+                className="p-2 rounded-full hover:bg-app-background"
+                aria-label="更多选项"
+              >
+                <MoreHorizontal className="text-app-secondary" size={20} />
+              </button>
+            </div>
             
             <form onSubmit={handleAddTask}>
               <input
@@ -281,7 +359,7 @@ const HomePage = () => {
                 value={taskTitle}
                 onChange={(e) => setTaskTitle(e.target.value)}
                 placeholder="输入任务内容"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-ocean-500"
+                className="w-full border border-app-border rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-primary bg-card text-app"
                 autoFocus
               />
               
@@ -289,13 +367,13 @@ const HomePage = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddTaskOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+                  className="px-4 py-2 text-sm font-medium text-app-secondary hover:bg-app-background rounded-lg"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-ocean-600 rounded-lg hover:bg-ocean-700"
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark"
                 >
                   添加
                 </button>
