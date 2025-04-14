@@ -30,4 +30,13 @@ export type AppAction =
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'ADD_TICKET'; payload: Ticket }
   | { type: 'TOGGLE_FOCUS_MODE' }
-  | { type: 'CLEAR_ALL_TASKS' }; 
+  | { type: 'CLEAR_ALL_TASKS' };
+
+export interface User {
+  id: string;        // UUID
+  nickname: string;  // 用户昵称
+  gender: 'male' | 'female' | 'other'; // 性别
+  age: number;       // 年龄
+  avatar?: string;   // 头像（可选）
+  createdAt: string; // 创建时间
+} 

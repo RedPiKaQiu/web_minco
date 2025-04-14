@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useEffect } from 'react';
@@ -12,6 +12,9 @@ import EmptySchedulePage from './pages/EmptySchedulePage'; // 新增
 import AiChatPage from './pages/AiChatPage'; // 新增聊天页面
 import NewTaskPage from './pages/NewTaskPage';
 import BottomNavigation from './components/BottomNavigation';
+import { UserProvider } from './context/UserContext';
+import LoginPage from './pages/LoginPage';
+import { useUser } from './context/UserContext';
 
 // 添加CSS样式，通过类名控制导航栏的隐藏
 const navStyles = `
@@ -19,6 +22,36 @@ const navStyles = `
     display: none;
   }
 `;
+
+// 创建一个路由保护组件
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { state } = useUser();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!state.isAuthenticated) {
+      navigate('/login', { replace: true });
+    }
+  }, [state.isAuthenticated, navigate]);
+  
+  return state.isAuthenticated ? <>{children}</> : null;
+};
+
+// 将BottomNavigation抽取成一个独立组件，可以根据路由条件渲染
+const NavigationWrapper = () => {
+  const location = useLocation();
+  
+  // 在登录页面不显示底部导航
+  if (location.pathname === '/login') {
+    return null;
+  }
+  
+  return (
+    <div className="navigation-container">
+      <BottomNavigation />
+    </div>
+  );
+};
 
 function App() {
   // 添加样式到document中
@@ -38,44 +71,48 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AppProvider>
-        <Router>
-          <div className="app-container">
-            <Routes>
-              <Route path="/" element={<StartPage />} /> {/* 默认起始页 */}
-              <Route path="/home" element={
-                <>
-                  <HomePage />
-                </>
-              } />
-              <Route path="/empty-schedule" element={<EmptySchedulePage />} /> {/* 新增空日程页面 */}
-              <Route path="/sailing" element={<SailingPage />} />
-              <Route path="/ai-chat" element={<AiChatPage />} /> {/* 聊天页面 */}
-              <Route path="/ideas" element={
-                <>
-                  <IdeasPage />
-                </>
-              } />
-              <Route path="/journal" element={
-                <>
-                  <JournalPage />
-                </>
-              } />
-              <Route path="/profile" element={
-                <>
-                  <ProfilePage />
-                </>
-              } />
-              <Route path="/new-task" element={<NewTaskPage />} />
-            </Routes>
-            <div className="navigation-container">
-              <BottomNavigation /> {/* 确保导航栏始终显示 */}
+    <UserProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <Router>
+            <div className="app-container">
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <StartPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/home" element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/sailing" element={<SailingPage />} />
+                <Route path="/ai-chat" element={<AiChatPage />} /> {/* 聊天页面 */}
+                <Route path="/ideas" element={
+                  <ProtectedRoute>
+                    <IdeasPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal" element={
+                  <ProtectedRoute>
+                    <JournalPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/new-task" element={<NewTaskPage />} />
+              </Routes>
+              <NavigationWrapper />
             </div>
-          </div>
-        </Router>
-      </AppProvider>
-    </ThemeProvider>
+          </Router>
+        </AppProvider>
+      </ThemeProvider>
+    </UserProvider>
   );
 }
 

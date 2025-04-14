@@ -1,10 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Ship, Pencil } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { useUser } from '../context/UserContext';
 
 const StartPage = () => {
   const navigate = useNavigate();
   const { dispatch } = useAppContext();
+  const { state } = useUser();
+  
+  // 获取用户昵称，如果没有则使用默认值
+  const userNickname = state.user?.nickname || '朋友';
 
   const handleStart = () => {
     navigate('/home');
@@ -20,7 +25,7 @@ const StartPage = () => {
     <div className="flex flex-col h-screen bg-white px-4 pt-16 pb-20">
       {/* 顶部问候语 */}
       <div className="text-left mb-32">
-        <h1 className="text-3xl font-bold mb-2">Shell, 早上好 <span className="text-4xl">☀️</span></h1>
+        <h1 className="text-3xl font-bold mb-2">你好，{userNickname} <span className="text-4xl">☀️</span></h1>
         <p className="text-gray-600">3月8日，星期六</p>
       </div>
       

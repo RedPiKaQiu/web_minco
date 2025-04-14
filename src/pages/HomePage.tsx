@@ -6,6 +6,7 @@ import SailingButton from '../components/SailingButton';
 import { Anchor, Clock, MessageCircle, Plus, MoreHorizontal } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 type TabType = '今日聚焦' | '时间轴' | '随时可做';
 
@@ -48,6 +49,7 @@ const timeToMinutes = (timeStr: string): number => {
 };
 
 const HomePage = () => {
+  const { state: userState } = useUser();
   const { state, dispatch } = useAppContext();
   const [currentDate] = useState(new Date());
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
@@ -117,11 +119,14 @@ const HomePage = () => {
     }
   };
 
+  // 获取用户昵称，如果没有则使用默认值
+  const userNickname = userState.user?.nickname || '朋友';
+
   const renderTasksByTab = () => {
     // 如果完全没有任务，显示空状态界面
     if (!hasAnyTasks) {
       return (
-        <div className="flex flex-col items-center mt-10">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] mt-10">
           <h2 className="text-xl text-gray-600 mb-3">今天还没有日程哦~</h2>
           <p className="text-sm text-gray-500 mb-8">点击下方按钮，快速添加</p>
           
@@ -204,32 +209,26 @@ const HomePage = () => {
   };
 
   return (
-    <div className="
-      pb-20 
-      bg-app 
-      px-[var(--spacing-page)]
-      space-y-[var(--spacing-gap)]
-    ">
+    <div className="flex flex-col min-h-screen bg-app">
       {/* 顶部状态栏 */}
       <div className="bg-primary-light/20 p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-xl font-bold text-app">
-            {hasAnyTasks ? "海况稳定，可以放心启航 ☀️" : "Shell，早上好。☀️"}
+            {hasAnyTasks ? "海况稳定，可以放心启航 ☀️" : `${userNickname}，早上好。☀️`}
             </h1>
             <p className="text-app-secondary text-sm">{formattedDate}</p>
           </div>
         </div>
         
         {/* 用户提示语 */}
-      {/* 悬浮工具栏 - 仅在有任务时显示 */}
-      {hasAnyTasks && (
-        <div className="px-4 mb-3">
-          <p className="text-lg text-app">
-            {"Shell，接下来想做点什么呢？"}
-          </p>
-        </div>
-      )}
+        {hasAnyTasks && (
+          <div className="px-4 mb-3">
+            <p className="text-lg text-app">
+              {`${userNickname}，接下来想做点什么呢？`}
+            </p>
+          </div>
+        )}
         
         {/* 快速操作区 - 仅在有任务时显示 */}
         {hasAnyTasks && quickActionTask && (
@@ -266,8 +265,8 @@ const HomePage = () => {
         )}
       </div>
       
-      {/* 任务标签页 */}
-      <div className="px-4 mt-4 flex flex-col min-h-[calc(100vh-330px)]">
+      {/* 任务标签页 - 添加 flex-grow 让它能够填充可用的空间 */}
+      <div className="px-[var(--spacing-page)] mt-4 flex flex-col flex-grow">
         {hasAnyTasks && (
           <div className="flex justify-between items-center mb-4">
             <div className="flex space-x-4">
@@ -289,13 +288,12 @@ const HomePage = () => {
         )}
         
         {/* 根据标签显示任务 */}
-        {renderTasksByTab()}
+        <div className="flex-grow">
+          {renderTasksByTab()}
+        </div>
         
         {/* 已完成任务 */}
         {hasAnyTasks && <CompletedTasks />}
-        
-        {/* 添加弹性空间 */}
-        <div className="flex-grow"></div>
       </div>
       
       {/* 悬浮工具栏 - 仅在有任务时显示 */}
