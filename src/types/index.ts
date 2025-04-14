@@ -39,4 +39,7 @@ export interface User {
   age: number;       // 年龄
   avatar?: string;   // 头像（可选）
   createdAt: string; // 创建时间
-} 
+}
+
+// 添加主题类型定义
+export type ThemeType = 'default' | 'sunset' | 'forest' | 'dark'; 
