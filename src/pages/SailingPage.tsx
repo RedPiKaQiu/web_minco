@@ -111,11 +111,6 @@ const SailingPage = () => {
     setIsPaused(!isPaused); // 更新暂停状态
   };
   
-  // 修改为使用toggleTimer函数
-  const handlePauseResume = () => {
-    toggleTimer();
-  };
-  
   const toggleDetails = () => {
     setShowDetails(!showDetails);
   };

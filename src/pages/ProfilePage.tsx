@@ -3,14 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import ThemeSelector from '../components/ThemeSelector';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
-import { useState } from 'react';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useUser();
   const { 
-    userSelectedTheme, 
-    setUserSelectedTheme,
     currentTime, 
     setCurrentTime,
     isAutoThemeEnabled,
