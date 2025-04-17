@@ -209,7 +209,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-app">
+    <div className="flex flex-col min-h-screen bg-app pb-safe">
       {/* 顶部状态栏 */}
       <div className="bg-primary-light/20 p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
@@ -298,17 +298,17 @@ const HomePage = () => {
       
       {/* 悬浮工具栏 - 仅在有任务时显示 */}
       {hasAnyTasks && (
-        <div className="fixed bottom-24 left-0 right-0 z-50 pointer-events-none" style={{ background: 'transparent' }}>
-          <div className="app-container mx-auto flex justify-end bg-transparent" style={{ boxShadow: 'none' }}>
-            <div className="mr-4 pointer-events-auto inline-flex bg-transparent" style={{ boxShadow: 'none' }}>
-              <div className="bg-card rounded-full shadow-md flex overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}>
+        <div className="fixed bottom-20 left-0 right-0 z-[100] pointer-events-none flex justify-center">
+          <div className="w-[375px] max-w-full px-4 pointer-events-none flex justify-end">
+            <div className="pointer-events-auto">
+              <div className="bg-card rounded-full shadow-lg flex overflow-hidden">
                 {/* 聊天按钮 */}
                 <button 
                   onClick={openAiChat} 
-                  className="p-4 flex items-center justify-center border-r border-app-border"
+                  className="h-12 w-12 flex items-center justify-center border-r border-app-border"
                   aria-label="打开聊天"
                 >
-                  <MessageCircle className="text-primary" size={24} />
+                  <MessageCircle className="text-primary" size={20} />
                 </button>
                 
                 {/* 竖线分隔符 */}
@@ -317,10 +317,10 @@ const HomePage = () => {
                 {/* 添加任务按钮 */}
                 <button 
                   onClick={() => setIsAddTaskOpen(true)} 
-                  className="p-4 flex items-center justify-center"
+                  className="h-12 w-12 flex items-center justify-center"
                   aria-label="添加任务"
                 >
-                  <Plus className="text-primary" size={24} />
+                  <Plus className="text-primary" size={20} />
                 </button>
               </div>
             </div>
