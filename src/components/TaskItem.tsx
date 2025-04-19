@@ -26,7 +26,7 @@ const TaskItem = ({ task }: TaskItemProps) => {
               </>
             )}
           </div>
-          <h3 className="font-medium text-gray-800">{task.title}</h3>
+          <h3 className="font-medium text-app">{task.title}</h3>
         </div>
 
         <div className="flex items-center self-center">
