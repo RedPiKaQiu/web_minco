@@ -1,11 +1,18 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ThemeSelector from '../components/ThemeSelector';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useUser();
+  const { 
+    currentTime, 
+    setCurrentTime,
+    isAutoThemeEnabled,
+    setIsAutoThemeEnabled
+  } = useTheme();
 
   const handleBack = () => {
     navigate(-1);
@@ -18,9 +25,19 @@ const ProfilePage = () => {
     // 导航到登录页面
     navigate('/login', { replace: true });
   };
+
+  // 处理时间变更
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentTime(e.target.value);
+  };
+
+  // 处理自动主题切换开关
+  const handleAutoThemeToggle = () => {
+    setIsAutoThemeEnabled(!isAutoThemeEnabled);
+  };
   
   return (
-    <div className="h-screen bg-app">
+    <div className="h-screen bg-app pb-safe">
       {/* 顶部导航栏 */}
       <div className="bg-card flex items-center justify-between p-4 border-b border-app-border">
         <button onClick={handleBack} className="p-2">
@@ -48,15 +65,63 @@ const ProfilePage = () => {
         <div className="bg-card rounded-[var(--radius-medium)] shadow-[var(--shadow-sm)] overflow-hidden mb-4">
           <h3 className="text-app font-medium p-[var(--spacing-card)] border-b border-app-border">设置</h3>
           
+          {/* 时间设置 */}
+          <div className="p-[var(--spacing-card)] border-b border-app-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Clock className="text-primary mr-2" size={20} />
+                <span className="text-app">当前时间</span>
+              </div>
+              <input
+                type="time"
+                value={currentTime}
+                onChange={handleTimeChange}
+                className="bg-card text-app border border-app-border rounded-lg px-2 py-1 text-sm"
+              />
+            </div>
+            <p className="text-xs text-app-secondary mt-1">
+              设置当前时间，晚上8点后将自动切换为暗色主题
+            </p>
+          </div>
+          
+          {/* 自动主题切换 */}
+          <div className="p-[var(--spacing-card)] border-b border-app-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                {isAutoThemeEnabled ? (
+                  <Moon className="text-primary mr-2" size={20} />
+                ) : (
+                  <Sun className="text-primary mr-2" size={20} />
+                )}
+                <span className="text-app">自动切换主题</span>
+              </div>
+              <button 
+                onClick={handleAutoThemeToggle}
+                className={`w-12 h-6 rounded-full relative transition-all duration-300 ${
+                  isAutoThemeEnabled ? 'bg-primary' : 'bg-gray-200'
+                }`}
+              >
+                <div className={`absolute w-4 h-4 bg-white rounded-full transition-all duration-300 top-1 ${
+                  isAutoThemeEnabled ? 'left-7' : 'left-1'
+                }`}></div>
+              </button>
+            </div>
+          </div>
+          
           {/* 主题设置 */}
           <div className="p-[var(--spacing-card)] border-b border-app-border">
             <div className="flex items-center justify-between">
               <span className="text-app">主题设置</span>
               <ThemeSelector />
             </div>
+            {isAutoThemeEnabled && (
+              <p className="text-xs text-app-secondary mt-1">
+                自动主题切换已启用，白天将使用此主题
+              </p>
+            )}
           </div>
           
-          {/* 其他设置项 */}
+          {/* 通知设置 */}
           <div className="p-[var(--spacing-card)] border-b border-app-border">
             <div className="flex items-center justify-between">
               <span className="text-app">通知</span>
@@ -66,6 +131,7 @@ const ProfilePage = () => {
             </div>
           </div>
           
+          {/* 关于 */}
           <div className="p-[var(--spacing-card)]">
             <div className="flex items-center justify-between">
               <span className="text-app">关于</span>

@@ -9,6 +9,7 @@ export interface Task {
   category?: string;
   priority?: 'low' | 'medium' | 'high';
   isAnytime?: boolean;
+  postponedToTomorrow?: boolean;
 }
 
 export interface Ticket {
@@ -18,10 +19,20 @@ export interface Ticket {
   image?: string;
 }
 
+// 收集物接口
+export interface Collection {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  acquiredDate: string; // 获取日期
+}
+
 export interface AppState {
   tasks: Task[];
   tickets: Ticket[];
   focusMode: boolean;
+  collections: Collection[]; // 用户的收集物列表
 }
 
 export type AppAction = 
@@ -30,7 +41,9 @@ export type AppAction =
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'ADD_TICKET'; payload: Ticket }
   | { type: 'TOGGLE_FOCUS_MODE' }
-  | { type: 'CLEAR_ALL_TASKS' };
+  | { type: 'CLEAR_ALL_TASKS' }
+  | { type: 'POSTPONE_TASKS_TO_TOMORROW'; payload: string[] }
+  | { type: 'ADD_COLLECTION'; payload: Collection };
 
 export interface User {
   id: string;        // UUID

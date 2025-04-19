@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
-import SailingButton from '../components/SailingButton';
-import { Anchor, Clock, MessageCircle, Plus, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, Plus, MoreHorizontal } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import QuickActionArea from '../components/QuickActionArea';
+import FloatingToolbar from '../components/FloatingToolbar';
+import { useTheme } from '../context/ThemeContext';
 
 type TabType = '今日聚焦' | '时间轴' | '随时可做';
 
@@ -56,6 +58,8 @@ const HomePage = () => {
   const [taskTitle, setTaskTitle] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('今日聚焦');
   const navigate = useNavigate();
+  const { currentTime } = useTheme();
+  const [isNightReview, setIsNightReview] = useState(false);
   
   const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
   const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
@@ -121,6 +125,23 @@ const HomePage = () => {
 
   // 获取用户昵称，如果没有则使用默认值
   const userNickname = userState.user?.nickname || '朋友';
+
+  // 检查当前时间是否为晚上10点以后
+  useEffect(() => {
+    const checkNightTime = () => {
+      if (currentTime) {
+        const [hours] = currentTime.split(':').map(Number);
+        setIsNightReview(hours >= 22 || hours < 4); // 晚上10点到凌晨4点显示回顾
+      }
+    };
+    
+    checkNightTime();
+  }, [currentTime]);
+  
+  // 切换回正常模式
+  const handleContinueTasks = () => {
+    setIsNightReview(false);
+  };
 
   const renderTasksByTab = () => {
     // 如果完全没有任务，显示空状态界面
@@ -209,7 +230,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-app">
+    <div className="flex flex-col min-h-screen bg-app pb-safe">
       {/* 顶部状态栏 */}
       <div className="bg-primary-light/20 p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
@@ -230,38 +251,25 @@ const HomePage = () => {
           </div>
         )}
         
-        {/* 快速操作区 - 仅在有任务时显示 */}
+        {/* 快速操作区 - 修改为传递控制参数 */}
         {hasAnyTasks && quickActionTask && (
-          <div className="
-            bg-gradient-to-br 
-            from-[var(--color-quick-action-gradient-from)] 
-            to-[var(--color-quick-action-gradient-to)] 
-            rounded-[var(--radius-large)]
-            p-[var(--spacing-card)]
-            shadow-[var(--shadow-md)]
-          ">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center">
-                <Anchor className="text-[var(--color-quick-action-icon)] mr-2" size={18} />
-                <span className="text-sm font-medium text-[var(--color-quick-action-text)]">{quickActionTask.title}</span>
+          <>
+            <QuickActionArea 
+              task={quickActionTask} 
+              isNightReview={isNightReview}
+            />
+            {/* "继续完成剩下事项"按钮 - 只在夜间回顾模式显示 */}
+            {isNightReview && (
+              <div className="flex justify-center mt-3">
+                <button 
+                  onClick={handleContinueTasks}
+                  className="text-app-secondary text-sm bg-transparent"
+                >
+                  继续完成剩下事项
+                </button>
               </div>
-              <div className="flex items-center text-xs text-gray-500">
-                <Clock size={14} className="mr-1" />
-                <span>{quickActionTask.duration || '10分钟'}</span>
-              </div>
-            </div>
-            
-            <div className="flex justify-between">
-              <div className="flex items-center">
-                <span className="text-xs text-gray-500">
-                  {quickActionTask.startTime && quickActionTask.endTime 
-                    ? `${quickActionTask.startTime} - ${quickActionTask.endTime}`
-                    : (quickActionTask.isAnytime ? '随时' : '')}
-                </span>
-              </div>
-              <SailingButton text="启航" task={quickActionTask} />
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
       
@@ -298,34 +306,7 @@ const HomePage = () => {
       
       {/* 悬浮工具栏 - 仅在有任务时显示 */}
       {hasAnyTasks && (
-        <div className="fixed bottom-24 left-0 right-0 z-50 pointer-events-none" style={{ background: 'transparent' }}>
-          <div className="app-container mx-auto flex justify-end bg-transparent" style={{ boxShadow: 'none' }}>
-            <div className="mr-4 pointer-events-auto inline-flex bg-transparent" style={{ boxShadow: 'none' }}>
-              <div className="bg-card rounded-full shadow-md flex overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}>
-                {/* 聊天按钮 */}
-                <button 
-                  onClick={openAiChat} 
-                  className="p-4 flex items-center justify-center border-r border-app-border"
-                  aria-label="打开聊天"
-                >
-                  <MessageCircle className="text-primary" size={24} />
-                </button>
-                
-                {/* 竖线分隔符 */}
-                <div className="w-[1px] bg-app-border"></div>
-                
-                {/* 添加任务按钮 */}
-                <button 
-                  onClick={() => setIsAddTaskOpen(true)} 
-                  className="p-4 flex items-center justify-center"
-                  aria-label="添加任务"
-                >
-                  <Plus className="text-primary" size={24} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <FloatingToolbar onAddTask={() => setIsAddTaskOpen(true)} />
       )}
       
       {/* 添加任务对话框 */}

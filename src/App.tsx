@@ -10,6 +10,8 @@ import JournalPage from './pages/JournalPage';
 import ProfilePage from './pages/ProfilePage';
 import AiChatPage from './pages/AiChatPage'; // 新增聊天页面
 import NewTaskPage from './pages/NewTaskPage';
+import ReviewPage from './pages/ReviewPage'; // 新增回顾页面
+import NightPage from './pages/NightPage'; // 新增晚安页面
 import BottomNavigation from './components/BottomNavigation';
 import { UserProvider } from './context/UserContext';
 import LoginPage from './pages/LoginPage';
@@ -40,7 +42,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const NavigationWrapper = () => {
   const location = useLocation();
   
-  // 在登录页面不显示底部导航
+  // 只在登录页面不显示底部导航
   if (location.pathname === '/login') {
     return null;
   }
@@ -89,6 +91,8 @@ function App() {
                 } />
                 <Route path="/sailing" element={<SailingPage />} />
                 <Route path="/ai-chat" element={<AiChatPage />} /> {/* 聊天页面 */}
+                <Route path="/review" element={<ReviewPage />} /> {/* 回顾页面 */}
+                <Route path="/night" element={<NightPage />} /> {/* 晚安页面 */}
                 <Route path="/ideas" element={
                   <ProtectedRoute>
                     <IdeasPage />

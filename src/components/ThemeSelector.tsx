@@ -2,7 +2,7 @@ import { useTheme } from '../context/ThemeContext';
 import { ThemeType } from '../types';
 
 const ThemeSelector = () => {
-  const { theme, setTheme } = useTheme();
+  const { userSelectedTheme, setUserSelectedTheme, isAutoThemeEnabled } = useTheme();
 
   const themes: { id: ThemeType; name: string }[] = [
     { id: 'default', name: '默认' },
@@ -13,9 +13,12 @@ const ThemeSelector = () => {
 
   return (
     <select
-      value={theme}
-      onChange={(e) => setTheme(e.target.value as ThemeType)}
-      className="bg-card text-app border border-app-border rounded-lg px-2 py-1 text-sm"
+      value={userSelectedTheme}
+      onChange={(e) => setUserSelectedTheme(e.target.value as ThemeType)}
+      disabled={isAutoThemeEnabled}
+      className={`bg-card text-app border border-app-border rounded-lg px-2 py-1 text-sm ${
+        isAutoThemeEnabled ? 'opacity-70 cursor-not-allowed' : ''
+      }`}
     >
       {themes.map(({ id, name }) => (
         <option key={id} value={id}>

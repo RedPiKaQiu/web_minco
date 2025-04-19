@@ -1,0 +1,31 @@
+/* 基础变量定义 */
+:root {
+  /* 布局和间距 */
+  --base-spacing-card: 1rem;
+  --base-spacing-page: 1rem;
+  --base-spacing-gap: 0.75rem;
+  
+  /* 圆角 */
+  --base-radius-small: 0.375rem;
+  --base-radius-medium: 0.75rem;
+  --base-radius-large: 1rem;
+  --base-radius-full: 9999px;
+  
+  /* 阴影效果基础值 */
+  --base-shadow-sm: 0 1px 2px;
+  --base-shadow-md: 0 4px 6px -1px;
+  --base-shadow-lg: 0 10px 15px -3px;
+  
+  /* 动画过渡 */
+  --base-transition-normal: 0.2s ease-in-out;
+  --base-transition-fast: 0.1s ease-in-out;
+  
+  /* 卡片基础样式 */
+  --base-card-padding: var(--base-spacing-card);
+  --base-card-radius: var(--base-radius-medium);
+  
+  /* 按钮基础样式 */
+  --base-button-height: 2.5rem;
+  --base-button-padding: 0 1rem;
+  --base-button-radius: var(--base-radius-full);
+} 

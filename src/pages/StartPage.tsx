@@ -22,7 +22,7 @@ const StartPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white px-4 pt-16 pb-20">
+    <div className="min-h-screen bg-app flex flex-col items-center pt-12 px-6 pb-safe">
       {/* 顶部问候语 */}
       <div className="text-left mb-32">
         <h1 className="text-3xl font-bold mb-2">你好，{userNickname} <span className="text-4xl">☀️</span></h1>
