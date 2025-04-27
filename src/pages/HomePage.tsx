@@ -251,9 +251,9 @@ const HomePage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-app pb-safe">
-      {/* 顶部状态栏 */}
-      <div className="bg-primary-light/20 p-4 rounded-b-3xl">
+    <div className="flex flex-col h-full bg-app">
+      {/* 顶部状态栏 - 添加homepage-header类方便计算高度 */}
+      <div className="bg-primary-light/20 p-4 rounded-b-3xl homepage-header">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-xl font-bold text-app">
@@ -305,37 +305,43 @@ const HomePage = () => {
         )}
       </div>
       
-      {/* 任务标签页 - 仅在非回顾模式下显示 */}
-      <div className="px-[var(--spacing-page)] mt-4 flex flex-col flex-grow">
-        {hasAnyTasks && !isNightReview && (
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex space-x-4">
-              {(['今日聚焦', '时间轴', '随时可做'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  className={`pb-1 ${
-                    activeTab === tab 
-                      ? 'font-medium text-app border-b-2 border-primary text-lg' 
-                      : 'text-app-secondary'
-                  }`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab}
-                </button>
-              ))}
+      {/* 使用content-wrapper类包装滚动区域内容 */}
+      <div className="content-wrapper">
+        {/* 任务标签页和内容区域 */}
+        <div className="px-[var(--spacing-page)] pt-4 flex flex-col page-main">
+          {hasAnyTasks && !isNightReview && (
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex space-x-4">
+                {(['今日聚焦', '时间轴', '随时可做'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    className={`pb-1 ${
+                      activeTab === tab 
+                        ? 'font-medium text-app border-b-2 border-primary text-lg' 
+                        : 'text-app-secondary'
+                    }`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-        
-        {/* 根据标签显示任务 - 仅在非回顾模式下显示 */}
-        {!isNightReview && (
-          <div className="flex-grow">
-            {renderTasksByTab()}
-          </div>
-        )}
-        
-        {/* 已完成任务 - 仅在非回顾模式下显示 */}
-        {hasAnyTasks && !isNightReview && <CompletedTasks />}
+          )}
+          
+          {/* 根据标签显示任务 - 仅在非回顾模式下显示 */}
+          {!isNightReview && (
+            <div className="flex-grow">
+              {renderTasksByTab()}
+            </div>
+          )}
+          
+          {/* 已完成任务 - 仅在非回顾模式下显示 */}
+          {hasAnyTasks && !isNightReview && <CompletedTasks />}
+          
+          {/* 底部间距 - 确保内容不被导航栏遮挡 */}
+          <div className="pb-safe"></div>
+        </div>
       </div>
       
       {/* 悬浮工具栏 - 仅在有任务时显示 */}

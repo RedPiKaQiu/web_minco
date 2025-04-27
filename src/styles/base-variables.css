@@ -5,6 +5,13 @@
   --base-spacing-page: 1rem;
   --base-spacing-gap: 0.75rem;
   
+  /* 页面和导航栏高度 */
+  --base-nav-height: 64px;
+  --base-header-height: 150px;
+  --base-page-min-height: calc(100vh - var(--base-nav-height));
+  --base-content-height: calc(100vh - var(--base-nav-height)); /* 内容区域高度，减去导航栏 */
+  --base-content-height-full: 100vh; /* 全屏高度（当导航栏隐藏时） */
+  
   /* 圆角 */
   --base-radius-small: 0.375rem;
   --base-radius-medium: 0.75rem;

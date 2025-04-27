@@ -15,6 +15,13 @@
   --radius-large: var(--base-radius-large);
   --radius-full: var(--base-radius-full);
   
+  /* 高度相关变量 */
+  --nav-height: var(--base-nav-height);
+  --header-height: var(--base-header-height);
+  --page-min-height: var(--base-page-min-height);
+  --content-height: var(--base-content-height);
+  --content-height-full: var(--base-content-height-full);
+  
   /* 阴影效果 - 只修改颜色透明度 */
   --shadow-sm: var(--base-shadow-sm) rgba(0, 0, 0, 0.05);
   --shadow-md: var(--base-shadow-md) rgba(0, 0, 0, 0.1);
@@ -79,6 +86,13 @@
   --radius-medium: var(--base-radius-medium);
   --radius-large: var(--base-radius-large);
   
+  /* 高度相关变量 */
+  --nav-height: var(--base-nav-height);
+  --header-height: var(--base-header-height);
+  --page-min-height: var(--base-page-min-height);
+  --content-height: var(--base-content-height);
+  --content-height-full: var(--base-content-height-full);
+  
   /* 只定义颜色相关的变量 */
   --color-primary: #f59e0b;
   --color-primary-light: #fbbf24;
@@ -128,6 +142,13 @@
   --radius-medium: var(--base-radius-medium);
   --radius-large: var(--base-radius-large);
   
+  /* 高度相关变量 */
+  --nav-height: var(--base-nav-height);
+  --header-height: var(--base-header-height);
+  --page-min-height: var(--base-page-min-height);
+  --content-height: var(--base-content-height);
+  --content-height-full: var(--base-content-height-full);
+  
   /* 只定义颜色相关的变量 */
   --color-primary: #22c55e;
   --color-primary-light: #4ade80;
@@ -166,6 +187,13 @@
   --radius-medium: var(--base-radius-medium);
   --radius-large: var(--base-radius-large);
   --radius-full: var(--base-radius-full);
+  
+  /* 高度相关变量 */
+  --nav-height: var(--base-nav-height);
+  --header-height: var(--base-header-height);
+  --page-min-height: var(--base-page-min-height);
+  --content-height: var(--base-content-height);
+  --content-height-full: var(--base-content-height-full);
   
   /* 阴影效果 - 只修改颜色透明度，适应暗色主题 */
   --shadow-sm: var(--base-shadow-sm) rgba(0, 0, 0, 0.5);

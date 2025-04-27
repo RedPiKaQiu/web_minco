@@ -27,26 +27,86 @@
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     position: relative;
     min-height: 100vh;
-    padding-bottom: 64px; /* 添加占位，等于导航栏高度 */
+    height: 100%; /* 添加高度100%，适应内容 */
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0; /* 移除固定的底部内边距 */
   }
   
-  /* 当导航栏隐藏时，移除底部内边距 */
-  body.hide-navigation .app-container {
-    padding-bottom: 0;
-  }
-  
-  /* 页面内容容器 */
+  /* 页面内容容器 - 根据导航栏状态调整高度 */
   .page-content {
-    min-height: 100vh;
     width: 100%;
-    padding-bottom: env(safe-area-inset-bottom, 0);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    /* 关键变化：使用calc计算可用高度 */
+    height: calc(100vh - var(--nav-height));
+    /* 添加过渡效果使高度变化平滑 */
+    transition: height 0.2s ease-in-out;
   }
   
-  /* 留出到底部的空间 */
+  /* 当导航栏隐藏时，内容区域高度自动调整为全屏 */
+  body.hide-navigation .page-content {
+    height: 100vh;
+  }
+  
+  /* 内容区域包装器 - 占满可用空间 */
+  .content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* 关键修改：让内容溢出时可滚动 */
+    overflow-y: auto;
+    /* 设置确切高度 */
+    height: 100%;
+  }
+  
+  /* 页面主要内容区域，会自动填充可用高度 */
+  .page-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: auto; /* 内容高度自适应 */
+    min-height: fit-content; /* 使容器高度适应内容 */
+    padding-bottom: 16px; /* 添加底部间距，确保内容完全显示 */
+  }
+  
+  /* 首页顶部区域 */
+  .homepage-header {
+    height: auto;
+    min-height: fit-content;
+    flex-shrink: 0; /* 防止顶部区域被压缩 */
+  }
+  
+  /* 导航栏样式 */
+  .navigation-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    height: var(--nav-height); /* 使用导航栏高度变量 */
+    background-color: var(--color-nav-background);
+    /* 添加过渡效果 */
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  /* 当隐藏导航栏时，将其完全移出视图 */
+  body.hide-navigation .navigation-container {
+    transform: translateY(100%);
+    display: none; /* 确保彻底隐藏 */
+  }
+  
+  /* 留出到底部的空间 - 调整为使用导航栏高度变量 */
   .pb-safe {
-    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+    padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 16px));
+  }
+  
+  /* 内容区域额外底部间距，确保完全显示 */
+  .pb-safe-extra {
+    padding-bottom: calc(env(safe-area-inset-bottom, 24px) + 24px);
   }
   
   .task-item {
@@ -92,21 +152,6 @@
   }
   .border-app-border {
     border-color: var(--color-border);
-  }
-  
-  /* 控制底部导航栏的显示和隐藏 */
-  body.hide-navigation .navigation-container {
-    display: none;
-  }
-  
-  /* 导航栏样式 */
-  .navigation-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
-    height: 64px; /* 确保与padding-bottom值相同 */
   }
   
   /* 星星动画 */

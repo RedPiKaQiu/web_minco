@@ -20,7 +20,13 @@ import { useUser } from './context/UserContext';
 // 添加CSS样式，通过类名控制导航栏的隐藏
 const navStyles = `
   body.hide-navigation .navigation-container {
+    transform: translateY(100%);
     display: none;
+  }
+  
+  body.hide-navigation .page-content {
+    height: 100vh !important;
+    padding-bottom: 0 !important;
   }
 `;
 
@@ -77,39 +83,41 @@ function App() {
         <AppProvider>
           <Router>
             <div className="app-container">
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <StartPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/home" element={
-                  <ProtectedRoute>
-                    <HomePage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/sailing" element={<SailingPage />} />
-                <Route path="/ai-chat" element={<AiChatPage />} /> {/* 聊天页面 */}
-                <Route path="/review" element={<ReviewPage />} /> {/* 回顾页面 */}
-                <Route path="/night" element={<NightPage />} /> {/* 晚安页面 */}
-                <Route path="/ideas" element={
-                  <ProtectedRoute>
-                    <IdeasPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/journal" element={
-                  <ProtectedRoute>
-                    <JournalPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/new-task" element={<NewTaskPage />} />
-              </Routes>
+              <div className="page-content">
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <StartPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/home" element={
+                    <ProtectedRoute>
+                      <HomePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/sailing" element={<SailingPage />} />
+                  <Route path="/ai-chat" element={<AiChatPage />} /> {/* 聊天页面 */}
+                  <Route path="/review" element={<ReviewPage />} /> {/* 回顾页面 */}
+                  <Route path="/night" element={<NightPage />} /> {/* 晚安页面 */}
+                  <Route path="/ideas" element={
+                    <ProtectedRoute>
+                      <IdeasPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/journal" element={
+                    <ProtectedRoute>
+                      <JournalPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/new-task" element={<NewTaskPage />} />
+                </Routes>
+              </div>
               <NavigationWrapper />
             </div>
           </Router>
