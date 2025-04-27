@@ -2,13 +2,17 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
-import { MessageCircle, Plus, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, Plus, MoreHorizontal, Book } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import QuickActionArea from '../components/QuickActionArea';
 import FloatingToolbar from '../components/FloatingToolbar';
 import { useTheme } from '../context/ThemeContext';
+
+// 晚间回顾时间范围
+const NIGHT_REVIEW_START_HOUR = 22; // 晚上10点
+const NIGHT_REVIEW_END_HOUR = 4;    // 凌晨4点
 
 type TabType = '今日聚焦' | '时间轴' | '随时可做';
 
@@ -59,7 +63,9 @@ const HomePage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('今日聚焦');
   const navigate = useNavigate();
   const { currentTime } = useTheme();
-  const [isNightReview, setIsNightReview] = useState(false);
+  const [isNightTime, setIsNightTime] = useState(false); // 是否在晚间时间段
+  const [isNightReview, setIsNightReview] = useState(false); // 是否处于晚间回顾模式
+  const [hasAutoTriggeredReview, setHasAutoTriggeredReview] = useState(false); // 是否已自动触发过回顾模式
   
   const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
   const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
@@ -126,17 +132,32 @@ const HomePage = () => {
   // 获取用户昵称，如果没有则使用默认值
   const userNickname = userState.user?.nickname || '朋友';
 
-  // 检查当前时间是否为晚上10点以后
+  // 检查当前时间是否在晚间时间范围内
   useEffect(() => {
     const checkNightTime = () => {
       if (currentTime) {
         const [hours] = currentTime.split(':').map(Number);
-        setIsNightReview(hours >= 22 || hours < 4); // 晚上10点到凌晨4点显示回顾
+        const isNight = hours >= NIGHT_REVIEW_START_HOUR || hours < NIGHT_REVIEW_END_HOUR;
+        
+        // 判断是否是从非晚间时间进入晚间时间
+        const enteringNightTime = isNight && !isNightTime;
+        setIsNightTime(isNight);
+        
+        // 只有在进入晚间时间且没有自动触发过回顾模式时，才自动进入回顾模式
+        if (enteringNightTime && !hasAutoTriggeredReview) {
+          setIsNightReview(true);
+          setHasAutoTriggeredReview(true);
+        }
+        
+        // 如果离开晚间时间段，重置自动触发标记
+        if (!isNight) {
+          setHasAutoTriggeredReview(false);
+        }
       }
     };
     
     checkNightTime();
-  }, [currentTime]);
+  }, [currentTime, isNightTime, hasAutoTriggeredReview]);
   
   // 切换回正常模式
   const handleContinueTasks = () => {
@@ -240,6 +261,17 @@ const HomePage = () => {
             </h1>
             <p className="text-app-secondary text-sm">{formattedDate}</p>
           </div>
+          
+          {/* 添加晚间回顾按钮 - 只在晚间时间且非回顾模式下显示 */}
+          {isNightTime && !isNightReview && hasAnyTasks && (
+            <button 
+              onClick={() => setIsNightReview(true)}
+              className="px-3 py-1.5 text-xs bg-[#1e3a8a] text-white rounded-full flex items-center"
+            >
+              <Book size={14} className="mr-1" />
+              晚间回顾
+            </button>
+          )} 
         </div>
         
         {/* 用户提示语 */}
@@ -273,9 +305,9 @@ const HomePage = () => {
         )}
       </div>
       
-      {/* 任务标签页 - 添加 flex-grow 让它能够填充可用的空间 */}
+      {/* 任务标签页 - 仅在非回顾模式下显示 */}
       <div className="px-[var(--spacing-page)] mt-4 flex flex-col flex-grow">
-        {hasAnyTasks && (
+        {hasAnyTasks && !isNightReview && (
           <div className="flex justify-between items-center mb-4">
             <div className="flex space-x-4">
               {(['今日聚焦', '时间轴', '随时可做'] as const).map((tab) => (
@@ -295,13 +327,15 @@ const HomePage = () => {
           </div>
         )}
         
-        {/* 根据标签显示任务 */}
-        <div className="flex-grow">
-          {renderTasksByTab()}
-        </div>
+        {/* 根据标签显示任务 - 仅在非回顾模式下显示 */}
+        {!isNightReview && (
+          <div className="flex-grow">
+            {renderTasksByTab()}
+          </div>
+        )}
         
-        {/* 已完成任务 */}
-        {hasAnyTasks && <CompletedTasks />}
+        {/* 已完成任务 - 仅在非回顾模式下显示 */}
+        {hasAnyTasks && !isNightReview && <CompletedTasks />}
       </div>
       
       {/* 悬浮工具栏 - 仅在有任务时显示 */}
