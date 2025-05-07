@@ -15,7 +15,7 @@ const CompletedTasks = () => {
   return (
     <div className="mt-6">
       <button
-        className="flex items-center text-gray-500 text-sm mb-3"
+        className="flex items-center text-[var(--color-completed-text)] text-sm mb-3"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span className="font-medium">已完成 ({completedTasks.length})</span>
@@ -27,8 +27,8 @@ const CompletedTasks = () => {
       </button>
       
       {isExpanded && (
-        <div className="bg-white rounded-xl shadow-sm mb-4">
-          <div className="divide-y divide-gray-100">
+        <div className="bg-[var(--color-completed-bg)] rounded-xl shadow-sm mb-4 border border-[var(--color-completed-border)]">
+          <div className="divide-y divide-[var(--color-completed-border)]">
             {completedTasks.map(task => (
               <CompletedTaskItem key={task.id} task={task} />
             ))}

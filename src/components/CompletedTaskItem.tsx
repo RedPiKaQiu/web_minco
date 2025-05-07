@@ -14,9 +14,9 @@ const CompletedTaskItem = ({ task }: CompletedTaskItemProps) => {
   };
 
   return (
-    <div className="flex items-center justify-between px-3 py-2.5">
+    <div className="flex items-center justify-between px-3 py-2.5 bg-[var(--color-completed-item-bg)]">
       <div className="flex-1">
-        <h3 className="text-app-secondary/70 line-through text-sm">{task.title}</h3>
+        <h3 className="text-[var(--color-completed-item-text)] line-through text-sm">{task.title}</h3>
       </div>
       <button 
         onClick={handleComplete}
