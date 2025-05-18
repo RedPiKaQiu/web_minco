@@ -43,7 +43,8 @@ export type AppAction =
   | { type: 'TOGGLE_FOCUS_MODE' }
   | { type: 'CLEAR_ALL_TASKS' }
   | { type: 'POSTPONE_TASKS_TO_TOMORROW'; payload: string[] }
-  | { type: 'ADD_COLLECTION'; payload: Collection };
+  | { type: 'ADD_COLLECTION'; payload: Collection }
+  | { type: 'LOAD_TASKS'; payload: Task[] };
 
 export interface User {
   id: string;        // UUID
