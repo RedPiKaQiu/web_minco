@@ -8,10 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 demo_pics/
+docs/
 node_modules
 dist
 dist-ssr
-api.json
 *.local
 
 # Editor directories and files

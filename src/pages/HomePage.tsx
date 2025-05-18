@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import TaskItem from '../components/TaskItem';
 import CompletedTasks from '../components/CompletedTasks';
-import { MessageCircle, Plus, MoreHorizontal, Book } from 'lucide-react';
-import { Dialog } from '@headlessui/react';
+import { MessageCircle, Plus, Book } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import QuickActionArea from '../components/QuickActionArea';
 import FloatingToolbar from '../components/FloatingToolbar';
+import TaskAddDrawer from '../components/TaskAddDrawer';
 import { useTheme } from '../context/ThemeContext';
 
 // 晚间回顾时间范围
@@ -56,10 +56,9 @@ const timeToMinutes = (timeStr: string): number => {
 
 const HomePage = () => {
   const { state: userState } = useUser();
-  const { state, dispatch } = useAppContext();
+  const { state, refreshTasks } = useAppContext();
   const [currentDate] = useState(new Date());
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [taskTitle, setTaskTitle] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('今日聚焦');
   const navigate = useNavigate();
   const { currentTime } = useTheme();
@@ -107,28 +106,6 @@ const HomePage = () => {
     navigate('/ai-chat');
   };
   
-  const openNewTaskPage = () => {
-    navigate('/new-task');
-    setIsAddTaskOpen(false);
-  };
-  
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (taskTitle.trim()) {
-      dispatch({
-        type: 'ADD_TASK',
-        payload: {
-          id: Date.now().toString(),
-          title: taskTitle,
-          completed: false,
-          isAnytime: true,
-        },
-      });
-      setTaskTitle('');
-      setIsAddTaskOpen(false);
-    }
-  };
-
   // 获取用户昵称，如果没有则使用默认值
   const userNickname = userState.user?.nickname || '朋友';
 
@@ -163,6 +140,11 @@ const HomePage = () => {
   const handleContinueTasks = () => {
     setIsNightReview(false);
   };
+
+  // 页面加载时刷新任务列表
+  useEffect(() => {
+    refreshTasks();
+  }, [refreshTasks]);
 
   const renderTasksByTab = () => {
     // 如果完全没有任务，显示空状态界面
@@ -349,58 +331,11 @@ const HomePage = () => {
         <FloatingToolbar onAddTask={() => setIsAddTaskOpen(true)} />
       )}
       
-      {/* 添加任务对话框 */}
-      <Dialog
-        open={isAddTaskOpen}
+      {/* 使用封装的任务添加抽屉组件 */}
+      <TaskAddDrawer 
+        isOpen={isAddTaskOpen}
         onClose={() => setIsAddTaskOpen(false)}
-        className="relative z-50"
-      >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-        
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-md rounded-lg bg-card p-6">
-            <div className="flex justify-between items-center mb-4">
-              <Dialog.Title className="text-lg font-medium text-app">
-                添加新任务
-              </Dialog.Title>
-              <button
-                onClick={openNewTaskPage}
-                className="p-2 rounded-full hover:bg-app-background"
-                aria-label="更多选项"
-              >
-                <MoreHorizontal className="text-app-secondary" size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleAddTask}>
-              <input
-                type="text"
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-                placeholder="输入任务内容"
-                className="w-full border border-app-border rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-primary bg-card text-app"
-                autoFocus
-              />
-              
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddTaskOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-app-secondary hover:bg-app-background rounded-lg"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark"
-                >
-                  添加
-                </button>
-              </div>
-            </form>
-          </Dialog.Panel>
-        </div>
-      </Dialog>
+      />
     </div>
   );
 };

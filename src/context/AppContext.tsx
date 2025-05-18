@@ -1,5 +1,6 @@
-import { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { AppState, AppAction } from '../types';
+import { getTasks } from '../api/task';
 
 // 从localStorage加载初始状态
 const loadInitialState = (): AppState => {
@@ -14,45 +15,7 @@ const loadInitialState = (): AppState => {
   
   // 如果没有保存的状态或解析失败，返回默认状态
   return {
-    tasks: [
-      {
-        id: '1',
-        title: '完成PPT制作',
-        completed: false,
-        startTime: '上午9:00',
-        endTime: '下午5:30',
-        duration: '2小时',
-      },
-      {
-        id: '2',
-        title: '和团队开会',
-        completed: false,
-        startTime: '上午10:00',
-        endTime: '上午11:30',
-        duration: '1小时30分',
-      },
-      {
-        id: '3',
-        title: '中午和Sarah吃饭',
-        completed: false,
-        startTime: '上午12:00',
-        endTime: '下午1:00',
-        duration: '1小时',
-      },
-      {
-        id: '4',
-        title: '下班后锻炼小时',
-        completed: false,
-        startTime: '下午6:00之后',
-        duration: '1小时',
-      },
-      {
-        id: '5',
-        title: '给妈妈挑生日礼物',
-        completed: false,
-        isAnytime: true,
-      }
-    ],
+    tasks: [],
     tickets: [
       {
         id: '1',
@@ -160,6 +123,12 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         collections: [...state.collections, action.payload]
       };
       break;
+    case 'LOAD_TASKS':
+      newState = {
+        ...state,
+        tasks: action.payload,
+      };
+      break;
     default:
       return state;
   }
@@ -172,13 +141,58 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  refreshTasks: () => Promise<void>;
+  isLoading: boolean;
 }>({
   state: initialState,
   dispatch: () => null,
+  refreshTasks: async () => {},
+  isLoading: false,
 });
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // 加载任务列表
+  const loadTasks = async () => {
+    // 检查是否有token，如果有才请求任务
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      const tasksFromApi = await getTasks();
+      
+      // 转换API任务格式为应用内部格式
+      const formattedTasks = tasksFromApi.map(apiTask => ({
+        id: apiTask.id?.toString() || '',
+        title: apiTask.title,
+        completed: apiTask.completed || false,
+        dueDate: apiTask.day,
+        startTime: apiTask.start_time,
+        endTime: apiTask.end_time,
+        priority: apiTask.priority as any,
+        category: apiTask.type,
+        isAnytime: !apiTask.start_time, // 如果没有开始时间，则视为"随时可做"
+      }));
+      
+      // 更新状态
+      dispatch({
+        type: 'LOAD_TASKS',
+        payload: formattedTasks
+      });
+    } catch (error) {
+      console.error('加载任务失败:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // 当应用初始化时加载任务
+  useEffect(() => {
+    loadTasks();
+  }, []);
   
   // 当状态改变时保存到localStorage
   useEffect(() => {
@@ -186,7 +200,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [state]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, refreshTasks: loadTasks, isLoading }}>
       {children}
     </AppContext.Provider>
   );
