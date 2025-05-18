@@ -13,25 +13,30 @@ interface UserCreatePayload {
   full_name?: string;
 }
 
+interface UserLoginPayload {
+  email: string;
+  password: string;
+}
+
 /**
  * 用户登录
- * @param username 用户名/邮箱
+ * @param email 用户邮箱
  * @param password 密码
  * @returns 登录结果和用户信息
  */
-export async function login(username: string, password: string): Promise<LoginResponse> {
+export async function login(email: string, password: string): Promise<LoginResponse> {
   try {
-    // 注意：登录API使用了x-www-form-urlencoded格式
-    const formData = new URLSearchParams();
-    formData.append('username', username);
-    formData.append('password', password);
+    const loginData: UserLoginPayload = {
+      email,
+      password
+    };
     
     return await fetchApi<LoginResponse>('/auth/login', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify(loginData),
     });
   } catch (error) {
     console.error('登录失败:', error);
