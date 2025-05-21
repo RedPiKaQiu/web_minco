@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Plus, Calendar, Tag, RepeatIcon, MoreHorizontal, List } from 'lucide-react';
+import { Plus, Calendar, Tag, RepeatIcon, MoreHorizontal, List, X } from 'lucide-react';
 import { createTask } from '../api/task';
 
 interface TaskAddDrawerProps {
@@ -14,6 +14,9 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
   const { dispatch } = useAppContext();
   const [taskTitle, setTaskTitle] = useState('');
   const [selectedDate, setSelectedDate] = useState('今天');
+  const [selectedTimeZone, setSelectedTimeZone] = useState<string | null>(null);
+  const [showTimeZones, setShowTimeZones] = useState(true);
+  const [isTimeZoneConfirmed, setIsTimeZoneConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // 拖拽相关状态
@@ -101,6 +104,12 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
       setTaskTitle('');
       // 重置日期选择
       setSelectedDate('今天');
+      // 重置时间区域选择
+      setSelectedTimeZone(null);
+      // 更新是否显示时间区域
+      setShowTimeZones(true);
+      // 重置时间区域确认状态
+      setIsTimeZoneConfirmed(false);
       // 重置抽屉位置
       if (drawerRef.current) {
         drawerRef.current.style.transform = 'translateY(0)';
@@ -116,6 +125,7 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
       try {
         // 根据日期选择设置任务day属性
         let taskDay: string | undefined;
+        let taskStartTime: string | undefined;
         const today = new Date();
         
         switch (selectedDate) {
@@ -129,7 +139,24 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
             break;
           // 其他日期选项可以根据需要处理
           default:
-            taskDay = today.toISOString().split('T')[0];
+            // 如果没有选择日期，则不设置taskDay
+            if (selectedDate) {
+              taskDay = today.toISOString().split('T')[0];
+            }
+        }
+        
+        // 根据时间区域设置开始时间
+        if (selectedTimeZone && taskDay) {
+          const timeMap: Record<string, string> = {
+            '上午': '09:00',
+            '中午': '12:00',
+            '下午': '14:00',
+            '晚上': '19:00'
+          };
+          
+          if (timeMap[selectedTimeZone]) {
+            taskStartTime = timeMap[selectedTimeZone];
+          }
         }
         
         // 调用API创建任务
@@ -138,7 +165,8 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
           day: taskDay,
           type: 'other', // 默认类型
           priority: 'medium', // 默认优先级
-          completed: false
+          completed: false,
+          start_time: taskStartTime
         });
         
         // 创建成功后，更新本地状态
@@ -174,14 +202,56 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
   };
   
   const handleDateSelect = (date: string) => {
-    setSelectedDate(date);
+    if (selectedDate === date) {
+      // 如果点击已选中的日期，则取消选中
+      setSelectedDate('');
+      setShowTimeZones(false);
+      setSelectedTimeZone(null);
+      setIsTimeZoneConfirmed(false);
+    } else {
+      setSelectedDate(date);
+      // 只有今天和明天显示时间区域选项
+      const shouldShowTimeZones = date === '今天' || date === '明天';
+      setShowTimeZones(shouldShowTimeZones);
+      // 如果切换日期，重置时间区域选择
+      if (isTimeZoneConfirmed) {
+        setSelectedTimeZone(null);
+        setIsTimeZoneConfirmed(false);
+      }
+    }
+  };
+
+  const handleClearDate = (e: React.MouseEvent, date: string) => {
+    e.stopPropagation();
+    if (selectedDate === date) {
+      setSelectedDate('');
+      setShowTimeZones(false);
+      setSelectedTimeZone(null);
+      setIsTimeZoneConfirmed(false);
+    }
+  };
+
+  const handleTimeZoneSelect = (timeZone: string) => {
+    setSelectedTimeZone(timeZone);
+    setIsTimeZoneConfirmed(true);
+  };
+  
+  const handleClearTimeZone = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedTimeZone(null);
+    setIsTimeZoneConfirmed(false);
+    // 如果当前选择的是今天或明天，重新显示时间区域选项
+    setShowTimeZones(selectedDate === '今天' || selectedDate === '明天');
   };
   
   if (!isOpen) return null;
   
   // 日期选项
-  const dateOptions = ['今天', '明天', '这周', '下周', '这个月'];
+  const dateOptions = ['今天', '明天', '随时'];
   
+  // 时间区域选项
+  const timeZoneOptions = ['上午', '中午', '下午', '晚上'];
+
   return (
     <div className="fixed inset-0 bg-black/30 z-[9999]" onClick={onClose}>
       <div 
@@ -217,25 +287,69 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
             className="w-full text-lg px-2 py-3 border-0 border-b border-gray-200 focus:outline-none focus:ring-0 bg-transparent text-app"
             autoFocus
           />
-          <p className="text-xs text-gray-400 mt-2 px-2">
-            <span>用口语描述你要做的事项，MinCo会帮你自动设定哦~</span>
-          </p>
         </div>
         
-        {/* 时间选择器 - 设计为多选一标签 */}
+        {/* 时间区域选择器 - 未确认时显示 */}
+        {showTimeZones && !isTimeZoneConfirmed && (
+          <div className="flex overflow-x-auto py-2 space-x-2 mb-4">
+            {timeZoneOptions.map((timeZone) => (
+              <button 
+                key={timeZone}
+                className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors duration-200 ${
+                  selectedTimeZone === timeZone 
+                    ? 'bg-blue-100 text-blue-700 font-medium' 
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+                onClick={() => handleTimeZoneSelect(timeZone)}
+              >
+                {timeZone}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {/* 日期选择器 */}
         <div className="flex overflow-x-auto py-2 space-x-2 mb-4">
-          {dateOptions.map((date) => (
+          {/* 显示选中的日期 */}
+          {selectedDate && (
             <button 
-              key={date}
-              className={`px-4 py-2 rounded-full whitespace-nowrap transition-colors duration-200 ${
-                selectedDate === date 
-                  ? 'bg-blue-100 text-blue-700 font-medium' 
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-              onClick={() => handleDateSelect(date)}
+              className="px-4 py-2 rounded-full whitespace-nowrap transition-colors duration-200 bg-blue-100 text-blue-700 font-medium flex items-center"
             >
-              {date}
+              <span 
+                onClick={(e) => handleClearDate(e, selectedDate)} 
+                className="mr-1 inline-flex items-center justify-center hover:bg-blue-200 rounded-full"
+              >
+                <X size={14} />
+              </span>
+              {selectedDate}
+              
+              {/* 如果时间区域已确认，显示在日期右侧 */}
+              {isTimeZoneConfirmed && selectedTimeZone && (
+                <span className="ml-1 flex items-center">
+                  <span className="mx-1 text-gray-400">·</span>
+                  <span 
+                    onClick={(e) => handleClearTimeZone(e)} 
+                    className="mr-1 inline-flex items-center justify-center hover:bg-blue-200 rounded-full"
+                  >
+                    <X size={14} />
+                  </span>
+                  {selectedTimeZone}
+                </span>
+              )}
             </button>
+          )}
+          
+          {/* 显示未选中的日期选项 */}
+          {!isTimeZoneConfirmed && dateOptions.map((date) => (
+            selectedDate !== date && (
+              <button 
+                key={date}
+                className="px-4 py-2 rounded-full whitespace-nowrap transition-colors duration-200 bg-gray-100 text-gray-700"
+                onClick={() => handleDateSelect(date)}
+              >
+                {date}
+              </button>
+            )
           ))}
         </div>
         
@@ -250,9 +364,6 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
             </button>
             <button className="w-10 h-10 flex items-center justify-center text-gray-500" aria-label="拆分">
               <List size={20} />
-            </button>
-            <button className="w-10 h-10 flex items-center justify-center text-gray-500" aria-label="重复">
-              <RepeatIcon size={20} />
             </button>
             <button 
               onClick={openNewTaskPage} 
