@@ -9,6 +9,7 @@ lerna-debug.log*
 
 demo_pics/
 docs/
+V0-minco-app/
 node_modules
 dist
 dist-ssr

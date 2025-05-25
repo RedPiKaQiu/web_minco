@@ -10,6 +10,9 @@ export interface Task {
   priority?: 'low' | 'medium' | 'high';
   isAnytime?: boolean;
   postponedToTomorrow?: boolean;
+  icon?: string;
+  type?: string;
+  subtasks?: {id: string, title: string, completed: boolean}[];
 }
 
 export interface Ticket {
