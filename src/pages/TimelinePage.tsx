@@ -55,9 +55,55 @@ const TimelinePage = () => {
 
   function getTimeOfDay(startTime?: string): string {
     if (!startTime || startTime === '随时') return '随时';
-    const hour = parseInt(startTime.split(':')[0]);
+    
+    // 处理多种时间格式
+    let hourStr = '';
+    
+    // 匹配 "上午 10:00" 或 "上午10:00" 格式
+    if (startTime.includes('上午')) {
+      const match = startTime.match(/上午\s*(\d{1,2})/);
+      if (match) {
+        hourStr = match[1];
+      }
+    }
+    // 匹配 "下午 2:00" 或 "下午2:00" 格式  
+    else if (startTime.includes('下午')) {
+      const match = startTime.match(/下午\s*(\d{1,2})/);
+      if (match) {
+        const hour = parseInt(match[1]);
+        hourStr = (hour === 12 ? 12 : hour + 12).toString(); // 下午12点仍为12，其他加12
+      }
+    }
+    // 匹配 "中午 12:00" 格式
+    else if (startTime.includes('中午')) {
+      hourStr = '12';
+    }
+    // 匹配 "晚上 8:00" 格式
+    else if (startTime.includes('晚上')) {
+      const match = startTime.match(/晚上\s*(\d{1,2})/);
+      if (match) {
+        const hour = parseInt(match[1]);
+        hourStr = (hour >= 6 ? hour + 12 : hour).toString(); // 晚上6点后加12，晚上1-5点不加
+      }
+    }
+    // 直接是 "10:00" 或 "10" 格式
+    else {
+      const match = startTime.match(/^(\d{1,2})/);
+      if (match) {
+        hourStr = match[1];
+      }
+    }
+    
+    if (!hourStr) {
+      console.log('无法解析时间格式:', startTime);
+      return '随时';
+    }
+    
+    const hour = parseInt(hourStr);
+    console.log(`解析时间: "${startTime}" -> 小时: ${hour}`);
+    
     if (hour >= 6 && hour < 12) return '上午';
-    if (hour >= 12 && hour < 14) return '中午';
+    if (hour >= 12 && hour < 14) return '中午';  
     if (hour >= 14 && hour < 18) return '下午';
     if (hour >= 18 || hour < 6) return '晚上';
     return '随时';
