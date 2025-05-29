@@ -7,9 +7,12 @@ export interface Task {
   endTime?: string;
   duration?: string;
   category?: string;
+  type?: string;
+  icon?: string;
   priority?: 'low' | 'medium' | 'high';
   isAnytime?: boolean;
   postponedToTomorrow?: boolean;
+  subtasks?: {id: string, title: string, completed: boolean}[];
 }
 
 export interface Ticket {

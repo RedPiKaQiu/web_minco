@@ -4,6 +4,287 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 移动端应用容器变量 */
+:root {
+  /* iPhone 14 Pro 比例 (390x844) */
+  --mobile-width: 390px;
+  --mobile-height: 100vh;
+  --mobile-aspect-ratio: 390 / 844;
+  
+  /* 最大宽度限制 */
+  --mobile-max-width: 428px; /* iPhone 14 Pro Max */
+  --mobile-min-width: 320px; /* iPhone SE */
+  
+  /* 响应式断点 */
+  --tablet-breakpoint: 768px;
+  --desktop-breakpoint: 1024px;
+  
+  /* 安全区域 */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  
+  /* 应用内边距 */
+  --app-padding-x: 16px;
+  --app-padding-y: 16px;
+  
+  /* 导航栏高度 */
+  --nav-height: 80px;
+}
+
+/* 重置默认样式 */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  background: #f5f5f5;
+  overflow: hidden; /* 防止页面滚动 */
+}
+
+/* 移动端容器基础样式 */
+.mobile-container {
+  width: 100%;
+  max-width: var(--mobile-max-width);
+  min-width: var(--mobile-min-width);
+  margin: 0 auto;
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* 在桌面端模拟手机屏幕 */
+@media (min-width: 768px) {
+  body {
+    background: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    overflow: auto;
+  }
+  
+  .mobile-container {
+    width: var(--mobile-width);
+    height: 100vh;
+    min-height: 100vh;
+    max-height: none; /* 移除最大高度限制 */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border-radius: 24px;
+    overflow: hidden;
+    background: #000;
+    padding: 4px;
+  }
+  
+  .mobile-container > * {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+}
+
+/* 全屏模式（移动端） */
+@media (max-width: 767px) {
+  body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .mobile-container {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+  
+  /* 处理安全区域 */
+  .safe-area-top {
+    padding-top: var(--safe-area-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: var(--safe-area-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: var(--safe-area-left);
+  }
+  
+  .safe-area-right {
+    padding-right: var(--safe-area-right);
+  }
+}
+
+/* 应用页面基础样式 */
+.app-page {
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f9fafb;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 页面内容容器 */
+.page-content {
+  flex: 1;
+  height: 0; /* 强制flex计算 */
+  padding: 0 var(--app-padding-x);
+  padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 页面头部 */
+.page-header {
+  padding: var(--app-padding-y) var(--app-padding-x);
+  padding-top: calc(var(--app-padding-y) + var(--safe-area-top));
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* 底部导航安全区域 */
+.bottom-navigation {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--nav-height) + var(--safe-area-bottom));
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  z-index: 50;
+  flex-shrink: 0;
+}
+
+/* 浮动按钮安全区域调整 */
+.floating-buttons {
+  position: absolute;
+  bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
+  right: calc(16px + var(--safe-area-right));
+  z-index: 40;
+}
+
+/* 不同设备的适配 */
+@media (max-width: 375px) {
+  :root {
+    --mobile-width: 375px;
+    --app-padding-x: 12px;
+  }
+}
+
+@media (min-width: 414px) {
+  :root {
+    --mobile-width: 414px;
+  }
+}
+
+/* iPad 适配 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .mobile-container {
+    width: min(var(--mobile-max-width), 50vw);
+    height: 100vh;
+    min-height: 100vh;
+  }
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .page-content {
+    padding-bottom: calc(60px + var(--safe-area-bottom));
+  }
+  
+  .floating-buttons {
+    bottom: calc(60px + var(--safe-area-bottom) + 16px);
+  }
+  
+  .bottom-navigation {
+    height: calc(60px + var(--safe-area-bottom));
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .mobile-container {
+    border: 2px solid #000;
+  }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a1a;
+  }
+  
+  .mobile-container {
+    background: #2a2a2a;
+  }
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 触摸优化 */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 防止文本选择 */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 防止点击高亮 */
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;

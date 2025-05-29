@@ -15,26 +15,57 @@ const loadInitialState = (): AppState => {
   
   // 如果没有保存的状态或解析失败，返回默认状态
   return {
-    tasks: [],
-    tickets: [
+    tasks: [
       {
         id: '1',
-        title: 'Manager 1:1 会议',
-        date: '2023-03-08',
+        title: '完成项目报告',
+        completed: false,
+        icon: '📊',
+        type: 'work',
+        duration: '2 小时',
+        startTime: '上午 9:00',
+        dueDate: '2024-01-15'
       },
       {
-        id: '2',
-        title: '洗衣服',
-        date: '2023-03-08',
+        id: '2', 
+        title: '健身锻炼',
+        completed: false,
+        icon: '💪',
+        type: 'health',
+        duration: '1 小时',
+        startTime: '下午 6:00'
       },
       {
         id: '3',
-        title: '报税',
-        date: '2023-03-08',
+        title: '阅读技术书籍',
+        completed: false,
+        icon: '📚',
+        type: 'study',
+        duration: '45 分钟',
+        isAnytime: true
+      },
+      {
+        id: '4',
+        title: '整理房间',
+        completed: false,
+        icon: '🏠',
+        type: 'life',
+        duration: '30 分钟',
+        isAnytime: true
+      },
+      {
+        id: '5',
+        title: '学习新技能',
+        completed: false,
+        icon: '🎯',
+        type: 'explore',
+        duration: '1.5 小时',
+        startTime: '晚上 8:00'
       }
     ],
+    tickets: [],
     focusMode: false,
-    collections: [] // 初始化为空数组
+    collections: []
   };
 };
 

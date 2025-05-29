@@ -27,6 +27,39 @@ const priorityOptions = [
   { id: 'high', color: 'bg-blue-400 border-blue-400', label: '' },
 ];
 
+// 预设时间选项
+const timeOptions = [
+  '5 分钟', 
+  '15 分钟', 
+  '30 分钟', 
+  '45 分钟', 
+  '1 小时', 
+  '1.5 小时', 
+  '2 小时', 
+  '3 小时', 
+  '4 小时',
+  '全天'
+];
+
+// 预设开始时间选项
+const startTimeOptions = [
+  '随时',
+  '上午 8:00',
+  '上午 9:00',
+  '上午 10:00',
+  '上午 11:00',
+  '中午 12:00',
+  '下午 1:00',
+  '下午 2:00',
+  '下午 3:00',
+  '下午 4:00',
+  '下午 5:00',
+  '下午 6:00',
+  '晚上 7:00',
+  '晚上 8:00',
+  '晚上 9:00'
+];
+
 const NewTaskPage = () => {
   const navigate = useNavigate();
   const { dispatch } = useAppContext();
@@ -43,39 +76,6 @@ const NewTaskPage = () => {
   const [showAiGeneration, setShowAiGeneration] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
-  
-  // 预设时间选项
-  const timeOptions = [
-    '5 分钟', 
-    '15 分钟', 
-    '30 分钟', 
-    '45 分钟', 
-    '1 小时', 
-    '1.5 小时', 
-    '2 小时', 
-    '3 小时', 
-    '4 小时',
-    '全天'
-  ];
-  
-  // 预设开始时间选项
-  const startTimeOptions = [
-    '随时',
-    '上午 8:00',
-    '上午 9:00',
-    '上午 10:00',
-    '上午 11:00',
-    '中午 12:00',
-    '下午 1:00',
-    '下午 2:00',
-    '下午 3:00',
-    '下午 4:00',
-    '下午 5:00',
-    '下午 6:00',
-    '晚上 7:00',
-    '晚上 8:00',
-    '晚上 9:00'
-  ];
   
   // 处理保存任务
   const handleSaveTask = () => {
@@ -118,7 +118,7 @@ const NewTaskPage = () => {
     setStartTime(selectedStartTime);
     setIsStartTimePickerOpen(false);
   };
-  
+
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* 顶部导航栏 */}

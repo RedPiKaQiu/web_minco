@@ -1,35 +1,43 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Package, Ship, Calendar, BookOpen, User } from 'lucide-react';
+import { Home, Clock, FolderKanban, User } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const BottomNavigation = () => {
   const location = useLocation();
-  const path = location.pathname;
+  const navigate = useNavigate();
+
+  const navItems = [
+    { id: 'home', label: '首页', icon: Home, path: '/home' },
+    { id: 'timeline', label: '时间轴', icon: Clock, path: '/timeline' },
+    { id: 'projects', label: '项目', icon: FolderKanban, path: '/projects' },
+    { id: 'profile', label: '我的', icon: User, path: '/profile' },
+  ];
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+  };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex justify-center bg-app z-50">
-      <div className="w-[375px] max-w-full flex justify-around items-center h-16 px-2 bg-nav border-t border-app-border">
-        <Link to="/ideas" className={`nav-item ${path === '/ideas' ? 'active' : ''}`}>
-          <Package size={20} />
-          <span className="mt-1">想法仓库</span>
-        </Link>
-        <Link to="/sailing" className={`nav-item ${path === '/sailing' ? 'active' : ''}`}>
-          <Ship size={20} />
-          <span className="mt-1">航行</span>
-        </Link>
-        <Link to="/home" className={`nav-item ${path === '/home' || path === '/' ? 'active' : ''}`}>
-          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center -mt-4">
-            <Calendar size={20} className="text-white" />
-          </div>
-          <span className="mt-1">今日</span>
-        </Link>
-        <Link to="/journal" className={`nav-item ${path === '/journal' ? 'active' : ''}`}>
-          <BookOpen size={20} />
-          <span className="mt-1">航海日志</span>
-        </Link>
-        <Link to="/profile" className={`nav-item ${path === '/profile' ? 'active' : ''}`}>
-          <User size={20} />
-          <span className="mt-1">我的</span>
-        </Link>
+    <div className="bottom-navigation">
+      <div className="flex justify-around items-center h-full px-4" style={{ paddingBottom: 'var(--safe-area-bottom)' }}>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavigation(item.path)}
+              className={`flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors touch-target no-tap-highlight ${
+                isActive 
+                  ? 'text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon size={20} className="mb-1" />
+              <span className="text-xs">{item.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
