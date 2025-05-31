@@ -1,6 +1,6 @@
-# Second Brain 任务管理应用
+# Second Brain 事项管理应用
 
-这是一个基于React + TypeScript + Vite开发的现代化任务管理应用。
+这是一个基于React + TypeScript + Vite开发的现代化事项管理应用。
 
 ## 如何获取和运行项目
 

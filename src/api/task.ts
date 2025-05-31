@@ -1,7 +1,7 @@
-// 任务相关 API 接口
+// 事项相关 API 接口
 import { fetchApi } from './index';
 
-// 任务类型，根据API文档
+// 事项类型，根据API文档
 export interface ApiTask {
   title: string;
   description?: string;
@@ -20,7 +20,7 @@ export interface ApiTask {
   user_id?: number;
 }
 
-// 创建任务请求参数
+// 创建事项请求参数
 export interface TaskCreatePayload {
   title: string;
   description?: string;
@@ -35,7 +35,7 @@ export interface TaskCreatePayload {
   repeat?: 'none' | 'daily' | 'weekly' | 'monthly' | 'workdays';
 }
 
-// 更新任务请求参数
+// 更新事项请求参数
 export interface TaskUpdatePayload {
   title: string;
   description?: string;
@@ -51,10 +51,10 @@ export interface TaskUpdatePayload {
 }
 
 /**
- * 获取任务列表
+ * 获取事项列表
  * @param skip 跳过数量
  * @param limit 限制数量
- * @returns 任务列表
+ * @returns 事项列表
  */
 export async function getTasks(skip = 0, limit = 100): Promise<ApiTask[]> {
   try {
@@ -62,15 +62,15 @@ export async function getTasks(skip = 0, limit = 100): Promise<ApiTask[]> {
       method: 'GET',
     });
   } catch (error) {
-    console.error('获取任务列表失败:', error);
+    console.error('获取事项列表失败:', error);
     throw error;
   }
 }
 
 /**
- * 创建任务
- * @param taskData 任务数据
- * @returns 创建的任务
+ * 创建事项
+ * @param taskData 事项数据
+ * @returns 创建的事项
  */
 export async function createTask(taskData: TaskCreatePayload): Promise<ApiTask> {
   try {
@@ -79,15 +79,15 @@ export async function createTask(taskData: TaskCreatePayload): Promise<ApiTask> 
       body: JSON.stringify(taskData),
     });
   } catch (error) {
-    console.error('创建任务失败:', error);
+    console.error('创建事项失败:', error);
     throw error;
   }
 }
 
 /**
- * 获取单个任务
- * @param taskId 任务ID
- * @returns 任务详情
+ * 获取单个事项
+ * @param taskId 事项ID
+ * @returns 事项详情
  */
 export async function getTask(taskId: number): Promise<ApiTask> {
   try {
@@ -95,16 +95,16 @@ export async function getTask(taskId: number): Promise<ApiTask> {
       method: 'GET',
     });
   } catch (error) {
-    console.error(`获取任务${taskId}失败:`, error);
+    console.error(`获取事项${taskId}失败:`, error);
     throw error;
   }
 }
 
 /**
- * 更新任务
- * @param taskId 任务ID
- * @param taskData 更新的任务数据
- * @returns 更新后的任务
+ * 更新事项
+ * @param taskId 事项ID
+ * @param taskData 更新的事项数据
+ * @returns 更新后的事项
  */
 export async function updateTask(taskId: number, taskData: TaskUpdatePayload): Promise<ApiTask> {
   try {
@@ -113,14 +113,14 @@ export async function updateTask(taskId: number, taskData: TaskUpdatePayload): P
       body: JSON.stringify(taskData),
     });
   } catch (error) {
-    console.error(`更新任务${taskId}失败:`, error);
+    console.error(`更新事项${taskId}失败:`, error);
     throw error;
   }
 }
 
 /**
- * 删除任务
- * @param taskId 任务ID
+ * 删除事项
+ * @param taskId 事项ID
  */
 export async function deleteTask(taskId: number): Promise<void> {
   try {
@@ -128,7 +128,7 @@ export async function deleteTask(taskId: number): Promise<void> {
       method: 'DELETE',
     });
   } catch (error) {
-    console.error(`删除任务${taskId}失败:`, error);
+    console.error(`删除事项${taskId}失败:`, error);
     throw error;
   }
 } 

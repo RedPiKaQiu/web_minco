@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { ArrowLeft, Calendar, Clock, Flag, RefreshCw, Edit, ChevronRight, Check, AlarmClock } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
+import { Task } from '../types';
 
-// 任务类型选项
+// 事项类型选项
 const taskNatureOptions = [
   { id: 'routine', icon: <RefreshCw size={22} />, label: '例行' },
   { id: 'chore', icon: <Edit size={22} />, label: '杂务' },
@@ -12,7 +13,7 @@ const taskNatureOptions = [
   { id: 'idea', icon: <div className="text-2xl">💡</div>, label: '想法' },
 ];
 
-// 任务分类选项
+// 事项分类选项
 const taskCategoryOptions = [
   { id: 'life', icon: '🏠', label: '生活' },
   { id: 'study', icon: '📚', label: '学习' },
@@ -60,9 +61,18 @@ const startTimeOptions = [
   '晚上 9:00'
 ];
 
+interface LocationState {
+  editTask?: Task;
+}
+
 const NewTaskPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { dispatch } = useAppContext();
+  
+  const locationState = location.state as LocationState;
+  const editTask = locationState?.editTask;
+  const isEditMode = !!editTask;
   
   // 状态管理
   const [title, setTitle] = useState('');
@@ -77,22 +87,67 @@ const NewTaskPage = () => {
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
   
-  // 处理保存任务
+  // 在编辑模式下预填充表单数据
+  useEffect(() => {
+    if (isEditMode && editTask) {
+      setTitle(editTask.title);
+      setStartTime(editTask.startTime || '随时');
+      setTime(editTask.duration || '30 分钟');
+      setPriority(editTask.priority || '');
+      
+      // 根据category找到对应的分类ID
+      if (editTask.category) {
+        const categoryOption = taskCategoryOptions.find(opt => opt.label === editTask.category);
+        if (categoryOption) {
+          setSelectedCategory(categoryOption.id);
+        }
+      }
+      
+      // 根据type找到对应的性质ID
+      if (editTask.type) {
+        const natureOption = taskNatureOptions.find(opt => opt.label === editTask.type);
+        if (natureOption) {
+          setSelectedNature(natureOption.id);
+        }
+      }
+    }
+  }, [isEditMode, editTask]);
+  
+  // 处理保存事项
   const handleSaveTask = () => {
     if (title.trim()) {
-      dispatch({
-        type: 'ADD_TASK',
-        payload: {
-          id: Date.now().toString(),
-          title: title,
-          completed: false,
-          isAnytime: startTime === '随时',
-          startTime: startTime !== '随时' ? startTime : undefined,
-          category: selectedCategory ? taskCategoryOptions.find(cat => cat.id === selectedCategory)?.label : undefined,
-          priority: priority as 'low' | 'medium' | 'high' | undefined,
-          duration: time,
-        },
-      });
+      if (isEditMode && editTask) {
+        // 编辑模式：更新现有事项
+        dispatch({
+          type: 'UPDATE_TASK',
+          payload: {
+            ...editTask,
+            title: title,
+            isAnytime: startTime === '随时',
+            startTime: startTime !== '随时' ? startTime : undefined,
+            category: selectedCategory ? taskCategoryOptions.find(cat => cat.id === selectedCategory)?.label : undefined,
+            type: selectedNature ? taskNatureOptions.find(nat => nat.id === selectedNature)?.label : undefined,
+            priority: priority as 'low' | 'medium' | 'high' | undefined,
+            duration: time,
+          },
+        });
+      } else {
+        // 新建模式：创建新事项
+        dispatch({
+          type: 'ADD_TASK',
+          payload: {
+            id: Date.now().toString(),
+            title: title,
+            completed: false,
+            isAnytime: startTime === '随时',
+            startTime: startTime !== '随时' ? startTime : undefined,
+            category: selectedCategory ? taskCategoryOptions.find(cat => cat.id === selectedCategory)?.label : undefined,
+            type: selectedNature ? taskNatureOptions.find(nat => nat.id === selectedNature)?.label : undefined,
+            priority: priority as 'low' | 'medium' | 'high' | undefined,
+            duration: time,
+          },
+        });
+      }
       navigate('/home');
     }
   };
@@ -126,7 +181,7 @@ const NewTaskPage = () => {
         <button onClick={handleBack} className="p-2">
           <ArrowLeft size={24} className="text-gray-600" />
         </button>
-        <h1 className="text-xl font-medium">新建任务</h1>
+        <h1 className="text-xl font-medium">{isEditMode ? '编辑事项' : '新建事项'}</h1>
         <button 
           onClick={handleSaveTask}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg"
@@ -136,7 +191,7 @@ const NewTaskPage = () => {
         </button>
       </div>
       
-      {/* 任务标题输入 */}
+      {/* 事项标题输入 */}
       <div className="p-4 border-b border-gray-100">
         <input
           type="text"
@@ -147,9 +202,9 @@ const NewTaskPage = () => {
         />
       </div>
       
-      {/* 任务性质选择 */}
+      {/* 事项性质选择 */}
       <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg mb-4">任务性质</h2>
+        <h2 className="text-lg mb-4">事项性质</h2>
         <div className="grid grid-cols-4 gap-4">
           {taskNatureOptions.map((option) => (
             <div 
@@ -166,9 +221,9 @@ const NewTaskPage = () => {
         </div>
       </div>
       
-      {/* 任务分类 */}
+      {/* 事项分类 */}
       <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg mb-4">任务分类</h2>
+        <h2 className="text-lg mb-4">事项分类</h2>
         <div className="grid grid-cols-4 gap-4">
           {taskCategoryOptions.map((option) => (
             <div 
@@ -275,27 +330,31 @@ const NewTaskPage = () => {
         </div>
       </div>
       
-      {/* 子任务 */}
+      {/* 子事项 */}
       <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg mb-4">子任务</h2>
+        <h2 className="text-lg mb-4">子事项</h2>
         
-        {/* AI生成子任务按钮 */}
+        {/* AI生成子事项按钮 */}
         <div 
           className="bg-blue-50 py-3 px-4 rounded-lg mb-4 flex items-center justify-center cursor-pointer"
           onClick={() => setShowAiGeneration(!showAiGeneration)}
         >
           <Edit size={18} className="text-blue-500 mr-2" />
-          <span className="text-blue-500">AI 生成子任务</span>
+          <span className="text-blue-500">AI 生成子事项</span>
         </div>
         
-        {/* 手动添加子任务 */}
+        {/* 手动添加子事项 */}
         <div className="flex items-center border border-gray-200 rounded-lg p-2">
           <input
             type="checkbox"
-            className="w-5 h-5 mr-3 border-gray-300 rounded"
+            className="rounded mr-3"
             disabled
           />
-          <span className="text-gray-500">添加子任务</span>
+          <input
+            type="text"
+            placeholder="添加子事项"
+            className="flex-1 border-0 focus:outline-none focus:ring-0"
+          />
         </div>
       </div>
       

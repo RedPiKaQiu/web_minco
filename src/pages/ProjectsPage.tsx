@@ -22,7 +22,7 @@ const ProjectsPage = () => {
     { id: '探索', label: '探索', emoji: '🌟', color: 'bg-indigo-100 text-indigo-700' },
   ];
 
-  // 按分类分组任务
+  // 按分类分组事项
   const groupedTasks = categories.reduce((acc, category) => {
     acc[category.id] = state.tasks.filter(task => 
       task.category === category.label || task.type === category.id
@@ -89,7 +89,9 @@ const ProjectsPage = () => {
       {/* 头部 */}
       <div className="py-6">
         <h1 className="text-2xl font-bold">项目</h1>
-        <p className="text-gray-500 mt-1">按分类管理你的任务</p>
+        <div className="text-center py-6">
+          <p className="text-gray-500 mt-1">按分类管理你的事项</p>
+        </div>
       </div>
 
       {/* 分类列表 */}
@@ -141,7 +143,7 @@ const ProjectsPage = () => {
                 <div className="border-t border-gray-100">
                   {categoryTasks.length === 0 ? (
                     <div className="p-4 text-center text-gray-500 text-sm">
-                      暂无{category.label}任务
+                      暂无{category.label}事项
                     </div>
                   ) : (
                     <div className="p-2 space-y-2">

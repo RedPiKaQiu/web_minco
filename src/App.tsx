@@ -16,6 +16,8 @@ import './index.css';
 function AppContent() {
   const location = useLocation();
   const isAiChatPage = location.pathname === '/ai-chat';
+  const isNewTaskPage = location.pathname === '/new-task';
+  const shouldHideNavigation = isAiChatPage || isNewTaskPage;
 
   return (
     <div className="mobile-container">
@@ -30,8 +32,8 @@ function AppContent() {
           <Route path="/focus/:taskId" element={<FocusPage />} />
           <Route path="/ai-chat" element={<AiChatPage />} />
         </Routes>
-        {!isAiChatPage && <FloatingButtons />}
-        {!isAiChatPage && <BottomNavigation />}
+        {!shouldHideNavigation && <FloatingButtons />}
+        {!shouldHideNavigation && <BottomNavigation />}
       </div>
     </div>
   );

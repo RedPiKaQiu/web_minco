@@ -21,11 +21,15 @@ const ReviewPage = () => {
     setDate(`${year}年${month}月${day}日，星期${weekday}`);
   }, []);
   
-  // 获取当天已完成的任务
-  const completedTasks = state.tasks.filter(task => task.completed);
+  // 获取当天已完成的事项
+  const completedTasks = state.tasks.filter(task => 
+    task.completed && !task.postponedToTomorrow
+  );
   
-  // 获取当天未完成的任务
-  const incompleteTasks = state.tasks.filter(task => !task.completed);
+  // 获取当天未完成的事项
+  const incompleteTasks = state.tasks.filter(task => 
+    !task.completed && !task.postponedToTomorrow
+  );
   
   // 计算完成率
   const completionRate = state.tasks.length > 0 
@@ -46,8 +50,8 @@ const ReviewPage = () => {
     }
   };
   
-  // 处理将任务移至明天
-  const handlePostponeTasks = () => {
+  // 处理将事项移至明天
+  const handleMoveToTomorrow = () => {
     if (incompleteTasks.length > 0) {
       const incompleteTaskIds = incompleteTasks.map(task => task.id);
       dispatch({
@@ -230,7 +234,7 @@ const ReviewPage = () => {
         {/* 移至明天按钮 */}
         <div className="px-6 mb-6 mt-4">
           <button 
-            onClick={handlePostponeTasks}
+            onClick={handleMoveToTomorrow}
             className="w-full bg-[#0f172a] py-4 rounded-lg text-center text-white font-medium"
           >
             移至明天
@@ -285,18 +289,22 @@ const ReviewPage = () => {
             </div>
           ))}
           
-          {/* 如果已完成任务少于3个，显示未完成的任务 */}
-          {incompleteTasks.slice(0, 3 - completedTasks.slice(0, 3).length).map(task => (
-            <div key={task.id} className="bg-[#123a7c] rounded-lg p-3 flex justify-between items-center">
-              <div className="flex items-center">
-                {task.startTime && (
-                  <span className="text-sm text-blue-300 mr-2">{task.startTime}</span>
-                )}
-                <span>{task.title}</span>
-              </div>
-              <div className="w-6 h-6 border border-gray-500 rounded-full"></div>
+          {/* 如果已完成事项少于3个，显示未完成的事项 */}
+          {completedTasks.length < 3 && incompleteTasks.length > 0 && (
+            <div className="space-y-4 mt-8">
+              <h3 className="text-lg font-semibold text-gray-900">未完成的事项</h3>
+              {incompleteTasks.slice(0, 5).map((task) => (
+                <div key={task.id} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    {task.startTime && (
+                      <span className="text-sm text-blue-300 mr-2">{task.startTime}</span>
+                    )}
+                    <span>{task.title}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
       
@@ -329,8 +337,8 @@ const ReviewPage = () => {
           <h2 className="text-lg font-medium mb-2">今天真是充实～</h2>
           <p className="text-sm text-blue-200 mb-4">
             {completedTasks.length > 0 
-              ? `工作、锻炼、送心意...完成了${completedTasks.length}项任务，还能让交流和时间更有效！`
-              : '今天还没有完成任务，明天继续加油！'}
+              ? `工作、锻炼、送心意...完成了${completedTasks.length}项事项，还能让交流和时间更有效！`
+              : '今天还没有完成事项，明天继续加油！'}
           </p>
           
           {/* 完成率环形进度 */}

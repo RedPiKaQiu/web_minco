@@ -102,10 +102,10 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
     setIsDragging(false);
   };
   
-  // 重置抽屉位置和任务标题
+  // 重置抽屉位置和事项标题
   useEffect(() => {
     if (!isOpen) {
-      // 清空任务标题
+      // 清空事项标题
       setTaskTitle('');
       // 重置日期选择
       setSelectedDate('今天');
@@ -130,10 +130,10 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
       setIsSubmitting(true);
       
       try {
-        // 根据日期选择设置任务day属性
+        // 根据日期选择设置事项day属性
+        const today = new Date();
         let taskDay: string | undefined;
         let taskStartTime: string | undefined;
-        const today = new Date();
         
         switch (selectedDate) {
           case '今天':
@@ -187,28 +187,33 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
           }
         }
         
-        // 调用API创建任务
-        const newTask = await createTask({
+        // 调用API创建事项
+        const result = await createTask({
           title: taskTitle,
+          description: '',
           day: taskDay,
-          type: 'other', // 默认类型
-          priority: 'medium', // 默认优先级
+          start_time: taskStartTime || undefined,
+          end_time: undefined,
+          type: 'other',
+          priority: 'medium',
           completed: false,
-          start_time: taskStartTime
+          location: '',
+          participants: '',
+          repeat: 'none'
         });
         
         // 创建成功后，更新本地状态
         dispatch({
           type: 'ADD_TASK',
           payload: {
-            id: newTask.id?.toString() || Date.now().toString(),
-            title: newTask.title,
-            completed: newTask.completed || false,
-            isAnytime: !newTask.start_time,
-            dueDate: newTask.day,
-            startTime: newTask.start_time,
-            endTime: newTask.end_time,
-            priority: newTask.priority as any,
+            id: result.id?.toString() || Date.now().toString(),
+            title: result.title,
+            completed: result.completed || false,
+            isAnytime: !result.start_time,
+            dueDate: result.day,
+            startTime: result.start_time,
+            endTime: result.end_time,
+            priority: result.priority as any,
           },
         });
         
@@ -217,9 +222,8 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
         setShowCalendar(false);
         onClose();
       } catch (error) {
-        console.error('添加任务失败:', error);
-        // 如果API调用失败，可以添加错误处理逻辑
-        alert('添加任务失败，请重试');
+        console.error('添加事项失败:', error);
+        alert('添加事项失败，请重试');
       } finally {
         setIsSubmitting(false);
       }
@@ -618,7 +622,7 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
             onClick={() => handleAddTask()} 
             className={`w-10 h-10 flex items-center justify-center rounded-full text-white ${isSubmitting ? 'bg-blue-300' : 'bg-blue-500'}`}
             disabled={!taskTitle.trim() || isSubmitting}
-            aria-label="添加任务"
+            aria-label="添加事项"
           >
             <Plus size={20} />
           </button>

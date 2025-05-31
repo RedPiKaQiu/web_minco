@@ -29,11 +29,11 @@ const FloatingToolbar = ({ onAddTask }: FloatingToolbarProps) => {
             {/* 竖线分隔符 */}
             <div className="w-[1px] bg-app-border"></div>
             
-            {/* 添加任务按钮 */}
+            {/* 添加事项按钮 */}
             <button 
               onClick={onAddTask} 
               className="h-12 w-12 flex items-center justify-center"
-              aria-label="添加任务"
+              aria-label="添加事项"
             >
               <Plus className="text-primary" size={20} />
             </button>

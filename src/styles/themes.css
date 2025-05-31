@@ -74,7 +74,7 @@
   --color-empty-add-icon: #2196f3;
   --color-empty-chat-icon: #64b5f6;
   
-  /* 已完成任务样式 */
+  /* 已完成事项样式 */
   --color-completed-text: #6b7280;
   --color-completed-bg: #ffffff;
   --color-completed-border: #f3f4f6;
@@ -137,7 +137,7 @@
   --color-empty-add-icon: #f59e0b;
   --color-empty-chat-icon: #fbbf24;
   
-  /* 已完成任务样式 */
+  /* 已完成事项样式 */
   --color-completed-text: #b45309;
   --color-completed-bg: #fffbeb;
   --color-completed-border: #fed7aa;
@@ -189,7 +189,7 @@
   --color-button-primary-hover: #15803d;
   --color-button-text: #ffffff;
   
-  /* 已完成任务样式 */
+  /* 已完成事项样式 */
   --color-completed-text: #166534;
   --color-completed-bg: #f0fdf4;
   --color-completed-border: #dcfce7;
@@ -238,7 +238,7 @@
   
   /* 背景色 */
   --color-background: #0f172a; /* 深蓝色背景 */
-  --color-card-background: #1e293b; /* 任务卡片背景 */
+  --color-card-background: #1e293b; /* 事项卡片背景 */
   
   /* 快速操作区颜色 */
   --color-quick-action-gradient-from: #172554;
@@ -268,10 +268,27 @@
   --color-empty-add-icon: #60a5fa;
   --color-empty-chat-icon: #93c5fd;
   
-  /* 已完成任务样式 */
+  /* 已完成事项样式 */
   --color-completed-text: #94a3b8;
   --color-completed-bg: #1e293b;
   --color-completed-border: #334155;
   --color-completed-item-bg: #0f172a;
   --color-completed-item-text: #cbd5e1;
+}
+
+/* 已完成事项样式 */
+.completed {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+/* 已完成事项样式 */
+.completed-task {
+  background-color: var(--color-completed-bg);
+  color: var(--color-completed-text);
+}
+
+/* 已完成事项样式 */
+.task-completed {
+  opacity: 0.7;
 } 

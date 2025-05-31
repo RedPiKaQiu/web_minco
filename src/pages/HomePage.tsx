@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Check, ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Task } from '../types';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -48,27 +49,38 @@ const HomePage = () => {
   // 生成推荐理由
   const generateRecommendReason = () => {
     const reasons = [
-      '现在是完成这个任务的好时机',
-      '这个任务优先级较高',
-      '完成这个任务会让你感觉很棒',
-      '这个任务不会花费太多时间',
-      '现在精力充沛，适合处理这个任务'
+      '现在是完成这个事项的好时机',
+      '这个事项优先级较高',
+      '完成这个事项会让你感觉很棒',
+      '这个事项不会花费太多时间',
+      '现在精力充沛，适合处理这个事项'
     ];
     return reasons[Math.floor(Math.random() * reasons.length)];
   };
 
-  // 获取推荐任务（模拟AI推荐）
-  const getRecommendedTasks = () => {
+  const motivationalMessages = [
+    '现在是完成这个事项的好时机',
+    '这个事项优先级较高',
+    '完成这个事项会让你感觉很棒',
+    '这个事项不会花费太多时间',
+    '现在精力充沛，适合处理这个事项'
+  ];
+
+  // 获取推荐事项（模拟AI推荐）
+  const getRecommendedTask = (): Task | null => {
     const incompleteTasks = state.tasks.filter(task => !task.completed);
-    const shuffled = [...incompleteTasks].sort(() => 0.5 - Math.random());
-    const count = Math.floor(Math.random() * 3) + 3; // 3-5个推荐
-    return shuffled.slice(0, Math.min(count, incompleteTasks.length)).map(task => ({
-      ...task,
-      recommendReason: generateRecommendReason()
-    }));
+    if (incompleteTasks.length === 0) return null;
+    
+    // 简单的推荐逻辑：优先推荐有开始时间的高优先级事项
+    const priorityTasks = incompleteTasks.filter(task => task.priority === 'high');
+    const timedTasks = incompleteTasks.filter(task => task.startTime && !task.isAnytime);
+    
+    if (priorityTasks.length > 0) return priorityTasks[0];
+    if (timedTasks.length > 0) return timedTasks[0];
+    return incompleteTasks[0];
   };
 
-  const [recommendedTasks, setRecommendedTasks] = useState(getRecommendedTasks());
+  const [recommendedTasks, setRecommendedTasks] = useState(getRecommendedTask() ? [getRecommendedTask()] : []);
 
   // 处理滑动
   const handleSwipe = (dir: 'left' | 'right') => {
@@ -78,6 +90,7 @@ const HomePage = () => {
     setExitX(dir === 'left' ? -100 : 100);
 
     const currentTask = recommendedTasks[currentIndex];
+    if (!currentTask) return;
 
     setTimeout(() => {
       if (dir === 'left') {
@@ -98,52 +111,10 @@ const HomePage = () => {
     }, 300);
   };
 
-  // 处理完成任务
-  const handleComplete = (id: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-
-    // 烟花特效
-    const button = e?.currentTarget as HTMLElement;
-    if (button) {
-      for (let i = 0; i < 25; i++) {
-        const particle = document.createElement('div');
-        const colors = ['#FF5252', '#FFD740', '#64FFDA', '#448AFF', '#E040FB'];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-
-        particle.className = 'absolute rounded-full';
-        particle.style.backgroundColor = color;
-        particle.style.width = `${2 + Math.random() * 3}px`;
-        particle.style.height = `${2 + Math.random() * 3}px`;
-        button.appendChild(particle);
-
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 30 + Math.random() * 50;
-        const x = Math.cos(angle) * distance;
-        const y = Math.sin(angle) * distance;
-
-        particle.animate([
-          { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-          { transform: `translate(${x}px, ${y}px) scale(0)`, opacity: 0 }
-        ], {
-          duration: 800 + Math.random() * 700,
-          easing: 'cubic-bezier(0, .9, .57, 1)'
-        });
-
-        setTimeout(() => particle.remove(), 1500);
-      }
-    }
-
-    // 完成任务
+  // 处理完成事项
+  const handleComplete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     dispatch({ type: 'COMPLETE_TASK', payload: id });
-    
-    // 从推荐列表移除
-    setRecommendedTasks(prev => prev.filter((_, i) => i !== currentIndex));
-    
-    if (currentIndex >= recommendedTasks.length - 1) {
-      setCurrentIndex(0);
-    }
   };
 
   // 获取更多推荐
@@ -151,7 +122,7 @@ const HomePage = () => {
     setIsLoading(true);
     
     setTimeout(() => {
-      const newRecommendations = getRecommendedTasks();
+      const newRecommendations = getRecommendedTask() ? [getRecommendedTask()] : [];
       setRecommendedTasks(newRecommendations);
       setCurrentIndex(0);
       setIsLoading(false);
@@ -260,7 +231,7 @@ const HomePage = () => {
               </button>
             </div>
 
-            {/* 任务卡片 */}
+            {/* 事项卡片 */}
             {currentTask && (
               <div
                 className={`mx-auto p-6 bg-white rounded-lg shadow-md cursor-grab active:cursor-grabbing w-[85%] max-w-[85%] relative transition-all duration-300 ${
@@ -311,7 +282,7 @@ const HomePage = () => {
                   <div className="border-t border-gray-100 pt-3 mt-auto">
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">推荐理由：</span>
-                      {currentTask.recommendReason}
+                      {generateRecommendReason()}
                     </p>
                   </div>
                 </div>

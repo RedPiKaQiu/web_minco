@@ -17,16 +17,16 @@ const SailingPage = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false); // 添加isPaused状态
   const [time, setTime] = useState(5); // 默认5秒倒计时，将在开始时更新
-  const [showDetails, setShowDetails] = useState(false); // 控制任务详情显示
+  const [showDetails, setShowDetails] = useState(false); // 控制事项详情显示
   const [isCompleted, setIsCompleted] = useState(false); // 控制是否显示完成状态
   const [elapsedTimeText, setElapsedTimeText] = useState(''); // 记录航行用时
   
-  // 提取任务信息，若无则使用默认值
+  // 提取事项信息，若无则使用默认值
   const taskTitle = task?.title || '收集PPT相关数据资料';
   const taskCategory = task?.category || '完成PPT制作';
   const taskDuration = task?.duration || '10分钟';
   
-  // 解析任务持续时间（如"10分钟"、"1小时30分"）转换为秒数
+  // 解析事项持续时间（如"10分钟"、"1小时30分"）转换为秒数
   const parseTimeToSeconds = (timeStr: string): number => {
     // 默认为10分钟（600秒）
     if (!timeStr) return 600;
@@ -64,7 +64,7 @@ const SailingPage = () => {
     };
   }, [isRunning]);
   
-  // 记录初始任务时间，用于计算总用时
+  // 记录初始事项时间，用于计算总用时
   const [initialTime, setInitialTime] = useState(0);
   
   useEffect(() => {
@@ -97,7 +97,7 @@ const SailingPage = () => {
   };
   
   const startSailing = () => {
-    // 设置倒计时时间为任务持续时间
+    // 设置倒计时时间为事项持续时间
     const durationInSeconds = parseTimeToSeconds(taskDuration);
     setTime(durationInSeconds);
     setInitialTime(durationInSeconds);
@@ -155,14 +155,14 @@ const SailingPage = () => {
           </div>
         </div>
         
-        {/* 任务标题 */}
+        {/* 事项标题 */}
         <h1 className="text-2xl font-bold text-center text-app mb-4">
           {taskTitle}
         </h1>
         
-        {/* 任务信息 */}
+        {/* 事项信息 */}
         <div className="flex items-center space-x-3 mb-1 text-app-secondary">
-          <span className="text-sm">主任务</span>
+          <span className="text-sm">主事项</span>
           <div className="bg-primary/10 px-3 py-1 rounded-full text-xs text-primary">
             {taskCategory}
           </div>
@@ -187,13 +187,13 @@ const SailingPage = () => {
           和MinCo聊聊
         </button>
         
-        {/* 查看下一个任务按钮 */}
+        {/* 查看下一个事项按钮 */}
         <button
           onClick={handleViewNextTask}
           className="flex items-center text-app-secondary mt-4"
         >
           <Book size={18} className="mr-2" />
-          <span>查看下个子任务</span>
+          <span>查看下个子事项</span>
         </button>
       </div>
     );
@@ -203,7 +203,7 @@ const SailingPage = () => {
     // 初始页面 - 显示开始航行按钮
     return (
       <div className="min-h-screen bg-app flex flex-col px-4 pt-10 pb-safe">
-        {/* 任务标题 */}
+        {/* 事项标题 */}
         <h1 className="text-3xl font-bold text-center text-app mb-4">{taskTitle}</h1>
         
         <div className="flex items-center justify-center mb-4">
@@ -223,13 +223,13 @@ const SailingPage = () => {
           </button>
         </div>
         
-        {/* 任务详情按钮 */}
+        {/* 事项详情按钮 */}
         <div className="mt-4 flex justify-center">
           <button 
             onClick={toggleDetails}
             className="flex items-center text-app-secondary"
           >
-            <span>任务详情</span>
+            <span>事项详情</span>
             {showDetails ? 
               <ChevronUp size={16} className="ml-1" /> : 
               <ChevronDown size={16} className="ml-1" />
@@ -237,7 +237,7 @@ const SailingPage = () => {
           </button>
         </div>
         
-        {/* 任务详情内容 */}
+        {/* 事项详情内容 */}
         <AnimatePresence>
           {showDetails && (
             <motion.div
@@ -256,7 +256,7 @@ const SailingPage = () => {
                 </div>
                 
                 <div>
-                  <h4 className="text-sm text-app-secondary mb-3">子任务</h4>
+                  <h4 className="text-sm text-app-secondary mb-3">子事项</h4>
                   <ul className="space-y-4">
                     <li className="flex items-center">
                       <div className="w-5 h-5 bg-primary/20 rounded-full flex items-center justify-center mr-3">
@@ -326,7 +326,7 @@ const SailingPage = () => {
           <Music size={20} className="text-primary" />
         </div>
         
-        {/* 任务标题 */}
+        {/* 事项标题 */}
         <h1 className="text-2xl font-bold text-center text-app mt-12 mb-8">{taskTitle}</h1>
         
         {/* 计时器 */}

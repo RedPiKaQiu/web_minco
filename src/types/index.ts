@@ -40,6 +40,7 @@ export interface AppState {
 
 export type AppAction = 
   | { type: 'ADD_TASK'; payload: Task }
+  | { type: 'UPDATE_TASK'; payload: Task }
   | { type: 'COMPLETE_TASK'; payload: string }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'ADD_TICKET'; payload: Ticket }

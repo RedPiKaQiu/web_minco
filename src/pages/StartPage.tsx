@@ -12,11 +12,13 @@ const StartPage = () => {
   const userNickname = state.user?.nickname || '朋友';
 
   const handleStart = () => {
+    // 清空所有事项后再导航到主页
+    dispatch({ type: 'CLEAR_ALL_TASKS' });
     navigate('/home');
   };
   
   const handleManualArrange = () => {
-    // 清空所有任务后再导航到主页
+    // 清空所有事项后再导航到主页
     dispatch({ type: 'CLEAR_ALL_TASKS' });
     navigate('/home');
   };

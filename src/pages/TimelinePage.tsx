@@ -3,6 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import TaskDetailModal from '../components/TaskDetailModal';
 
 const TimelinePage = () => {
   const { state, dispatch } = useAppContext();
@@ -10,6 +11,7 @@ const TimelinePage = () => {
   const [viewMode, setViewMode] = useState<'compact' | 'expanded'>('expanded');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     上午: true,
     中午: true,
@@ -18,7 +20,7 @@ const TimelinePage = () => {
     随时: true,
   });
 
-  // 过滤未完成的任务
+  // 过滤未完成的事项
   const incompleteTasks = state.tasks.filter(task => !task.completed);
   const completedTasks = state.tasks.filter(task => task.completed);
 
@@ -31,7 +33,7 @@ const TimelinePage = () => {
     { id: '随时', label: '随时', emoji: '⏰' },
   ];
 
-  // 根据任务分组
+  // 根据事项分组
   const groupedTasks = incompleteTasks.reduce((groups, task) => {
     const timeOfDay = getTimeOfDay(task.startTime);
     if (!groups[timeOfDay]) {
@@ -198,6 +200,14 @@ const TimelinePage = () => {
     dispatch({ type: 'COMPLETE_TASK', payload: id });
   };
 
+  const handleTaskClick = (taskId: string, e: React.MouseEvent) => {
+    // 不要在点击完成按钮时打开模态框
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    setSelectedTaskId(taskId);
+  };
+
   const isToday = isSameDay(selectedDate, new Date());
 
   // 判断当前是否大部分区域都展开了
@@ -356,6 +366,7 @@ const TimelinePage = () => {
                       <div
                         key={task.id}
                         className="p-3 cursor-pointer transition-colors hover:bg-gray-50 no-tap-highlight border-b border-gray-100 last:border-b-0"
+                        onClick={(e) => handleTaskClick(task.id, e)}
                       >
                         <div className="flex items-center">
                           <button
@@ -433,6 +444,7 @@ const TimelinePage = () => {
                       <div
                         key={task.id}
                         className="p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 no-tap-highlight"
+                        onClick={(e) => handleTaskClick(task.id, e)}
                       >
                         <div className="flex items-center">
                           <button
@@ -483,7 +495,8 @@ const TimelinePage = () => {
         completedTasks.map(task => (
           <div
             key={task.id}
-            className="p-3 bg-white rounded-lg shadow-sm border opacity-75"
+            className="p-3 bg-white rounded-lg shadow-sm border opacity-75 cursor-pointer transition-colors hover:bg-gray-50"
+            onClick={(e) => handleTaskClick(task.id, e)}
           >
             <div className="flex items-center">
               <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mr-3">
@@ -513,15 +526,24 @@ const TimelinePage = () => {
   );
 
   return (
-    <div className="page-content safe-area-top">
-      {renderHeader()}
+    <>
+      <div className="page-content safe-area-top">
+        {renderHeader()}
+        
+        {activeTab === 'timeline' ? (
+          viewMode === 'compact' ? renderCompactView() : renderExpandedView()
+        ) : (
+          renderCompletedView()
+        )}
+      </div>
       
-      {activeTab === 'timeline' ? (
-        viewMode === 'compact' ? renderCompactView() : renderExpandedView()
-      ) : (
-        renderCompletedView()
+      {selectedTaskId && (
+        <TaskDetailModal 
+          taskId={selectedTaskId} 
+          onClose={() => setSelectedTaskId(null)} 
+        />
       )}
-    </div>
+    </>
   );
 };
 

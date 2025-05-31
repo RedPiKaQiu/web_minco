@@ -13,10 +13,12 @@ const AiChatPage = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const suggestions = [
-    '看看这周有什么任务',
-    '感觉目前状态有点卡住',
-    '需要一点动力'
+  const quickQuestions = [
+    '今天有什么重要的事情要做？',
+    '帮我安排一下今天的时间',
+    '看看这周有什么事项',
+    '我想完成一个新项目',
+    '给我一些提高效率的建议'
   ];
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -138,7 +140,7 @@ const AiChatPage = () => {
       {messages.length === 0 && (
         <div className="px-4 py-2">
           <div className="flex flex-col items-end space-y-2">
-            {suggestions.map((suggestion, index) => (
+            {quickQuestions.map((suggestion, index) => (
               <div
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}

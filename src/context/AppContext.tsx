@@ -69,7 +69,7 @@ const loadInitialState = (): AppState => {
   };
 };
 
-// 每天检查是否有postponedToTomorrow的任务需要恢复
+// 每天检查是否有postponedToTomorrow的事项需要恢复
 const checkPostponedTasks = (state: AppState): AppState => {
   const today = new Date().toISOString().split('T')[0]; // 获取今天的日期（YYYY-MM-DD格式）
   const lastCheck = localStorage.getItem('lastPostponedCheck');
@@ -80,7 +80,7 @@ const checkPostponedTasks = (state: AppState): AppState => {
   // 更新最后检查日期
   localStorage.setItem('lastPostponedCheck', today);
   
-  // 检查是否有被移至今天的任务
+  // 检查是否有被移至今天的事项
   const updatedTasks = state.tasks.map(task => {
     if (task.postponedToTomorrow) {
       return { ...task, postponedToTomorrow: false };
@@ -104,6 +104,14 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       newState = {
         ...state,
         tasks: [...state.tasks, action.payload],
+      };
+      break;
+    case 'UPDATE_TASK':
+      newState = {
+        ...state,
+        tasks: state.tasks.map(task => 
+          task.id === action.payload.id ? action.payload : task
+        ),
       };
       break;
     case 'COMPLETE_TASK':
@@ -185,9 +193,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [isLoading, setIsLoading] = useState(false);
   
-  // 加载任务列表
+  // 加载事项列表
   const loadTasks = async () => {
-    // 检查是否有token，如果有才请求任务
+    // 检查是否有token，如果有才请求事项
     const token = localStorage.getItem('token');
     if (!token) return;
     
@@ -195,7 +203,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       const tasksFromApi = await getTasks();
       
-      // 转换API任务格式为应用内部格式
+      // 转换API事项格式为应用内部格式
       const formattedTasks = tasksFromApi.map(apiTask => ({
         id: apiTask.id?.toString() || '',
         title: apiTask.title,
@@ -214,13 +222,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         payload: formattedTasks
       });
     } catch (error) {
-      console.error('加载任务失败:', error);
+      console.error('加载事项失败:', error);
     } finally {
       setIsLoading(false);
     }
   };
   
-  // 当应用初始化时加载任务
+  // 当应用初始化时加载事项
   useEffect(() => {
     loadTasks();
   }, []);
