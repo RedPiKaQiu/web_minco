@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { ArrowLeft, Play, Pause, Square, Check } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Square } from 'lucide-react';
 
 const FocusPage = () => {
   const { taskId } = useParams<{ taskId: string }>();

@@ -23,7 +23,7 @@ const SailingPage = () => {
   
   // 提取事项信息，若无则使用默认值
   const taskTitle = task?.title || '收集PPT相关数据资料';
-  const taskCategory = task?.category || '完成PPT制作';
+  const taskCategory = task?.category || '工作';
   const taskDuration = task?.duration || '10分钟';
   
   // 解析事项持续时间（如"10分钟"、"1小时30分"）转换为秒数

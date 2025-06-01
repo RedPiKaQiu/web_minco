@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { ArrowLeft, Calendar, Clock, Flag, RefreshCw, Edit, ChevronRight, Check, AlarmClock } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
-import { Task } from '../types';
+import { Task, TaskCategory, TASK_CATEGORIES } from '../types';
 
 // 事项类型选项
 const taskNatureOptions = [
@@ -13,13 +13,12 @@ const taskNatureOptions = [
   { id: 'idea', icon: <div className="text-2xl">💡</div>, label: '想法' },
 ];
 
-// 事项分类选项
-const taskCategoryOptions = [
-  { id: 'life', icon: '🏠', label: '生活' },
-  { id: 'study', icon: '📚', label: '学习' },
-  { id: 'work', icon: '💼', label: '工作' },
-  { id: 'other', icon: '🔍', label: '其他' },
-];
+// 使用统一的事项分类配置
+const taskCategoryOptions = TASK_CATEGORIES.map(category => ({
+  id: category.id.toLowerCase(),
+  icon: category.emoji,
+  label: category.label
+}));
 
 // 优先级选项
 const priorityOptions = [
@@ -116,6 +115,9 @@ const NewTaskPage = () => {
   // 处理保存事项
   const handleSaveTask = () => {
     if (title.trim()) {
+      const selectedCategoryConfig = taskCategoryOptions.find(cat => cat.id === selectedCategory);
+      const selectedCategoryValue = selectedCategoryConfig?.label as TaskCategory;
+      
       if (isEditMode && editTask) {
         // 编辑模式：更新现有事项
         dispatch({
@@ -125,7 +127,7 @@ const NewTaskPage = () => {
             title: title,
             isAnytime: startTime === '随时',
             startTime: startTime !== '随时' ? startTime : undefined,
-            category: selectedCategory ? taskCategoryOptions.find(cat => cat.id === selectedCategory)?.label : undefined,
+            category: selectedCategoryValue,
             type: selectedNature ? taskNatureOptions.find(nat => nat.id === selectedNature)?.label : undefined,
             priority: priority as 'low' | 'medium' | 'high' | undefined,
             duration: time,
@@ -141,7 +143,7 @@ const NewTaskPage = () => {
             completed: false,
             isAnytime: startTime === '随时',
             startTime: startTime !== '随时' ? startTime : undefined,
-            category: selectedCategory ? taskCategoryOptions.find(cat => cat.id === selectedCategory)?.label : undefined,
+            category: selectedCategoryValue,
             type: selectedNature ? taskNatureOptions.find(nat => nat.id === selectedNature)?.label : undefined,
             priority: priority as 'low' | 'medium' | 'high' | undefined,
             duration: time,

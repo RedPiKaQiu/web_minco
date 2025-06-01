@@ -58,29 +58,68 @@ const HomePage = () => {
     return reasons[Math.floor(Math.random() * reasons.length)];
   };
 
-  const motivationalMessages = [
-    '现在是完成这个事项的好时机',
-    '这个事项优先级较高',
-    '完成这个事项会让你感觉很棒',
-    '这个事项不会花费太多时间',
-    '现在精力充沛，适合处理这个事项'
-  ];
-
-  // 获取推荐事项（模拟AI推荐）
-  const getRecommendedTask = (): Task | null => {
-    const incompleteTasks = state.tasks.filter(task => !task.completed);
-    if (incompleteTasks.length === 0) return null;
+  // 获取推荐事项（模拟AI推荐）- 返回3-5个推荐事项
+  const getRecommendedTask = (tasks: Task[]): Task[] => {
+    if (tasks.length === 0) return [];
     
-    // 简单的推荐逻辑：优先推荐有开始时间的高优先级事项
-    const priorityTasks = incompleteTasks.filter(task => task.priority === 'high');
-    const timedTasks = incompleteTasks.filter(task => task.startTime && !task.isAnytime);
+    // 设置推荐数量：最少3个，最多5个，但不超过可用事项数量
+    const recommendCount = Math.min(Math.max(3, Math.min(5, tasks.length)), tasks.length);
     
-    if (priorityTasks.length > 0) return priorityTasks[0];
-    if (timedTasks.length > 0) return timedTasks[0];
-    return incompleteTasks[0];
+    // 创建推荐列表，按优先级和特征排序
+    const recommendedList: Task[] = [];
+    const usedTasks = new Set<string>();
+    
+    // 1. 优先推荐高优先级事项
+    const highPriorityTasks = tasks.filter(task => 
+      task.priority === 'high' && !usedTasks.has(task.id)
+    );
+    for (const task of highPriorityTasks.slice(0, 2)) {
+      recommendedList.push(task);
+      usedTasks.add(task.id);
+      if (recommendedList.length >= recommendCount) break;
+    }
+    
+    // 2. 推荐有具体时间的事项
+    if (recommendedList.length < recommendCount) {
+      const timedTasks = tasks.filter(task => 
+        task.startTime && !task.isAnytime && !usedTasks.has(task.id)
+      );
+      for (const task of timedTasks.slice(0, 2)) {
+        recommendedList.push(task);
+        usedTasks.add(task.id);
+        if (recommendedList.length >= recommendCount) break;
+      }
+    }
+    
+    // 3. 推荐中优先级事项
+    if (recommendedList.length < recommendCount) {
+      const mediumPriorityTasks = tasks.filter(task => 
+        task.priority === 'medium' && !usedTasks.has(task.id)
+      );
+      for (const task of mediumPriorityTasks.slice(0, 2)) {
+        recommendedList.push(task);
+        usedTasks.add(task.id);
+        if (recommendedList.length >= recommendCount) break;
+      }
+    }
+    
+    // 4. 填充剩余位置（随机选择或按创建顺序）
+    if (recommendedList.length < recommendCount) {
+      const remainingTasks = tasks.filter(task => !usedTasks.has(task.id));
+      for (const task of remainingTasks.slice(0, recommendCount - recommendedList.length)) {
+        recommendedList.push(task);
+        usedTasks.add(task.id);
+      }
+    }
+    
+    return recommendedList;
   };
 
-  const [recommendedTasks, setRecommendedTasks] = useState(getRecommendedTask() ? [getRecommendedTask()] : []);
+  // 获取今日事项和推荐事项的逻辑
+  const todayTasks = state.tasks.filter(task => !task.completed);
+  const initialRecommendedTasks = getRecommendedTask(todayTasks);
+
+  const [recommendedTasks, setRecommendedTasks] = useState<Task[]>(initialRecommendedTasks);
 
   // 处理滑动
   const handleSwipe = (dir: 'left' | 'right') => {
@@ -122,7 +161,7 @@ const HomePage = () => {
     setIsLoading(true);
     
     setTimeout(() => {
-      const newRecommendations = getRecommendedTask() ? [getRecommendedTask()] : [];
+      const newRecommendations = getRecommendedTask(todayTasks);
       setRecommendedTasks(newRecommendations);
       setCurrentIndex(0);
       setIsLoading(false);

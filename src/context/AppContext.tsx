@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
-import { AppState, AppAction } from '../types';
+import { AppState, AppAction, TaskCategory } from '../types';
 import { getTasks } from '../api/task';
 
 // 从localStorage加载初始状态
@@ -204,17 +204,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const tasksFromApi = await getTasks();
       
       // 转换API事项格式为应用内部格式
-      const formattedTasks = tasksFromApi.map(apiTask => ({
-        id: apiTask.id?.toString() || '',
-        title: apiTask.title,
-        completed: apiTask.completed || false,
-        dueDate: apiTask.day,
-        startTime: apiTask.start_time,
-        endTime: apiTask.end_time,
-        priority: apiTask.priority as any,
-        category: apiTask.type,
-        isAnytime: !apiTask.start_time, // 如果没有开始时间，则视为"随时可做"
-      }));
+      const formattedTasks = tasksFromApi.map(apiTask => {
+        // 映射API的type字段到我们的TaskCategory枚举
+        let mappedCategory: TaskCategory | undefined;
+        switch (apiTask.type) {
+          case 'study':
+            mappedCategory = TaskCategory.STUDY;
+            break;
+          case 'career':
+            mappedCategory = TaskCategory.WORK;
+            break;
+          case 'health':
+            mappedCategory = TaskCategory.HEALTH;
+            break;
+          case 'art':
+            mappedCategory = TaskCategory.RELAX;
+            break;
+          case 'other':
+          default:
+            mappedCategory = TaskCategory.LIFE;
+            break;
+        }
+        
+        return {
+          id: apiTask.id?.toString() || '',
+          title: apiTask.title,
+          completed: apiTask.completed || false,
+          dueDate: apiTask.day,
+          startTime: apiTask.start_time,
+          endTime: apiTask.end_time,
+          priority: apiTask.priority as any,
+          category: mappedCategory,
+          isAnytime: !apiTask.start_time, // 如果没有开始时间，则视为"随时可做"
+        };
+      });
       
       // 更新状态
       dispatch({

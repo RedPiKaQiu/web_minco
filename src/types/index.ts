@@ -1,3 +1,30 @@
+// 事项分类枚举
+export enum TaskCategory {
+  LIFE = '生活',
+  HEALTH = '健康', 
+  WORK = '工作',
+  STUDY = '学习',
+  RELAX = '放松',
+  EXPLORE = '探索'
+}
+
+// 事项分类配置接口
+export interface TaskCategoryConfig {
+  id: keyof typeof TaskCategory;
+  label: TaskCategory;
+  emoji: string;
+}
+
+// 预定义的事项分类配置
+export const TASK_CATEGORIES: TaskCategoryConfig[] = [
+  { id: 'LIFE', label: TaskCategory.LIFE, emoji: '🏠' },
+  { id: 'HEALTH', label: TaskCategory.HEALTH, emoji: '💪' },
+  { id: 'WORK', label: TaskCategory.WORK, emoji: '💼' },
+  { id: 'STUDY', label: TaskCategory.STUDY, emoji: '📚' },
+  { id: 'RELAX', label: TaskCategory.RELAX, emoji: '🎮' },
+  { id: 'EXPLORE', label: TaskCategory.EXPLORE, emoji: '🔍' },
+];
+
 export interface Task {
   id: string;
   title: string;
@@ -6,7 +33,7 @@ export interface Task {
   startTime?: string;
   endTime?: string;
   duration?: string;
-  category?: string;
+  category?: TaskCategory;
   type?: string;
   icon?: string;
   priority?: 'low' | 'medium' | 'high';
