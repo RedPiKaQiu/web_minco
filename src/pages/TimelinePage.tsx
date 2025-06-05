@@ -168,35 +168,43 @@ const TimelinePage = () => {
   const handleComplete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // 烟花特效
-    const button = e.currentTarget as HTMLElement;
-    for (let i = 0; i < 25; i++) {
-      const particle = document.createElement('div');
-      const colors = ['#FF5252', '#FFD740', '#64FFDA', '#448AFF', '#E040FB'];
-      const color = colors[Math.floor(Math.random() * colors.length)];
+    // 找到当前任务
+    const task = state.tasks.find(t => t.id === id);
+    if (!task) return;
 
-      particle.className = 'absolute rounded-full';
-      particle.style.backgroundColor = color;
-      particle.style.width = `${2 + Math.random() * 3}px`;
-      particle.style.height = `${2 + Math.random() * 3}px`;
-      button.appendChild(particle);
+    // 如果任务未完成，显示烟花特效
+    if (!task.completed) {
+      // 烟花特效
+      const button = e.currentTarget as HTMLElement;
+      for (let i = 0; i < 25; i++) {
+        const particle = document.createElement('div');
+        const colors = ['#FF5252', '#FFD740', '#64FFDA', '#448AFF', '#E040FB'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
 
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 30 + Math.random() * 50;
-      const x = Math.cos(angle) * distance;
-      const y = Math.sin(angle) * distance;
+        particle.className = 'absolute rounded-full';
+        particle.style.backgroundColor = color;
+        particle.style.width = `${2 + Math.random() * 3}px`;
+        particle.style.height = `${2 + Math.random() * 3}px`;
+        button.appendChild(particle);
 
-      particle.animate([
-        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-        { transform: `translate(${x}px, ${y}px) scale(0)`, opacity: 0 }
-      ], {
-        duration: 800 + Math.random() * 700,
-        easing: 'cubic-bezier(0, .9, .57, 1)'
-      });
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 50;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
 
-      setTimeout(() => particle.remove(), 1500);
+        particle.animate([
+          { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+          { transform: `translate(${x}px, ${y}px) scale(0)`, opacity: 0 }
+        ], {
+          duration: 800 + Math.random() * 700,
+          easing: 'cubic-bezier(0, .9, .57, 1)'
+        });
+
+        setTimeout(() => particle.remove(), 1500);
+      }
     }
 
+    // 切换任务完成状态
     dispatch({ type: 'COMPLETE_TASK', payload: id });
   };
 
@@ -499,9 +507,13 @@ const TimelinePage = () => {
             onClick={(e) => handleTaskClick(task.id, e)}
           >
             <div className="flex items-center">
-              <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mr-3">
+              <button
+                onClick={(e) => handleComplete(task.id, e)}
+                className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mr-3 relative hover:bg-green-600 touch-target no-tap-highlight transition-colors"
+                title="点击取消完成"
+              >
                 <Check className="h-3 w-3 text-white" />
-              </div>
+              </button>
 
               <div className="flex-grow">
                 <div className="font-medium line-through text-gray-500">{task.title}</div>

@@ -448,17 +448,243 @@ body {
   }
   
   @keyframes twinkle {
-    0% {
-      opacity: 0;
-      transform: scale(0.5);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(0.5);
-    }
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
   }
+}
+
+/* 自定义动画 */
+@keyframes slideInFromTop {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-from-top {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+.slide-in-from-bottom {
+  animation: slideInFromBottom 0.3s ease-out;
+}
+
+/* 烟花特效动画 */
+@keyframes fireworkBurst {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fireworkSpark {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  20% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.firework {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+  border-radius: 50%;
+  animation: fireworkBurst 1.5s ease-out forwards;
+}
+
+.firework::before,
+.firework::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: inherit;
+  border-radius: 50%;
+  animation: fireworkSpark 1.2s ease-out forwards;
+}
+
+.firework::before {
+  top: -8px;
+  left: -8px;
+  animation-delay: 0.2s;
+}
+
+.firework::after {
+  bottom: -8px;
+  right: -8px;
+  animation-delay: 0.4s;
+}
+
+/* 新的烟花特效动画 */
+@keyframes fireworkParticleExplode {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  20% {
+    transform: translate(calc(var(--final-x) * 0.3), calc(var(--final-y) * 0.3)) scale(1.2);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(calc(var(--final-x) * 0.7), calc(var(--final-y) * 0.7)) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(var(--final-x), var(--final-y)) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes fireworkLineExplode {
+  0% {
+    transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  15% {
+    transform: translate(-50%, -50%) scale(0.3) rotate(90deg);
+    opacity: 1;
+  }
+  30% {
+    transform: translate(calc(var(--final-x) * 0.4 - 50%), calc(var(--final-y) * 0.4 - 50%)) scale(0.8) rotate(180deg);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(calc(var(--final-x) * 0.8 - 50%), calc(var(--final-y) * 0.8 - 50%)) scale(1) rotate(270deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(calc(var(--final-x) - 50%), calc(var(--final-y) - 50%)) scale(0.2) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fireworkCenterBurst {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+.firework-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--color);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 10px var(--color),
+    0 0 20px var(--color),
+    0 0 30px var(--color);
+  animation: fireworkParticleExplode 1.5s ease-out forwards;
+  z-index: 51;
+}
+
+.firework-particle::before {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: inherit;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 5px var(--color);
+}
+
+/* 线条状烟花效果 */
+.firework-line {
+  position: absolute;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color), var(--color), transparent);
+  border-radius: 2px;
+  box-shadow: 
+    0 0 6px var(--color),
+    0 0 12px var(--color),
+    0 0 18px var(--color);
+  animation: fireworkLineExplode 1.2s ease-out forwards;
+  z-index: 51;
+}
+
+.firework-line::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  background: var(--color);
+  border-radius: 1px;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  box-shadow: 0 0 8px var(--color);
+}
+
+.firework-line::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--color);
+  border-radius: 50%;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  box-shadow: 
+    0 0 6px var(--color),
+    0 0 12px var(--color);
+}
+
+.firework-center {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #FFD700, #FF6B6B, #4ECDC4, #45B7D1);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 20px #FFD700,
+    0 0 40px #FF6B6B,
+    0 0 60px #4ECDC4;
+  animation: fireworkCenterBurst 1s ease-out forwards;
+  z-index: 52;
 }

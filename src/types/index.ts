@@ -25,6 +25,22 @@ export const TASK_CATEGORIES: TaskCategoryConfig[] = [
   { id: 'EXPLORE', label: TaskCategory.EXPLORE, emoji: '🔍' },
 ];
 
+// 项目接口定义
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  category: TaskCategory;
+  taskCount: number;
+  dueDate?: string;
+  hasProgress: boolean;
+  progress: number;
+  icon?: string;
+  color?: string;
+  notes?: string;
+  order?: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -34,6 +50,7 @@ export interface Task {
   endTime?: string;
   duration?: string;
   category?: TaskCategory;
+  project?: string; // 关联的项目标题
   type?: string;
   icon?: string;
   priority?: 'low' | 'medium' | 'high';
@@ -60,6 +77,7 @@ export interface Collection {
 
 export interface AppState {
   tasks: Task[];
+  projects: Project[]; // 添加项目列表
   tickets: Ticket[];
   focusMode: boolean;
   collections: Collection[]; // 用户的收集物列表
@@ -75,7 +93,10 @@ export type AppAction =
   | { type: 'CLEAR_ALL_TASKS' }
   | { type: 'POSTPONE_TASKS_TO_TOMORROW'; payload: string[] }
   | { type: 'ADD_COLLECTION'; payload: Collection }
-  | { type: 'LOAD_TASKS'; payload: Task[] };
+  | { type: 'LOAD_TASKS'; payload: Task[] }
+  | { type: 'ADD_PROJECT'; payload: Project }
+  | { type: 'UPDATE_PROJECT'; payload: { id: string; updates: Partial<Project> } }
+  | { type: 'DELETE_PROJECT'; payload: string };
 
 export interface User {
   id: string;        // UUID

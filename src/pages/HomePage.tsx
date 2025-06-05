@@ -6,6 +6,75 @@ import { Check, ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Task } from '../types';
 
+// 烟花特效组件
+const Fireworks = ({ 
+  show, 
+  onComplete, 
+  clickPosition 
+}: { 
+  show: boolean; 
+  onComplete: () => void; 
+  clickPosition?: { x: number; y: number } 
+}) => {
+  useEffect(() => {
+    if (show) {
+      const timer = setTimeout(() => {
+        onComplete();
+      }, 1500); // 缩短时间确保状态及时重置
+      return () => clearTimeout(timer);
+    }
+  }, [show, onComplete]);
+
+  if (!show) return null;
+
+  const centerX = clickPosition?.x || window.innerWidth / 2;
+  const centerY = clickPosition?.y || window.innerHeight / 2;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50">
+      {Array.from({ length: 24 }).map((_, i) => {
+        const angle = (i / 24) * Math.PI * 2;
+        const distance = 80 + Math.random() * 60;
+        const finalX = centerX + Math.cos(angle) * distance;
+        const finalY = centerY + Math.sin(angle) * distance;
+        
+        const colors = [
+          '#FF1744', '#E91E63', '#9C27B0', '#673AB7',
+          '#3F51B5', '#2196F3', '#03DAC6', '#00BCD4',
+          '#009688', '#4CAF50', '#8BC34A', '#CDDC39',
+          '#FFEB3B', '#FFC107', '#FF9800', '#FF5722'
+        ];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        return (
+          <div
+            key={`${show}-${i}`} // 使用show状态作为key的一部分，确保重新渲染
+            className="firework-line"
+            style={{
+              left: `${centerX}px`,
+              top: `${centerY}px`,
+              '--final-x': `${finalX - centerX}px`,
+              '--final-y': `${finalY - centerY}px`,
+              '--color': color,
+              animationDelay: `${Math.random() * 0.3}s`,
+            } as React.CSSProperties}
+          />
+        );
+      })}
+      
+      {/* 中心爆炸效果 */}
+      <div
+        key={`center-${show}`} // 确保重新渲染
+        className="firework-center"
+        style={{
+          left: `${centerX}px`,
+          top: `${centerY}px`,
+        }}
+      />
+    </div>
+  );
+};
+
 const HomePage = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useAppContext();
@@ -15,6 +84,8 @@ const HomePage = () => {
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [exitX, setExitX] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFireworks, setShowFireworks] = useState(false);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | undefined>(undefined);
   
   // 触摸相关状态
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -153,7 +224,34 @@ const HomePage = () => {
   // 处理完成事项
   const handleComplete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch({ type: 'COMPLETE_TASK', payload: id });
+    
+    // 获取点击位置
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    
+    // 先确保烟花状态被重置
+    setShowFireworks(false);
+    
+    // 使用setTimeout确保状态重置后再设置新状态
+    setTimeout(() => {
+      setClickPosition({ x: clickX, y: clickY });
+      setShowFireworks(true);
+    }, 10);
+    
+    // 延迟完成事项，让用户看到烟花效果
+    setTimeout(() => {
+      dispatch({ type: 'COMPLETE_TASK', payload: id });
+      
+      // 从推荐列表中移除已完成的事项
+      setRecommendedTasks(prev => prev.filter(task => task.id !== id));
+      
+      // 如果当前显示的是已完成的事项，切换到下一个
+      if (currentTask && currentTask.id === id) {
+        if (currentIndex >= recommendedTasks.length - 2) {
+          setCurrentIndex(0);
+        }
+      }
+    }, 800); // 调整延迟时间
   };
 
   // 获取更多推荐
@@ -350,6 +448,14 @@ const HomePage = () => {
           </div>
         )}
       </div>
+
+      {showFireworks && (
+        <Fireworks
+          show={showFireworks}
+          onComplete={() => setShowFireworks(false)}
+          clickPosition={clickPosition}
+        />
+      )}
     </div>
   );
 };

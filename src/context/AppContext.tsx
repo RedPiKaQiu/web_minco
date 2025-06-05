@@ -7,7 +7,15 @@ const loadInitialState = (): AppState => {
   const savedState = localStorage.getItem('appState');
   if (savedState) {
     try {
-      return JSON.parse(savedState);
+      const parsedState = JSON.parse(savedState);
+      // 确保状态包含所有必需的字段（向后兼容性）
+      return {
+        tasks: parsedState.tasks || [],
+        projects: parsedState.projects || [], // 添加默认值以防旧状态没有projects字段
+        tickets: parsedState.tickets || [],
+        focusMode: parsedState.focusMode || false,
+        collections: parsedState.collections || []
+      };
     } catch (error) {
       console.error('Failed to parse saved state:', error);
     }
@@ -61,6 +69,45 @@ const loadInitialState = (): AppState => {
         type: 'explore',
         duration: '1.5 小时',
         startTime: '晚上 8:00'
+      }
+    ],
+    projects: [
+      {
+        id: '1',
+        title: '家庭整理',
+        description: '整理家居空间，提高生活品质',
+        category: TaskCategory.LIFE,
+        taskCount: 4,
+        hasProgress: true,
+        progress: 25,
+        icon: '🏠',
+        color: '#4CAF50',
+        notes: '每周末花1-2小时进行整理，重点关注客厅和厨房区域。'
+      },
+      {
+        id: '2',
+        title: '健身计划',
+        description: '每周三次锻炼，提高体能',
+        category: TaskCategory.HEALTH,
+        taskCount: 3,
+        hasProgress: true,
+        progress: 33,
+        icon: '💪',
+        color: '#E91E63',
+        notes: '周一、周三、周五进行力量训练，周末进行有氧运动。'
+      },
+      {
+        id: '3',
+        title: '季度报告',
+        description: '准备第二季度业绩报告',
+        category: TaskCategory.WORK,
+        taskCount: 4,
+        dueDate: '2024-06-30',
+        hasProgress: true,
+        progress: 25,
+        icon: '📊',
+        color: '#9C27B0',
+        notes: '重点分析销售增长点和成本控制措施，准备详细的数据支持。'
       }
     ],
     tickets: [],
@@ -126,6 +173,28 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
       newState = {
         ...state,
         tasks: state.tasks.filter(task => task.id !== action.payload),
+      };
+      break;
+    case 'ADD_PROJECT':
+      newState = {
+        ...state,
+        projects: [...state.projects, action.payload],
+      };
+      break;
+    case 'UPDATE_PROJECT':
+      newState = {
+        ...state,
+        projects: state.projects.map(project => 
+          project.id === action.payload.id 
+            ? { ...project, ...action.payload.updates } 
+            : project
+        ),
+      };
+      break;
+    case 'DELETE_PROJECT':
+      newState = {
+        ...state,
+        projects: state.projects.filter(project => project.id !== action.payload),
       };
       break;
     case 'ADD_TICKET':
