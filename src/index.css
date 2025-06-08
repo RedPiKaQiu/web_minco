@@ -679,12 +679,113 @@ body {
   position: absolute;
   width: 20px;
   height: 20px;
-  background: radial-gradient(circle, #FFD700, #FF6B6B, #4ECDC4, #45B7D1);
+  background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 70%);
   border-radius: 50%;
-  box-shadow: 
-    0 0 20px #FFD700,
-    0 0 40px #FF6B6B,
-    0 0 60px #4ECDC4;
-  animation: fireworkCenterBurst 1s ease-out forwards;
-  z-index: 52;
+  transform: translate(-50%, -50%);
+  animation: fireworkCenterBurst 1.5s ease-out forwards;
+}
+
+/* 便利贴相关样式 */
+.rotate-1 {
+  transform: rotate(1deg);
+}
+
+.-rotate-1 {
+  transform: rotate(-1deg);
+}
+
+.rotate-2 {
+  transform: rotate(2deg);
+}
+
+.-rotate-2 {
+  transform: rotate(-2deg);
+}
+
+.rotate-3 {
+  transform: rotate(3deg);
+}
+
+.-rotate-3 {
+  transform: rotate(-3deg);
+}
+
+/* 文本行数限制 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 便利贴悬停效果 */
+.sticky-note:hover {
+  transform: scale(1.05) rotate(var(--rotation, 0deg));
+  z-index: 10;
+  transition: all 0.2s ease-in-out;
+}
+
+/* 便利贴选中效果 */
+.sticky-note.selected {
+  transform: scale(1.1) rotate(var(--rotation, 0deg));
+  z-index: 20;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* 便利贴背景颜色 */
+.bg-yellow-200 {
+  background-color: #fef3c7;
+}
+
+.border-yellow-300 {
+  border-color: #fcd34d;
+}
+
+.bg-pink-200 {
+  background-color: #fce7f3;
+}
+
+.border-pink-300 {
+  border-color: #f9a8d4;
+}
+
+.bg-blue-200 {
+  background-color: #dbeafe;
+}
+
+.border-blue-300 {
+  border-color: #93c5fd;
+}
+
+.bg-green-200 {
+  background-color: #dcfce7;
+}
+
+.border-green-300 {
+  border-color: #86efac;
+}
+
+.bg-purple-200 {
+  background-color: #e9d5ff;
+}
+
+.border-purple-300 {
+  border-color: #c4b5fd;
+}
+
+.bg-orange-200 {
+  background-color: #fed7aa;
+}
+
+.border-orange-300 {
+  border-color: #fdba74;
 }

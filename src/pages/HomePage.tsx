@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Check, ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react';
+import { Loader2, Grid3X3, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Task } from '../types';
+import { CardMode } from '../components/CardMode';
+import { StickyNoteBoard } from '../components/StickyNoteBoard';
 
 // 烟花特效组件
 const Fireworks = ({ 
@@ -75,23 +77,17 @@ const Fireworks = ({
   );
 };
 
+
+
 const HomePage = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useAppContext();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [greeting, setGreeting] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState<'left' | 'right' | null>(null);
-  const [exitX, setExitX] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | undefined>(undefined);
-  
-  // 触摸相关状态
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
+  const [viewMode, setViewMode] = useState<'card' | 'sticky'>('card'); // 新增模式状态
 
   // 更新时间
   useEffect(() => {
@@ -192,33 +188,24 @@ const HomePage = () => {
 
   const [recommendedTasks, setRecommendedTasks] = useState<Task[]>(initialRecommendedTasks);
 
-  // 处理滑动
-  const handleSwipe = (dir: 'left' | 'right') => {
+  // 处理卡片模式的滑动
+  const handleCardSwipe = (dir: 'left' | 'right') => {
     if (recommendedTasks.length === 0) return;
 
-    setDirection(dir);
-    setExitX(dir === 'left' ? -100 : 100);
-
-    const currentTask = recommendedTasks[currentIndex];
-    if (!currentTask) return;
-
-    setTimeout(() => {
-      if (dir === 'left') {
-        // 左滑跳过 - 从推荐列表移除
-        setRecommendedTasks(prev => prev.filter((_, i) => i !== currentIndex));
-      } else if (dir === 'right') {
-        // 右滑开始专注 - 导航到专注模式
+    if (dir === 'left') {
+      // 左滑跳过 - 从推荐列表移除
+      const currentTask = recommendedTasks[0];
+      if (currentTask) {
+        setRecommendedTasks(prev => prev.filter(task => task.id !== currentTask.id));
+      }
+    } else if (dir === 'right') {
+      // 右滑开始专注 - 导航到专注模式
+      const currentTask = recommendedTasks[0];
+      if (currentTask) {
         navigate(`/focus/${currentTask.id}`);
-        setRecommendedTasks(prev => prev.filter((_, i) => i !== currentIndex));
+        setRecommendedTasks(prev => prev.filter(task => task.id !== currentTask.id));
       }
-
-      setDirection(null);
-      
-      // 重置索引
-      if (currentIndex >= recommendedTasks.length - 1) {
-        setCurrentIndex(0);
-      }
-    }, 300);
+    }
   };
 
   // 处理完成事项
@@ -244,13 +231,6 @@ const HomePage = () => {
       
       // 从推荐列表中移除已完成的事项
       setRecommendedTasks(prev => prev.filter(task => task.id !== id));
-      
-      // 如果当前显示的是已完成的事项，切换到下一个
-      if (currentTask && currentTask.id === id) {
-        if (currentIndex >= recommendedTasks.length - 2) {
-          setCurrentIndex(0);
-        }
-      }
     }, 800); // 调整延迟时间
   };
 
@@ -261,58 +241,20 @@ const HomePage = () => {
     setTimeout(() => {
       const newRecommendations = getRecommendedTask(todayTasks);
       setRecommendedTasks(newRecommendations);
-      setCurrentIndex(0);
       setIsLoading(false);
     }, 800);
   };
 
-  // 触摸事件处理
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.targetTouches[0];
-    setTouchStart({ x: touch.clientX, y: touch.clientY });
-    setTouchEnd(null);
-    setIsDragging(false);
-    setDragOffset(0);
+  // 处理跳过（便利贴模式）
+  const handleSkip = (id: string) => {
+    setRecommendedTasks(prev => prev.filter(task => task.id !== id));
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart) return;
-
-    const touch = e.targetTouches[0];
-    const deltaX = touch.clientX - touchStart.x;
-    const deltaY = touch.clientY - touchStart.y;
-
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-      setIsDragging(true);
-      setDragOffset(deltaX);
-      e.preventDefault();
-    }
-
-    setTouchEnd({ x: touch.clientX, y: touch.clientY });
+  // 处理开始专注（便利贴模式）
+  const handleFocus = (id: string) => {
+    navigate(`/focus/${id}`);
+    setRecommendedTasks(prev => prev.filter(task => task.id !== id));
   };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
-    const deltaX = touchEnd.x - touchStart.x;
-    const deltaY = touchEnd.y - touchStart.y;
-
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (deltaX > 0) {
-        handleSwipe('right');
-      } else {
-        handleSwipe('left');
-      }
-    }
-
-    setTouchStart(null);
-    setTouchEnd(null);
-    setIsDragging(false);
-    setDragOffset(0);
-  };
-
-  const safeIndex = Math.min(currentIndex, recommendedTasks.length - 1);
-  const currentTask = recommendedTasks[safeIndex];
 
   return (
     <div className="page-content safe-area-top">
@@ -326,7 +268,31 @@ const HomePage = () => {
 
       {/* 决策区域 */}
       <div className="py-4">
-        <h2 className="text-lg font-medium mb-4 text-gray-900">现在可以做什么？</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-gray-900">现在可以做什么？</h2>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setViewMode('card')}
+              className={`h-8 w-8 p-0 rounded flex items-center justify-center touch-target ${
+                viewMode === 'card' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              <Layers className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('sticky')}
+              className={`h-8 w-8 p-0 rounded flex items-center justify-center touch-target ${
+                viewMode === 'sticky' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
 
         {recommendedTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -346,107 +312,25 @@ const HomePage = () => {
               )}
             </button>
           </div>
+        ) : viewMode === 'sticky' ? (
+          <StickyNoteBoard
+            tasks={recommendedTasks}
+            onComplete={handleComplete}
+            onSkip={handleSkip}
+            onFocus={handleFocus}
+            onGetMore={handleGetMoreRecommendations}
+            isLoading={isLoading}
+          />
         ) : (
-          <div className="relative h-[350px] flex items-center">
-            {/* 左箭头 - 跳过 */}
-            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10">
-              <button
-                onClick={() => handleSwipe('left')}
-                className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-sm shadow-md hover:bg-white/90 transition-all flex items-center justify-center touch-target no-tap-highlight"
-              >
-                <ChevronLeft className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
-
-            {/* 右箭头 - 开始专注 */}
-            <div className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10">
-              <button
-                onClick={() => handleSwipe('right')}
-                className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-sm shadow-md hover:bg-white/90 transition-all flex items-center justify-center touch-target no-tap-highlight"
-              >
-                <ChevronRight className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
-
-            {/* 事项卡片 */}
-            {currentTask && (
-              <div
-                className={`mx-auto p-6 bg-white rounded-lg shadow-md cursor-grab active:cursor-grabbing w-[85%] max-w-[85%] relative transition-all duration-300 ${
-                  direction ? 'opacity-0' : ''
-                } ${isDragging ? 'transition-none' : ''} no-select`}
-                style={{
-                  transform: isDragging 
-                    ? `translateX(${dragOffset}px) rotate(${dragOffset * 0.1}deg)` 
-                    : direction 
-                    ? `translateX(${exitX}%)` 
-                    : undefined
-                }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                <div className="absolute top-4 right-4 z-10">
-                  <button
-                    onClick={(e) => handleComplete(currentTask.id, e)}
-                    className="rounded-full h-8 w-8 border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center touch-target no-tap-highlight"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="flex flex-col h-full">
-                  <div className="text-3xl mb-2">{currentTask.icon || '📌'}</div>
-                  <h3 className="text-xl font-semibold mb-2 text-gray-900">{currentTask.title}</h3>
-
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-2 py-1 bg-gray-100 rounded-full text-sm border">
-                      {currentTask.type || '未分类'}
-                    </span>
-                    {currentTask.category && (
-                      <span className="px-2 py-1 bg-gray-100 rounded-full text-sm border">
-                        {currentTask.category}
-                      </span>
-                    )}
-                  </div>
-
-                  {currentTask.duration && (
-                    <div className="flex items-center text-sm text-gray-500 mb-2">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {currentTask.duration}
-                    </div>
-                  )}
-
-                  <div className="border-t border-gray-100 pt-3 mt-auto">
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">推荐理由：</span>
-                      {generateRecommendReason()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <CardMode
+            tasks={recommendedTasks}
+            onComplete={handleComplete}
+            onSwipe={handleCardSwipe}
+            generateRecommendReason={generateRecommendReason}
+          />
         )}
 
-        {recommendedTasks.length > 0 && (
-          <div className="flex flex-col items-center mt-4">
-            <div className="text-sm text-gray-500 mb-2">
-              <span>← 跳过</span>
-              <span className="mx-2">|</span>
-              <span>开始 →</span>
-            </div>
-            <div className="flex justify-center">
-              {recommendedTasks.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 w-1.5 rounded-full mx-1 ${
-                    i === safeIndex ? 'bg-blue-500' : 'bg-gray-300'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
 
       {showFireworks && (
