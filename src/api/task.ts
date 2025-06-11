@@ -1,5 +1,6 @@
 // 事项相关 API 接口
 import { fetchApi } from './index';
+import { ApiResponse } from '../types';
 
 // 事项类型，根据API文档
 export interface ApiTask {
@@ -58,9 +59,16 @@ export interface TaskUpdatePayload {
  */
 export async function getTasks(skip = 0, limit = 100): Promise<ApiTask[]> {
   try {
-    return await fetchApi<ApiTask[]>(`/tasks/?skip=${skip}&limit=${limit}`, {
+    const response = await fetchApi<ApiResponse<ApiTask[]>>(`/tasks/?skip=${skip}&limit=${limit}`, {
       method: 'GET',
     });
+
+    // 检查业务状态码
+    if (response.code === 0) {
+      return response.data || [];
+    } else {
+      throw new Error(response.message || '获取事项列表失败');
+    }
   } catch (error) {
     console.error('获取事项列表失败:', error);
     throw error;
@@ -74,10 +82,17 @@ export async function getTasks(skip = 0, limit = 100): Promise<ApiTask[]> {
  */
 export async function createTask(taskData: TaskCreatePayload): Promise<ApiTask> {
   try {
-    return await fetchApi<ApiTask>('/tasks/', {
+    const response = await fetchApi<ApiResponse<ApiTask>>('/tasks/', {
       method: 'POST',
       body: JSON.stringify(taskData),
     });
+
+    // 检查业务状态码
+    if (response.code === 0) {
+      return response.data!;
+    } else {
+      throw new Error(response.message || '创建事项失败');
+    }
   } catch (error) {
     console.error('创建事项失败:', error);
     throw error;
@@ -91,9 +106,16 @@ export async function createTask(taskData: TaskCreatePayload): Promise<ApiTask> 
  */
 export async function getTask(taskId: number): Promise<ApiTask> {
   try {
-    return await fetchApi<ApiTask>(`/tasks/${taskId}`, {
+    const response = await fetchApi<ApiResponse<ApiTask>>(`/tasks/${taskId}`, {
       method: 'GET',
     });
+
+    // 检查业务状态码
+    if (response.code === 0) {
+      return response.data!;
+    } else {
+      throw new Error(response.message || `获取事项${taskId}失败`);
+    }
   } catch (error) {
     console.error(`获取事项${taskId}失败:`, error);
     throw error;
@@ -108,10 +130,17 @@ export async function getTask(taskId: number): Promise<ApiTask> {
  */
 export async function updateTask(taskId: number, taskData: TaskUpdatePayload): Promise<ApiTask> {
   try {
-    return await fetchApi<ApiTask>(`/tasks/${taskId}`, {
+    const response = await fetchApi<ApiResponse<ApiTask>>(`/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify(taskData),
     });
+
+    // 检查业务状态码
+    if (response.code === 0) {
+      return response.data!;
+    } else {
+      throw new Error(response.message || `更新事项${taskId}失败`);
+    }
   } catch (error) {
     console.error(`更新事项${taskId}失败:`, error);
     throw error;
@@ -124,9 +153,14 @@ export async function updateTask(taskId: number, taskData: TaskUpdatePayload): P
  */
 export async function deleteTask(taskId: number): Promise<void> {
   try {
-    await fetchApi(`/tasks/${taskId}`, {
+    const response = await fetchApi<ApiResponse<any>>(`/tasks/${taskId}`, {
       method: 'DELETE',
     });
+
+    // 检查业务状态码
+    if (response.code !== 0) {
+      throw new Error(response.message || `删除事项${taskId}失败`);
+    }
   } catch (error) {
     console.error(`删除事项${taskId}失败:`, error);
     throw error;

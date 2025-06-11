@@ -1,7 +1,7 @@
 // API 基础配置和公共方法
 
 // API 基础 URL
-export const API_BASE_URL = 'http://127.0.0.1:8000/api';
+export const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 // 获取token
 const getToken = () => {

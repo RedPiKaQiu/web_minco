@@ -43,6 +43,55 @@ const TimelinePage = () => {
     return groups;
   }, {} as Record<string, typeof incompleteTasks>);
 
+  // 按时间排序的所有任务（用于展开模式的平铺显示）
+  const sortedTasks = incompleteTasks.sort((a, b) => {
+    const timeA = parseTime(a.startTime);
+    const timeB = parseTime(b.startTime);
+    return timeA - timeB;
+  });
+
+  // 解析时间为数字，用于排序
+  function parseTime(startTime?: string): number {
+    if (!startTime || startTime === '随时') return 2400; // 随时放在最后
+    
+    let hour = 0;
+    
+    // 处理多种时间格式
+    if (startTime.includes('上午')) {
+      const match = startTime.match(/上午\s*(\d{1,2})/);
+      if (match) {
+        hour = parseInt(match[1]);
+        if (hour === 12) hour = 0; // 上午12点 = 0点
+      }
+    } else if (startTime.includes('下午')) {
+      const match = startTime.match(/下午\s*(\d{1,2})/);
+      if (match) {
+        hour = parseInt(match[1]);
+        if (hour !== 12) hour += 12; // 下午1点-11点加12
+      }
+    } else if (startTime.includes('中午')) {
+      hour = 12;
+    } else if (startTime.includes('晚上')) {
+      const match = startTime.match(/晚上\s*(\d{1,2})/);
+      if (match) {
+        const h = parseInt(match[1]);
+        hour = h >= 6 ? h + 12 : h;
+      }
+    } else {
+      // 直接是数字格式
+      const match = startTime.match(/^(\d{1,2})/);
+      if (match) {
+        hour = parseInt(match[1]);
+      }
+    }
+    
+    // 提取分钟
+    const minuteMatch = startTime.match(/:(\d{2})/);
+    const minute = minuteMatch ? parseInt(minuteMatch[1]) : 0;
+    
+    return hour * 100 + minute; // 转换为HHMM格式的数字
+  }
+
   // 获取本周日期
   const getWeekDates = () => {
     const startOfThisWeek = startOfWeek(selectedDate, { weekStartsOn: 1 }); // 周一开始
@@ -139,12 +188,12 @@ const TimelinePage = () => {
     }));
   };
 
-  // 切换视图模式时，在紧凑模式下收起所有区域
+  // 切换视图模式
   const handleViewModeChange = () => {
     const newMode = viewMode === 'compact' ? 'expanded' : 'compact';
     setViewMode(newMode);
     
-    // 如果切换到紧凑模式，收起所有区域
+    // 如果切换到紧凑模式，收起所有区域（仅在紧凑模式下使用分组）
     if (newMode === 'compact') {
       setExpandedSections({
         上午: false,
@@ -154,7 +203,7 @@ const TimelinePage = () => {
         随时: false,
       });
     } else {
-      // 如果切换到展开模式，展开所有区域
+      // 展开模式下不需要区域展开状态，因为直接平铺显示
       setExpandedSections({
         上午: true,
         中午: true,
@@ -218,8 +267,8 @@ const TimelinePage = () => {
 
   const isToday = isSameDay(selectedDate, new Date());
 
-  // 判断当前是否大部分区域都展开了
-  const isCurrentlyExpanded = Object.values(expandedSections).filter(Boolean).length > Object.values(expandedSections).length / 2;
+  // 判断当前视图模式
+  const isCurrentlyExpanded = viewMode === 'expanded';
 
   const renderHeader = () => (
     <div className="py-4 space-y-4">
@@ -418,80 +467,50 @@ const TimelinePage = () => {
   );
 
   const renderExpandedView = () => (
-    <div className="py-2 space-y-4">
-      {timeSlots.map(slot => {
-        const sectionTasks = groupedTasks[slot.id] || [];
-        
-        return (
-          <div key={slot.id} className="border rounded-lg overflow-hidden bg-white">
-            <div
-              className="flex items-center justify-between p-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors touch-target no-tap-highlight"
-              onClick={() => toggleSection(slot.id)}
-            >
-              <div className="flex items-center">
-                <span className="mr-2">{slot.emoji}</span>
-                <h3 className="font-medium">{slot.label}</h3>
-                <span className="ml-2 text-sm text-gray-500">({sectionTasks.length})</span>
-              </div>
-              <button className="p-1 touch-target">
-                {expandedSections[slot.id] ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
+    <div className="py-2 space-y-2">
+      {incompleteTasks.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">暂无事项</div>
+      ) : (
+        sortedTasks.map(task => (
+          <div
+            key={task.id}
+            className="p-3 bg-white rounded-lg border cursor-pointer transition-colors hover:bg-gray-50 no-tap-highlight"
+            onClick={(e) => handleTaskClick(task.id, e)}
+          >
+            <div className="flex items-center">
+              <div className="flex items-center mr-3">
+                <button
+                  onClick={(e) => handleComplete(task.id, e)}
+                  className="h-5 w-5 rounded-full border border-gray-300 flex items-center justify-center relative hover:bg-gray-50 touch-target no-tap-highlight flex-shrink-0 mr-2"
+                >
+                  <Check className="h-2 w-2" />
+                </button>
+                {task.startTime && (
+                  <div className="text-sm text-gray-500 whitespace-nowrap">{task.startTime}</div>
                 )}
-              </button>
+              </div>
+
+              <div className="flex-grow min-w-0">
+                <div className="font-medium truncate">{task.title}</div>
+              </div>
+
+              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                {task.icon && <div className="text-lg">{task.icon}</div>}
+                {task.duration && (
+                  <span className="px-2 py-1 bg-gray-100 rounded text-xs whitespace-nowrap">
+                    {task.duration}
+                  </span>
+                )}
+                {task.category && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs whitespace-nowrap">
+                    {task.category}
+                  </span>
+                )}
+              </div>
             </div>
-
-            {expandedSections[slot.id] && (
-              <div className="p-2">
-                {sectionTasks.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 text-sm">暂无事项</div>
-                ) : (
-                  <div className="space-y-2">
-                    {sectionTasks.map(task => (
-                      <div
-                        key={task.id}
-                        className="p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 no-tap-highlight"
-                        onClick={(e) => handleTaskClick(task.id, e)}
-                      >
-                        <div className="flex items-center">
-                          <button
-                            onClick={(e) => handleComplete(task.id, e)}
-                            className="h-5 w-5 rounded-full border border-gray-300 flex items-center justify-center mr-3 relative hover:bg-gray-50 touch-target no-tap-highlight"
-                          >
-                            <Check className="h-2 w-2" />
-                          </button>
-
-                          <div className="flex-grow">
-                            <div className="font-medium">{task.title}</div>
-                            {task.startTime && (
-                              <div className="text-sm text-gray-500">{task.startTime}</div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {task.icon && <div className="text-lg">{task.icon}</div>}
-                            {task.duration && (
-                              <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                                {task.duration}
-                              </span>
-                            )}
-                            {task.category && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                {task.category}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        );
-      })}
+        ))
+      )}
     </div>
   );
 

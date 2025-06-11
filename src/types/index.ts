@@ -1,3 +1,10 @@
+// API统一响应格式
+export interface ApiResponse<T = any> {
+  code: number;        // 业务状态码，0表示成功
+  message: string;     // 响应消息
+  data: T | null;      // 数据载荷
+}
+
 // 事项分类枚举
 export enum TaskCategory {
   LIFE = '生活',

@@ -6,31 +6,63 @@ import HomePage from './pages/HomePage';
 import TimelinePage from './pages/TimelinePage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProfilePage from './pages/ProfilePage';
+import LoginPage from './pages/LoginPage';
 import NewTaskPage from './pages/NewTaskPage';
 import FocusPage from './pages/FocusPage';
 import AiChatPage from './pages/AiChatPage';
 import BottomNavigation from './components/BottomNavigation';
 import FloatingButtons from './components/FloatingButtons';
+import AuthGuard from './components/AuthGuard';
 import './index.css';
 
 function AppContent() {
   const location = useLocation();
   const isAiChatPage = location.pathname === '/ai-chat';
   const isNewTaskPage = location.pathname === '/new-task';
-  const shouldHideNavigation = isAiChatPage || isNewTaskPage;
+  const isLoginPage = location.pathname === '/login';
+  const shouldHideNavigation = isAiChatPage || isNewTaskPage || isLoginPage;
 
   return (
     <div className="mobile-container">
       <div className="app-page">
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/timeline" element={<TimelinePage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/new-task" element={<NewTaskPage />} />
-          <Route path="/focus/:taskId" element={<FocusPage />} />
-          <Route path="/ai-chat" element={<AiChatPage />} />
+          <Route path="/home" element={
+            <AuthGuard>
+              <HomePage />
+            </AuthGuard>
+          } />
+          <Route path="/timeline" element={
+            <AuthGuard>
+              <TimelinePage />
+            </AuthGuard>
+          } />
+          <Route path="/projects" element={
+            <AuthGuard>
+              <ProjectsPage />
+            </AuthGuard>
+          } />
+          <Route path="/profile" element={
+            <AuthGuard>
+              <ProfilePage />
+            </AuthGuard>
+          } />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/new-task" element={
+            <AuthGuard>
+              <NewTaskPage />
+            </AuthGuard>
+          } />
+          <Route path="/focus/:taskId" element={
+            <AuthGuard>
+              <FocusPage />
+            </AuthGuard>
+          } />
+          <Route path="/ai-chat" element={
+            <AuthGuard>
+              <AiChatPage />
+            </AuthGuard>
+          } />
         </Routes>
         {!shouldHideNavigation && <FloatingButtons />}
         {!shouldHideNavigation && <BottomNavigation />}

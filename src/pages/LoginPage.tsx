@@ -1,18 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid'; // 需要安装: npm install uuid @types/uuid
 import { useUser } from '../context/UserContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { testConnection } from '../api/test';
 import { login, register } from '../api/user';
 
 const LoginPage = () => {
-  const { dispatch } = useUser();
+  const { state, dispatch } = useUser();
   const navigate = useNavigate();
   const [connectionStatus, setConnectionStatus] = useState<'未连接' | '连接中...' | '连接成功' | '连接失败'>('未连接');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(true);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [username, setUsername] = useState('');
@@ -23,6 +23,13 @@ const LoginPage = () => {
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
+
+  // 如果用户已登录，重定向到主页
+  useEffect(() => {
+    if (state.isAuthenticated && state.user) {
+      navigate('/', { replace: true });
+    }
+  }, [state.isAuthenticated, state.user, navigate]);
 
   const handleTestLogin = () => {
     // 创建测试用户数据
