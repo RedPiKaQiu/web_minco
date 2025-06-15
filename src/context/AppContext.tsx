@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { AppState, AppAction, TaskCategory } from '../types';
-import { getTasks } from '../api/task';
+import { getItems } from '../api/items';
 
 // 从localStorage加载初始状态
 const loadInitialState = (): AppState => {
@@ -76,6 +76,12 @@ const loadInitialState = (): AppState => {
         id: '1',
         title: '家庭整理',
         description: '整理家居空间，提高生活品质',
+        category_id: 1, // 生活
+        task_count: 4,
+        completed_task_count: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // 兼容性字段
         category: TaskCategory.LIFE,
         taskCount: 4,
         hasProgress: true,
@@ -88,6 +94,12 @@ const loadInitialState = (): AppState => {
         id: '2',
         title: '健身计划',
         description: '每周三次锻炼，提高体能',
+        category_id: 2, // 健康
+        task_count: 3,
+        completed_task_count: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // 兼容性字段
         category: TaskCategory.HEALTH,
         taskCount: 3,
         hasProgress: true,
@@ -100,6 +112,12 @@ const loadInitialState = (): AppState => {
         id: '3',
         title: '季度报告',
         description: '准备第二季度业绩报告',
+        category_id: 3, // 工作
+        task_count: 4,
+        completed_task_count: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // 兼容性字段
         category: TaskCategory.WORK,
         taskCount: 4,
         dueDate: '2024-06-30',
@@ -265,31 +283,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // 加载事项列表
   const loadTasks = async () => {
     // 检查是否有token，如果有才请求事项
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) return;
     
     try {
       setIsLoading(true);
-      const tasksFromApi = await getTasks();
+      const response = await getItems();
       
       // 转换API事项格式为应用内部格式
-      const formattedTasks = tasksFromApi.map(apiTask => {
-        // 映射API的type字段到我们的TaskCategory枚举
+      const formattedTasks = response.items.map((apiTask: any) => {
+        // 映射API的category_id字段到我们的TaskCategory枚举
         let mappedCategory: TaskCategory | undefined;
-        switch (apiTask.type) {
-          case 'study':
-            mappedCategory = TaskCategory.STUDY;
+        switch (apiTask.category_id) {
+          case 1:
+            mappedCategory = TaskCategory.LIFE;
             break;
-          case 'career':
-            mappedCategory = TaskCategory.WORK;
-            break;
-          case 'health':
+          case 2:
             mappedCategory = TaskCategory.HEALTH;
             break;
-          case 'art':
+          case 3:
+            mappedCategory = TaskCategory.WORK;
+            break;
+          case 4:
+            mappedCategory = TaskCategory.STUDY;
+            break;
+          case 5:
             mappedCategory = TaskCategory.RELAX;
             break;
-          case 'other':
+          case 6:
+            mappedCategory = TaskCategory.EXPLORE;
+            break;
           default:
             mappedCategory = TaskCategory.LIFE;
             break;
@@ -298,11 +321,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return {
           id: apiTask.id?.toString() || '',
           title: apiTask.title,
-          completed: apiTask.completed || false,
-          dueDate: apiTask.day,
-          startTime: apiTask.start_time,
-          endTime: apiTask.end_time,
-          priority: apiTask.priority as any,
+          completed: apiTask.status_id === 3, // 3表示已完成
+          dueDate: apiTask.start_time ? apiTask.start_time.split('T')[0] : undefined,
+          startTime: apiTask.start_time ? apiTask.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+          endTime: apiTask.end_time ? apiTask.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+          priority: (apiTask.priority >= 4 ? 'high' : apiTask.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
           category: mappedCategory,
           isAnytime: !apiTask.start_time, // 如果没有开始时间，则视为"随时可做"
         };

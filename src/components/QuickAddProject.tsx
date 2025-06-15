@@ -25,6 +25,16 @@ const QuickAddProject = ({ onClose, category }: QuickAddProjectProps) => {
         id: Date.now().toString(),
         title: projectName.trim(),
         description: description.trim(),
+        category_id: category === TaskCategory.LIFE ? 1 : 
+                     category === TaskCategory.HEALTH ? 2 :
+                     category === TaskCategory.WORK ? 3 :
+                     category === TaskCategory.STUDY ? 4 :
+                     category === TaskCategory.RELAX ? 5 : 6,
+        task_count: 0,
+        completed_task_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // 兼容性字段
         category: category,
         taskCount: 0,
         hasProgress: true,

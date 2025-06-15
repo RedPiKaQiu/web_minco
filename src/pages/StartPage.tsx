@@ -9,7 +9,7 @@ const StartPage = () => {
   const { state } = useUser();
   
   // 获取用户昵称，如果没有则使用默认值
-  const userNickname = state.user?.nickname || '朋友';
+  const userNickname = state.user?.nickname || state.user?.username || '朋友';
 
   const handleStart = () => {
     // 清空所有事项后再导航到主页

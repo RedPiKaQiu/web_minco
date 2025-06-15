@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Plus, Calendar, Clock, MoreHorizontal, List, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { createTask } from '../api/task';
+import { createItem } from '../api/items';
 
 interface TaskAddDrawerProps {
   isOpen: boolean;
@@ -188,18 +188,13 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
         }
         
         // 调用API创建事项
-        const result = await createTask({
+        const result = await createItem({
           title: taskTitle,
           description: '',
-          day: taskDay,
-          start_time: taskStartTime || undefined,
-          end_time: undefined,
-          type: 'other',
-          priority: 'medium',
-          completed: false,
-          location: '',
-          participants: '',
-          repeat: 'none'
+          category_id: 1, // 默认分类：生活
+          start_time: taskStartTime ? `${taskDay}T${taskStartTime}:00` : undefined,
+          priority: 3, // 默认优先级：中等
+          time_slot_id: 5, // 默认时间段：随时
         });
         
         // 创建成功后，更新本地状态
@@ -208,12 +203,12 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
           payload: {
             id: result.id?.toString() || Date.now().toString(),
             title: result.title,
-            completed: result.completed || false,
+            completed: result.status_id === 3, // 3表示已完成
             isAnytime: !result.start_time,
-            dueDate: result.day,
-            startTime: result.start_time,
-            endTime: result.end_time,
-            priority: result.priority as any,
+            dueDate: result.start_time ? result.start_time.split('T')[0] : taskDay,
+            startTime: result.start_time ? result.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+            endTime: result.end_time ? result.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+            priority: result.priority >= 4 ? 'high' : result.priority >= 3 ? 'medium' : 'low',
           },
         });
         

@@ -48,7 +48,7 @@ const ProjectDetailModal = ({ project, onClose }: ProjectDetailModalProps) => {
       type: 'UPDATE_PROJECT',
       payload: {
         id: project.id,
-        updates: { description: tempDescription.trim() }
+        updates: { description: tempDescription?.trim() || '' }
       }
     });
     setIsEditingDescription(false);

@@ -1,11 +1,5 @@
 // 测试相关 API 接口
-import { fetchApi } from './index';
-import { ApiResponse } from '../types';
-
-// 测试连接请求参数
-interface TestConnectRequestDto {
-  uuid?: string;  // 可选的用户UUID
-}
+import { fetchApi, ApiResponse } from './index';
 
 // 测试连接响应数据
 interface TestConnectResponseDto {
@@ -16,25 +10,24 @@ interface TestConnectResponseDto {
 
 /**
  * 测试与后端的连接状态
- * @param uuid 用户标识符（可选）
+ * @param uuid 用户标识符（可选，如果不提供则自动生成）
  * @returns 连接测试结果
  */
 export async function testConnection(uuid?: string): Promise<TestConnectResponseDto> {
   try {
+    // 如果没有提供uuid，则自动生成一个测试用的uuid
+    const testUuid = uuid || `test-connection-${Date.now()}`;
+    
     const response = await fetchApi<ApiResponse<TestConnectResponseDto>>('/test/connect_test', {
       method: 'POST',
-      body: JSON.stringify({ uuid }),
+      body: JSON.stringify({ uuid: testUuid }),
     });
     
     // 检查业务状态码
-    if (response.code === 0) {
-      return response.data || {
-        status: 'success',
-        message: 'Connection successful',
-        uuid
-      };
+    if (response.code === 0 && response.data) {
+      return response.data;
     } else {
-      // 业务逻辑错误
+      // 如果后端返回错误，抛出错误信息
       throw new Error(response.message || '连接测试失败');
     }
   } catch (error) {

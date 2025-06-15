@@ -35,9 +35,12 @@ const LoginPage = () => {
     // 创建测试用户数据
     const testUser = {
       id: uuidv4(),
+      username: 'Shell',
+      email: 'shell@test.com',
       nickname: 'Shell',
       gender: 'female' as const,
       age: 25,
+      created_at: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
 
@@ -76,24 +79,13 @@ const LoginPage = () => {
     setIsLoggingIn(true);
     
     try {
-      const response = await login(username, password);
+      const response = await login({ username, password });
       
       if (response.access_token) {
-        // 将token存储到localStorage
-        localStorage.setItem('token', response.access_token);
-        localStorage.setItem('token_type', response.token_type);
-        
-        // 创建临时用户数据 (实际项目中应该有一个获取用户信息的API)
-        const tempUser = {
-          id: 'logged-user',
-          nickname: username,
-          gender: 'other' as const,
-          age: 30,
-          createdAt: new Date().toISOString()
-        };
+        // access_token已在login函数中保存到localStorage
         
         // 登录成功，更新用户状态
-        dispatch({ type: 'LOGIN', payload: tempUser });
+        dispatch({ type: 'LOGIN', payload: response.user });
         
         // 导航到主页
         navigate('/');
@@ -125,6 +117,7 @@ const LoginPage = () => {
     
     try {
       const userData = {
+        username: email, // 使用邮箱作为用户名
         email,
         password,
         full_name: fullName
