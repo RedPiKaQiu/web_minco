@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { Task } from '../types';
 import { CardMode } from '../components/CardMode';
 import { StickyNoteBoard } from '../components/StickyNoteBoard';
+import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
 
 // 烟花特效组件
 const Fireworks = ({ 
@@ -77,17 +79,14 @@ const Fireworks = ({
   );
 };
 
-
-
 const HomePage = () => {
   const navigate = useNavigate();
-  const { state, dispatch } = useAppContext();
+  const { state, dispatch, isLoading, error, refreshTasks, isTestUser } = useAppContext();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [greeting, setGreeting] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'card' | 'sticky'>('card'); // 新增模式状态
+  const [viewMode, setViewMode] = useState<'card' | 'sticky'>('card');
 
   // 更新时间
   useEffect(() => {
@@ -236,13 +235,8 @@ const HomePage = () => {
 
   // 获取更多推荐
   const handleGetMoreRecommendations = () => {
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      const newRecommendations = getRecommendedTask(todayTasks);
-      setRecommendedTasks(newRecommendations);
-      setIsLoading(false);
-    }, 800);
+    const newRecommendations = getRecommendedTask(todayTasks);
+    setRecommendedTasks(newRecommendations);
   };
 
   // 处理跳过（便利贴模式）
@@ -256,6 +250,11 @@ const HomePage = () => {
     setRecommendedTasks(prev => prev.filter(task => task.id !== id));
   };
 
+  // 处理创建新事项
+  const handleCreateTask = () => {
+    navigate('/new-task');
+  };
+
   return (
     <div className="page-content safe-area-top">
       {/* 头部区域 */}
@@ -264,6 +263,11 @@ const HomePage = () => {
           {format(currentTime, 'yyyy年MM月dd日 EEEE', { locale: zhCN })}
         </div>
         <h1 className="text-2xl font-bold mt-1 text-gray-900">{greeting}</h1>
+        {isTestUser && (
+          <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+            🧪 测试用户模式
+          </div>
+        )}
       </div>
 
       {/* 决策区域 */}
@@ -294,7 +298,16 @@ const HomePage = () => {
           </div>
         </div>
 
-        {recommendedTasks.length === 0 ? (
+        {/* 错误状态 */}
+        {error ? (
+          <ErrorState 
+            error={error} 
+            onRetry={refreshTasks}
+            isLoading={isLoading}
+          />
+        ) : /* 空状态 */ todayTasks.length === 0 && !isLoading ? (
+          <EmptyState onCreateTask={handleCreateTask} />
+        ) : /* 推荐事项 */ recommendedTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <p className="text-gray-500 mb-4">目前没有推荐的事项</p>
             <button
@@ -329,8 +342,6 @@ const HomePage = () => {
             generateRecommendReason={generateRecommendReason}
           />
         )}
-
-
       </div>
 
       {showFireworks && (

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Plus, Calendar, Clock, MoreHorizontal, List, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { createItem } from '../api/items';
+import { createItem } from '../api/interceptor';
 
 interface TaskAddDrawerProps {
   isOpen: boolean;

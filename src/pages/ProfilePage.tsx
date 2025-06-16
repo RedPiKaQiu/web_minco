@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { resetMockData, isTestUser } from '../api/mock';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ const ProfilePage = () => {
   const [dailyPlanTime, setDailyPlanTime] = useState("08:00");
   const [dailyReviewTime, setDailyReviewTime] = useState("21:00");
 
+  // 检查是否为测试用户
+  const userIsTest = isTestUser();
+
   // 不强制重定向，而是显示未登录状态或登录界面
 
   const handleLogout = () => {
@@ -23,12 +27,28 @@ const ProfilePage = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('token_type');
+    localStorage.removeItem('access_token');
+    
+    // 清除应用状态数据
+    localStorage.removeItem('appState');
+    
+    // 如果是测试用户，也清除测试数据
+    if (userIsTest) {
+      localStorage.removeItem('mock_tasks');
+      localStorage.removeItem('mock_projects');
+    }
     
     // 分发登出操作
     dispatch({ type: 'LOGOUT' });
     
     // 导航到登录页面
     navigate('/login', { replace: true });
+  };
+
+  // 重置测试数据
+  const handleResetTestData = () => {
+    resetMockData();
+    alert('测试数据已重置！');
   };
 
   // 处理时间变更
@@ -50,6 +70,27 @@ const ProfilePage = () => {
       <div className="flex-1 overflow-y-auto scroll-smooth">
         <div className="max-w-md mx-auto px-4 pb-20">
 
+          {/* 测试用户提示卡片 */}
+          {userIsTest && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+              <div className="flex items-center">
+                <span className="text-yellow-600 text-lg mr-2">🧪</span>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-yellow-800">测试模式</h3>
+                  <p className="text-xs text-yellow-600 mt-1">
+                    您当前使用的是测试账户，所有数据都保存在本地，不会同步到服务器
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleResetTestData}
+                className="mt-3 w-full px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors"
+              >
+                重置测试数据
+              </button>
+            </div>
+          )}
+
           {/* 用户资料卡片 */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <div className="flex items-center">
@@ -60,16 +101,23 @@ const ProfilePage = () => {
               </div>
 
               <div className="ml-4">
-                <h2 className="text-xl font-bold text-gray-900">{user.nickname || user.username}</h2>
-                <div className="flex flex-wrap gap-1 mt-1">
-                                      {user.gender && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium">
-                        {user.gender === 'male' ? '男' : user.gender === 'female' ? '女' : '其他'}
-                      </span>
-                    )}
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
-                      {user.age ? `${user.age}岁` : '年龄未设置'}
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-gray-900">{user.nickname || user.username}</h2>
+                  {userIsTest && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-md text-xs font-medium">
+                      测试用户
                     </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {user.gender && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium">
+                      {user.gender === 'male' ? '男' : user.gender === 'female' ? '女' : '其他'}
+                    </span>
+                  )}
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
+                    {user.age ? `${user.age}岁` : '年龄未设置'}
+                  </span>
                 </div>
               </div>
             </div>

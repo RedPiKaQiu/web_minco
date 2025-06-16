@@ -199,12 +199,15 @@ export type AppAction =
   | { type: 'ADD_TICKET'; payload: Ticket }
   | { type: 'TOGGLE_FOCUS_MODE' }
   | { type: 'CLEAR_ALL_TASKS' }
+  | { type: 'CLEAR_ALL_PROJECTS' }
   | { type: 'POSTPONE_TASKS_TO_TOMORROW'; payload: string[] }
   | { type: 'ADD_COLLECTION'; payload: Collection }
   | { type: 'LOAD_TASKS'; payload: Task[] }
+  | { type: 'LOAD_PROJECTS'; payload: Project[] }
   | { type: 'ADD_PROJECT'; payload: Project }
   | { type: 'UPDATE_PROJECT'; payload: { id: string; updates: Partial<Project> } }
-  | { type: 'DELETE_PROJECT'; payload: string };
+  | { type: 'DELETE_PROJECT'; payload: string }
+  | { type: 'RESET_STATE' };
 
 // 添加主题类型定义
 export type ThemeType = 'default' | 'sunset' | 'forest' | 'dark'; 

@@ -59,62 +59,80 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-// 获取token - 统一使用access_token
-const getToken = () => {
-  const token = localStorage.getItem('access_token');
-  return token ? `Bearer ${token}` : null;
-};
 
-// 通用请求方法
-export async function fetchApi<T>(
-  endpoint: string, 
-  options: RequestInit = {}
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-  
-  const defaultHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  
-  // 如果存在token，添加Authorization头
-  const token = getToken();
-  if (token) {
-    defaultHeaders['Authorization'] = token;
-  }
-  
-  const config = {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...(options.headers || {}),
-    },
-  };
-  
-  try {
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      // 根据API文档的错误响应格式处理
-      if (errorData.code !== undefined && errorData.message) {
-        throw new Error(errorData.message);
-      }
-      
-      throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data as T;
-  } catch (error) {
-    console.error(`API 请求失败: ${endpoint}`, error);
-    throw error;
-  }
+
+interface RequestConfig {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
 }
 
-// 导出所有API接口
-export * from './items';
+// 通用请求封装
+export async function fetchApi<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
+  const token = localStorage.getItem('access_token');
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...config.headers,
+  };
+
+  // 添加认证头
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const url = `${API_BASE_URL}${endpoint}`;
+  console.log(`🌐 API调用: ${config.method || 'GET'} ${url}`);
+
+  const response = await fetch(url, {
+    ...config,
+    headers,
+  });
+
+  if (!response.ok) {
+    // 处理HTTP错误
+    if (response.status === 401) {
+      // 未授权，可能token过期
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('appState'); // 清除应用状态
+      throw new Error('认证失败，请重新登录');
+    }
+    
+    if (response.status === 403) {
+      throw new Error('权限不足');
+    }
+    
+    if (response.status === 404) {
+      throw new Error('资源不存在');
+    }
+    
+    if (response.status >= 500) {
+      throw new Error('服务器错误，请稍后重试');
+    }
+    
+    throw new Error(`请求失败: ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log(`✅ API响应:`, data);
+  return data;
+}
+
+// 分页信息
+export interface PaginationInfo {
+  total_items: number;
+  total_pages: number;
+  current_page: number;
+  limit: number;
+}
+
+// 导出所有API接口 - 现在使用拦截器版本
+export * from './interceptor';
+export * from './user';
+export * from './test';
 export * from './ai';
 export * from './focus';
-export * from './user';
-export * from './test'; 
+
+// 同时导出原始API（用于特殊需求）
+export * as OriginalItemsAPI from './items'; 

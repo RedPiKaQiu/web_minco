@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid'; // 需要安装: npm install uuid @types/uu
 import { useUser } from '../context/UserContext';
 import { useState, useEffect } from 'react';
 import { testConnection } from '../api/test';
-import { login, register, getUserProfile } from '../api/user';
+import { login, register } from '../api/user';
+import { resetMockData } from '../api/mock';
 import { User } from '../types';
 
 const LoginPage = () => {
@@ -44,6 +45,9 @@ const LoginPage = () => {
       created_at: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
+
+    // 设置测试用户的access_token（确保AppContext能正常工作）
+    localStorage.setItem('access_token', 'test-token-' + Date.now());
 
     // 清空所有表单状态
     setUsername('');
@@ -318,6 +322,14 @@ const LoginPage = () => {
               className="w-full border border-[var(--color-primary)] text-[var(--color-primary)] bg-transparent rounded-[var(--button-radius)] py-3 font-medium transition-all duration-[var(--transition-normal)] hover:bg-[var(--color-primary-light)/10] mt-2"
             >
               测试用户登录
+            </button>
+            
+            {/* 重置测试数据按钮 */}
+            <button
+              onClick={resetMockData}
+              className="w-full border border-[var(--color-primary)] text-[var(--color-primary)] bg-transparent rounded-[var(--button-radius)] py-3 font-medium transition-all duration-[var(--transition-normal)] hover:bg-[var(--color-primary-light)/10] mt-2"
+            >
+              重置测试数据
             </button>
           </div>
         ) : showLoginForm ? (

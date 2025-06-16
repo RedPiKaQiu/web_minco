@@ -1,6 +1,8 @@
 import { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { AppState, AppAction, TaskCategory } from '../types';
-import { getItems } from '../api/items';
+import { getItems } from '../api/interceptor';
+import { getMockDataForAppContext } from '../api/mock';
+import { useUser } from './UserContext';
 
 // 从localStorage加载初始状态
 const loadInitialState = (): AppState => {
@@ -11,7 +13,7 @@ const loadInitialState = (): AppState => {
       // 确保状态包含所有必需的字段（向后兼容性）
       return {
         tasks: parsedState.tasks || [],
-        projects: parsedState.projects || [], // 添加默认值以防旧状态没有projects字段
+        projects: parsedState.projects || [],
         tickets: parsedState.tickets || [],
         focusMode: parsedState.focusMode || false,
         collections: parsedState.collections || []
@@ -21,117 +23,40 @@ const loadInitialState = (): AppState => {
     }
   }
   
-  // 如果没有保存的状态或解析失败，返回默认状态
+  // 如果没有保存的状态或解析失败，返回空状态
   return {
-    tasks: [
-      {
-        id: '1',
-        title: '完成项目报告',
-        completed: false,
-        icon: '📊',
-        type: 'work',
-        duration: '2 小时',
-        startTime: '上午 9:00',
-        dueDate: '2024-01-15'
-      },
-      {
-        id: '2', 
-        title: '健身锻炼',
-        completed: false,
-        icon: '💪',
-        type: 'health',
-        duration: '1 小时',
-        startTime: '下午 6:00'
-      },
-      {
-        id: '3',
-        title: '阅读技术书籍',
-        completed: false,
-        icon: '📚',
-        type: 'study',
-        duration: '45 分钟',
-        isAnytime: true
-      },
-      {
-        id: '4',
-        title: '整理房间',
-        completed: false,
-        icon: '🏠',
-        type: 'life',
-        duration: '30 分钟',
-        isAnytime: true
-      },
-      {
-        id: '5',
-        title: '学习新技能',
-        completed: false,
-        icon: '🎯',
-        type: 'explore',
-        duration: '1.5 小时',
-        startTime: '晚上 8:00'
-      }
-    ],
-    projects: [
-      {
-        id: '1',
-        title: '家庭整理',
-        description: '整理家居空间，提高生活品质',
-        category_id: 1, // 生活
-        task_count: 4,
-        completed_task_count: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        // 兼容性字段
-        category: TaskCategory.LIFE,
-        taskCount: 4,
-        hasProgress: true,
-        progress: 25,
-        icon: '🏠',
-        color: '#4CAF50',
-        notes: '每周末花1-2小时进行整理，重点关注客厅和厨房区域。'
-      },
-      {
-        id: '2',
-        title: '健身计划',
-        description: '每周三次锻炼，提高体能',
-        category_id: 2, // 健康
-        task_count: 3,
-        completed_task_count: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        // 兼容性字段
-        category: TaskCategory.HEALTH,
-        taskCount: 3,
-        hasProgress: true,
-        progress: 33,
-        icon: '💪',
-        color: '#E91E63',
-        notes: '周一、周三、周五进行力量训练，周末进行有氧运动。'
-      },
-      {
-        id: '3',
-        title: '季度报告',
-        description: '准备第二季度业绩报告',
-        category_id: 3, // 工作
-        task_count: 4,
-        completed_task_count: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        // 兼容性字段
-        category: TaskCategory.WORK,
-        taskCount: 4,
-        dueDate: '2024-06-30',
-        hasProgress: true,
-        progress: 25,
-        icon: '📊',
-        color: '#9C27B0',
-        notes: '重点分析销售增长点和成本控制措施，准备详细的数据支持。'
-      }
-    ],
+    tasks: [],
+    projects: [],
     tickets: [],
     focusMode: false,
     collections: []
   };
+};
+
+// 检查是否为测试用户
+const isTestUser = (): boolean => {
+  const user = localStorage.getItem('user');
+  if (!user) {
+    console.log('🔍 用户检测: 未找到用户信息');
+    return false;
+  }
+  
+  try {
+    const userData = JSON.parse(user);
+    console.log('🔍 用户检测: 用户数据', { username: userData.username, email: userData.email, id: userData.id });
+    
+    // 检查用户名是否为Shell或包含test
+    const isTest = userData.username === 'Shell' || 
+           userData.email === 'shell@test.com' ||
+           userData.username?.includes('test') ||
+           userData.id?.toString().includes('user-'); // 测试用户ID格式
+           
+    console.log('🔍 用户检测: 是否为测试用户?', isTest);
+    return isTest;
+  } catch (error) {
+    console.log('🔍 用户检测: 解析用户数据失败', error);
+    return false;
+  }
 };
 
 // 每天检查是否有postponedToTomorrow的事项需要恢复
@@ -255,6 +180,27 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         tasks: action.payload,
       };
       break;
+    case 'CLEAR_ALL_PROJECTS':
+      newState = {
+        ...state,
+        projects: [],
+      };
+      break;
+    case 'LOAD_PROJECTS':
+      newState = {
+        ...state,
+        projects: action.payload,
+      };
+      break;
+    case 'RESET_STATE':
+      newState = {
+        tasks: [],
+        projects: [],
+        tickets: [],
+        focusMode: false,
+        collections: []
+      };
+      break;
     default:
       return state;
   }
@@ -269,26 +215,145 @@ const AppContext = createContext<{
   dispatch: React.Dispatch<AppAction>;
   refreshTasks: () => Promise<void>;
   isLoading: boolean;
+  error: string | null;
+  isTestUser: boolean;
 }>({
   state: initialState,
   dispatch: () => null,
   refreshTasks: async () => {},
   isLoading: false,
+  error: null,
+  isTestUser: false,
 });
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userIsTest, setUserIsTest] = useState(false);
+  const [hasLoadedTestData, setHasLoadedTestData] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // 获取用户上下文
+  const { state: userState } = useUser();
+  
+  // 监听用户状态变化
+  useEffect(() => {
+    const newUserId = userState.user?.id || null;
+    const hasUserChanged = currentUserId !== newUserId;
+    
+    console.log('👤 用户状态变化监听:', {
+      旧用户ID: currentUserId,
+      新用户ID: newUserId,
+      用户是否变化: hasUserChanged,
+      是否已认证: userState.isAuthenticated
+    });
+    
+    if (hasUserChanged) {
+      console.log('🔄 检测到用户变化，重置应用状态');
+      
+      // 重置所有状态
+      dispatch({ type: 'RESET_STATE' });
+      
+      // 重置加载状态
+      setHasLoadedTestData(false);
+      setError(null);
+      setIsLoading(false);
+      
+      // 更新当前用户ID
+      setCurrentUserId(newUserId);
+      
+      // 如果有新用户登录，立即加载数据
+      if (newUserId && userState.isAuthenticated) {
+        console.log('🚀 新用户登录，立即加载数据');
+        setTimeout(() => {
+          loadTasks();
+        }, 100); // 短暂延迟确保状态更新完成
+      }
+    }
+  }, [userState.user?.id, userState.isAuthenticated]);
+  
+  // 检查用户类型
+  useEffect(() => {
+    const checkUserType = () => {
+      const userType = isTestUser();
+      console.log('🔄 检查用户类型结果:', userType ? '测试用户' : '普通用户');
+      setUserIsTest(userType);
+      
+      // 如果用户类型变化，重置加载状态
+      if (userType !== userIsTest) {
+        setHasLoadedTestData(false);
+      }
+    };
+    
+    checkUserType();
+  }, [userState.user, userIsTest]);
+  
+  // 加载测试用户数据
+  const loadTestUserData = () => {
+    if (hasLoadedTestData) {
+      console.log('🧪 测试数据已加载，跳过重复加载');
+      return;
+    }
+    
+    console.log('🧪 检测到测试用户，加载默认数据');
+    
+    // 清除错误状态
+    setError(null);
+    setIsLoading(false);
+    
+    const testData = getMockDataForAppContext();
+    
+    // 先清空现有数据，再加载测试数据，避免重复
+    dispatch({ type: 'CLEAR_ALL_TASKS' });
+    dispatch({ type: 'CLEAR_ALL_PROJECTS' });
+    
+    // 批量加载测试事项
+    dispatch({
+      type: 'LOAD_TASKS',
+      payload: testData.tasks
+    });
+    
+    // 批量加载测试项目
+    dispatch({
+      type: 'LOAD_PROJECTS',
+      payload: testData.projects
+    });
+    
+    setHasLoadedTestData(true);
+    console.log('✅ 测试用户数据加载完成');
+  };
   
   // 加载事项列表
   const loadTasks = async () => {
-    // 检查是否有token，如果有才请求事项
+    // 优先检查是否为测试用户（不依赖token）
+    const userIsTestUser = isTestUser();
+    console.log('🔍 检查用户类型:', userIsTestUser ? '测试用户' : '普通用户');
+    
+    if (userIsTestUser) {
+      console.log('🧪 检测到测试用户，加载测试数据');
+      loadTestUserData();
+      return;
+    }
+    
+    // 普通用户需要检查token
     const token = localStorage.getItem('access_token');
-    if (!token) return;
+    if (!token) {
+      console.log('🚫 普通用户未登录，不加载数据');
+      return;
+    }
+    
+    // 普通用户：从API获取数据
+    setIsLoading(true);
+    setError(null);
     
     try {
-      setIsLoading(true);
+      console.log('🌐 普通用户登录，从API获取数据');
       const response = await getItems();
+      
+      if (!response.items || !Array.isArray(response.items)) {
+        throw new Error('API返回数据格式错误');
+      }
       
       // 转换API事项格式为应用内部格式
       const formattedTasks = response.items.map((apiTask: any) => {
@@ -331,22 +396,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
       });
       
+      console.log(`✅ 成功获取 ${formattedTasks.length} 个事项`);
+      
       // 更新状态
       dispatch({
         type: 'LOAD_TASKS',
         payload: formattedTasks
       });
+      
     } catch (error) {
-      console.error('加载事项失败:', error);
+      console.error('❌ 加载事项失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '获取数据失败，请检查网络连接';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
   
-  // 当应用初始化时加载事项
+  // 当用户测试状态变化时重新加载数据（仅在有用户且未加载数据时）
   useEffect(() => {
-    loadTasks();
-  }, []);
+    const token = localStorage.getItem('access_token');
+    if (token && currentUserId && !hasLoadedTestData && userState.isAuthenticated) {
+      console.log('👤 用户测试状态变化，重新加载数据. 是否为测试用户:', userIsTest);
+      if (userIsTest) {
+        loadTestUserData();
+      } else {
+        loadTasks();
+      }
+    }
+  }, [userIsTest, hasLoadedTestData, currentUserId, userState.isAuthenticated]);
   
   // 当状态改变时保存到localStorage
   useEffect(() => {
@@ -354,7 +432,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [state]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch, refreshTasks: loadTasks, isLoading }}>
+    <AppContext.Provider value={{ 
+      state, 
+      dispatch, 
+      refreshTasks: loadTasks, 
+      isLoading, 
+      error, 
+      isTestUser: userIsTest 
+    }}>
       {children}
     </AppContext.Provider>
   );
