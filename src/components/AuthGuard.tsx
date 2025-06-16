@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 
@@ -9,13 +9,33 @@ interface AuthGuardProps {
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const { state } = useUser();
   const navigate = useNavigate();
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // 如果用户未登录，重定向到登录页面
-    if (!state.isAuthenticated || !state.user) {
+    // 给用户状态一点时间初始化
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // 只有在初始化后才进行认证检查
+    if (isInitialized && (!state.isAuthenticated || !state.user)) {
+      console.log('🔐 AuthGuard: 用户未认证，重定向到登录页面');
       navigate('/login', { replace: true });
     }
-  }, [state.isAuthenticated, state.user, navigate]);
+  }, [isInitialized, state.isAuthenticated, state.user, navigate]);
+
+  // 如果还没有初始化，显示加载状态
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   // 如果用户未登录，返回null（因为会重定向）
   if (!state.isAuthenticated || !state.user) {

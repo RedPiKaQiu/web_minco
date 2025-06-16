@@ -9,12 +9,15 @@ export interface LoginRequest {
   remember_me?: boolean; // 是否记住登录状态，默认false
 }
 
-// 登录响应数据（根据API文档）
+// 登录响应数据（根据API文档和实际响应更新）
 export interface LoginResponse {
   access_token: string;  // JWT令牌
   token_type: string;    // 令牌类型
-  expires_in: number;    // token有效期(秒)
-  user: User;            // 用户信息
+  expires_in?: number;   // token有效期(秒) - 可选，因为实际API可能不返回
+  user?: User;           // 用户信息 - 可选，标准格式
+  // 实际API返回的格式
+  user_id?: number;      // 用户ID - 实际API返回的格式
+  username?: string;     // 用户名 - 实际API返回的格式
 }
 
 // 注册请求参数

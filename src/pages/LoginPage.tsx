@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid'; // 需要安装: npm install uuid @types/uu
 import { useUser } from '../context/UserContext';
 import { useState, useEffect } from 'react';
 import { testConnection } from '../api/test';
-import { login, register } from '../api/user';
+import { login, register, getUserProfile } from '../api/user';
+import { User } from '../types';
 
 const LoginPage = () => {
   const { state, dispatch } = useUser();
@@ -27,7 +28,7 @@ const LoginPage = () => {
   // 如果用户已登录，重定向到主页
   useEffect(() => {
     if (state.isAuthenticated && state.user) {
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
     }
   }, [state.isAuthenticated, state.user, navigate]);
 
@@ -44,11 +45,17 @@ const LoginPage = () => {
       createdAt: new Date().toISOString()
     };
 
+    // 清空所有表单状态
+    setUsername('');
+    setPassword('');
+    setLoginError('');
+    setRegisterError('');
+
     // 分发登录操作
     dispatch({ type: 'LOGIN', payload: testUser });
     
-    // 导航到开始页面
-    navigate('/');
+    // 导航到主页 - 直接导航到/home避免重定向竞态
+    navigate('/home', { replace: true });
   };
 
   const handleTestConnection = async () => {
@@ -78,21 +85,67 @@ const LoginPage = () => {
     setLoginError('');
     setIsLoggingIn(true);
     
+    console.log('🔐 开始登录:', { username, password: '***' });
+    
     try {
       const response = await login({ username, password });
+      console.log('✅ 登录API完整响应:', JSON.stringify(response, null, 2));
       
-      if (response.access_token) {
-        // access_token已在login函数中保存到localStorage
+      if (response && response.access_token) {
+        console.log('✅ 登录成功，处理用户数据');
         
-        // 登录成功，更新用户状态
-        dispatch({ type: 'LOGIN', payload: response.user });
+        let userData: User;
         
-        // 导航到主页
-        navigate('/');
+        // 处理API返回的实际格式：{access_token, token_type, user_id, username}
+        if (response.user) {
+          // 标准格式：有完整的user对象
+          userData = response.user;
+          console.log('👤 使用API返回的用户数据:', userData);
+        } else if (response.user_id && response.username) {
+          // 实际API格式：从user_id和username构建用户对象
+          userData = {
+            id: String(response.user_id),
+            username: response.username,
+            email: response.username, // 假设username就是email
+            created_at: new Date().toISOString()
+          };
+          console.log('🔧 从响应数据构建用户对象:', userData);
+        } else {
+          // 备用方案：使用输入的用户名创建基本用户对象
+          userData = {
+            id: `user-${Date.now()}`,
+            username: username,
+            email: username.includes('@') ? username : `${username}@example.com`,
+            created_at: new Date().toISOString()
+          };
+          console.log('🆘 使用备用用户数据:', userData);
+        }
+        
+        // 更新用户状态
+        dispatch({ type: 'LOGIN', payload: userData });
+        console.log('📝 用户状态已更新:', userData);
+        
+        // 清空表单数据
+        setUsername('');
+        setPassword('');
+        setLoginError('');
+        
+        // 稍微延迟导航，确保状态更新完成
+        setTimeout(() => {
+          console.log('🚀 现在导航到主页');
+          navigate('/home', { replace: true });
+        }, 100);
+      } else {
+        console.error('❌ 登录响应缺少access_token:', response);
+        setLoginError('服务器响应格式错误，请稍后重试');
       }
     } catch (error) {
-      console.error('登录失败:', error);
-      setLoginError('登录失败，请检查用户名和密码');
+      console.error('❌ 登录失败:', error);
+      if (error instanceof Error) {
+        setLoginError(error.message);
+      } else {
+        setLoginError('登录失败，请检查网络连接和后端服务状态');
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -115,6 +168,8 @@ const LoginPage = () => {
 
     setIsRegistering(true);
     
+    console.log('📝 开始注册:', { email, fullName, password: '***' });
+    
     try {
       const userData = {
         username: email, // 使用邮箱作为用户名
@@ -124,9 +179,11 @@ const LoginPage = () => {
       };
 
       const response = await register(userData);
+      console.log('✅ 注册API完整响应:', JSON.stringify(response, null, 2));
       
-      if (response.access_token) {
-        // 注册成功，但不直接登录
+      if (response && response.access_token) {
+        console.log('✅ 注册成功，显示成功页面');
+        
         // 保存注册的邮箱，用于显示成功消息
         setRegisteredEmail(email);
         
@@ -139,10 +196,19 @@ const LoginPage = () => {
         setFullName('');
         setPassword('');
         setConfirmPassword('');
+        
+        console.log('✅ 注册成功状态已更新，showRegisterSuccess=true');
+      } else {
+        console.error('❌ 注册响应缺少access_token:', response);
+        setRegisterError('服务器响应格式错误，请稍后重试');
       }
     } catch (error) {
-      console.error('注册失败:', error);
-      setRegisterError('注册失败，请稍后重试或使用其他邮箱');
+      console.error('❌ 注册失败:', error);
+      if (error instanceof Error) {
+        setRegisterError(error.message);
+      } else {
+        setRegisterError('注册失败，请稍后重试或使用其他邮箱');
+      }
     } finally {
       setIsRegistering(false);
     }
@@ -185,6 +251,21 @@ const LoginPage = () => {
     <div className="h-screen bg-app flex flex-col items-center justify-center p-[var(--spacing-page)]">
       <div className="bg-card rounded-[var(--radius-large)] shadow-[var(--shadow-md)] w-full max-w-sm p-[var(--spacing-card)]">
         <h1 className="text-2xl font-bold text-center text-app mb-8">航行者</h1>
+        
+        {/* 调试信息面板 */}
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg text-xs border">
+          <div className="font-medium text-gray-700 mb-2">🔍 调试信息</div>
+          <div className="space-y-1 text-gray-600">
+            <div>认证状态: {state.isAuthenticated ? '✅ 已认证' : '❌ 未认证'}</div>
+            <div>用户信息: {state.user ? `✅ 存在 (${state.user.username})` : '❌ 不存在'}</div>
+            <div>Token: {localStorage.getItem('access_token') ? '✅ 存在' : '❌ 不存在'}</div>
+            <div>显示状态: {
+              showRegisterSuccess ? '注册成功页面' : 
+              showLoginForm ? '登录表单' : 
+              showRegisterForm ? '注册表单' : '主界面'
+            }</div>
+          </div>
+        </div>
         
         {!showLoginForm && !showRegisterForm && !showRegisterSuccess ? (
           <div className="flex flex-col gap-4">
@@ -307,17 +388,25 @@ const LoginPage = () => {
               </svg>
             </div>
             
-            <h2 className="text-xl font-semibold text-app text-center">注册成功！</h2>
+            <h2 className="text-xl font-semibold text-app text-center">🎉 注册成功！</h2>
             
-            <p className="text-app-secondary text-center mb-2">
-              您的账号 <span className="font-medium text-app">{registeredEmail}</span> 已注册成功。
-            </p>
+            <div className="text-center mb-4">
+              <p className="text-app-secondary mb-2">
+                您的账号 <span className="font-medium text-app">{registeredEmail}</span> 已注册成功！
+              </p>
+              <p className="text-sm text-app-secondary">
+                现在可以使用您的账号登录了
+              </p>
+            </div>
             
             <button
               onClick={showLoginFormHandler}
-              className="w-full bg-[var(--color-button-primary)] text-[var(--color-button-text)] rounded-[var(--button-radius)] py-3 font-medium transition-all duration-[var(--transition-normal)] hover:bg-[var(--color-button-primary-hover)] shadow-[var(--button-shadow)]"
+              className="w-full bg-[var(--color-button-primary)] text-[var(--color-button-text)] rounded-[var(--button-radius)] py-3 font-medium transition-all duration-[var(--transition-normal)] hover:bg-[var(--color-button-primary-hover)] shadow-[var(--button-shadow)] flex items-center justify-center"
             >
-              返回登录
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              立即登录
             </button>
             
             <button
@@ -325,7 +414,7 @@ const LoginPage = () => {
               onClick={backToMainHandler}
               className="w-full border border-[var(--color-primary)] text-[var(--color-primary)] bg-transparent rounded-[var(--button-radius)] py-2 font-medium transition-all duration-[var(--transition-normal)] hover:bg-[var(--color-primary-light)/10]"
             >
-              返回首页
+              稍后登录
             </button>
           </div>
         ) : (
