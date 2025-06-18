@@ -46,6 +46,7 @@ npm run build
 - Lucide React (图标库)
 - React Router
 - Headless UI
+- JavaScript
 
 ## ESLint配置扩展
 
