@@ -1,7 +1,7 @@
 /**
  * 任务图标工具函数，根据任务类型和类别提供对应的图标
  */
-import { Task, TASK_CATEGORIES, TaskCategory } from '../types';
+import { Task, ITEM_CATEGORIES, ItemCategory } from '../types';
 
 // 任务类型到图标的映射
 const TASK_TYPE_ICONS: Record<string, string> = {
@@ -68,7 +68,7 @@ export function getTaskIcon(task: Task): string {
   
   // 3. 根据任务类别查找图标
   if (task.category) {
-    const categoryConfig = TASK_CATEGORIES.find(config => config.label === task.category);
+    const categoryConfig = ITEM_CATEGORIES.find(config => config.label === task.category);
     if (categoryConfig) {
       return categoryConfig.emoji;
     }
@@ -81,7 +81,7 @@ export function getTaskIcon(task: Task): string {
 /**
  * 获取任务类别的图标
  */
-export function getCategoryIcon(category: TaskCategory): string {
-  const categoryConfig = TASK_CATEGORIES.find(config => config.label === category);
+export function getCategoryIcon(category: ItemCategory): string {
+  const categoryConfig = ITEM_CATEGORIES.find(config => config.label === category);
   return categoryConfig?.emoji || '📌';
 } 

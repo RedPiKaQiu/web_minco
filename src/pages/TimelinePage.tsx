@@ -7,8 +7,8 @@ import { updateItem } from '../api/items';
 import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Task, Item, TaskCategory } from '../types';
-import TaskDetailModal from '../components/TaskDetailModal';
+import { Task, Item, ItemCategory } from '../types';
+import ItemDetailModal from '../components/ItemDetailModal';
 import { formatBeijingTimeToLocal } from '../utils/timezone';
 
 // API Item 到 Task 的转换函数
@@ -23,12 +23,12 @@ const convertApiItemToTask = (apiItem: Item): Task => {
     endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
     priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
     // 正确映射TaskCategory枚举
-    category: apiItem.category_id === 1 ? TaskCategory.LIFE : 
-              apiItem.category_id === 2 ? TaskCategory.HEALTH :
-              apiItem.category_id === 3 ? TaskCategory.WORK :
-              apiItem.category_id === 4 ? TaskCategory.STUDY :
-              apiItem.category_id === 5 ? TaskCategory.RELAX :
-              apiItem.category_id === 6 ? TaskCategory.EXPLORE : undefined,
+    category: apiItem.category_id === 1 ? ItemCategory.LIFE : 
+              apiItem.category_id === 2 ? ItemCategory.HEALTH :
+              apiItem.category_id === 3 ? ItemCategory.WORK :
+              apiItem.category_id === 4 ? ItemCategory.STUDY :
+              apiItem.category_id === 5 ? ItemCategory.RELAX :
+              apiItem.category_id === 6 ? ItemCategory.EXPLORE : undefined,
     isAnytime: !apiItem.start_time,
     icon: apiItem.emoji,
     duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined,
@@ -805,7 +805,7 @@ const TimelinePage = () => {
       </div>
       
       {selectedTaskId && selectedTask && (
-        <TaskDetailModal 
+        <ItemDetailModal 
           task={selectedTask}
           onClose={() => {
             setSelectedTaskId(null);

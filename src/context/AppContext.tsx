@@ -2,7 +2,7 @@
  * 应用全局状态管理上下文，管理任务、项目、焦点模式等全局状态
  */
 import { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
-import { AppState, AppAction, TaskCategory } from '../types';
+import { AppState, AppAction, ItemCategory } from '../types';
 import { getItems } from '../api/interceptor';
 import { getMockDataForAppContext } from '../api/mock';
 import { useUser } from './UserContext';
@@ -386,28 +386,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // 转换API事项格式为应用内部格式
       const formattedTasks = response.items.map((apiTask: any) => {
         // 映射API的category_id字段到我们的TaskCategory枚举
-        let mappedCategory: TaskCategory | undefined;
+        let mappedCategory: ItemCategory | undefined;
         switch (apiTask.category_id) {
           case 1:
-            mappedCategory = TaskCategory.LIFE;
+            mappedCategory = ItemCategory.LIFE;
             break;
           case 2:
-            mappedCategory = TaskCategory.HEALTH;
+            mappedCategory = ItemCategory.HEALTH;
             break;
           case 3:
-            mappedCategory = TaskCategory.WORK;
+            mappedCategory = ItemCategory.WORK;
             break;
           case 4:
-            mappedCategory = TaskCategory.STUDY;
+            mappedCategory = ItemCategory.STUDY;
             break;
           case 5:
-            mappedCategory = TaskCategory.RELAX;
+            mappedCategory = ItemCategory.RELAX;
             break;
           case 6:
-            mappedCategory = TaskCategory.EXPLORE;
+            mappedCategory = ItemCategory.EXPLORE;
             break;
           default:
-            mappedCategory = TaskCategory.LIFE;
+            mappedCategory = ItemCategory.LIFE;
             break;
         }
         

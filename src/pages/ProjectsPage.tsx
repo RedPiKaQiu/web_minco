@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useProjectTasks } from '../hooks/useTaskData';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { TaskCategory, TASK_CATEGORIES, Project, Task, Item } from '../types';
+import { ItemCategory, ITEM_CATEGORIES, Project, Task, Item } from '../types';
 import QuickAddProject from '../components/QuickAddProject';
 import ProjectDetailModal from '../components/ProjectDetailModal';
 
@@ -20,12 +20,12 @@ const convertApiItemToTask = (apiItem: Item): Task => {
     endTime: apiItem.end_time ? apiItem.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
     priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
     // 正确映射TaskCategory枚举
-    category: apiItem.category_id === 1 ? TaskCategory.LIFE : 
-              apiItem.category_id === 2 ? TaskCategory.HEALTH :
-              apiItem.category_id === 3 ? TaskCategory.WORK :
-              apiItem.category_id === 4 ? TaskCategory.STUDY :
-              apiItem.category_id === 5 ? TaskCategory.RELAX :
-              apiItem.category_id === 6 ? TaskCategory.EXPLORE : undefined,
+    category: apiItem.category_id === 1 ? ItemCategory.LIFE : 
+              apiItem.category_id === 2 ? ItemCategory.HEALTH :
+              apiItem.category_id === 3 ? ItemCategory.WORK :
+              apiItem.category_id === 4 ? ItemCategory.STUDY :
+              apiItem.category_id === 5 ? ItemCategory.RELAX :
+              apiItem.category_id === 6 ? ItemCategory.EXPLORE : undefined,
     isAnytime: !apiItem.start_time,
     icon: apiItem.emoji,
     duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined,
@@ -34,14 +34,14 @@ const convertApiItemToTask = (apiItem: Item): Task => {
 };
 
 // TaskCategory 到 category_id 的映射
-const getCategoryId = (category: TaskCategory): number => {
+const getCategoryId = (category: ItemCategory): number => {
   switch (category) {
-    case TaskCategory.LIFE: return 1;
-    case TaskCategory.HEALTH: return 2;
-    case TaskCategory.WORK: return 3;
-    case TaskCategory.STUDY: return 4;
-    case TaskCategory.RELAX: return 5;
-    case TaskCategory.EXPLORE: return 6;
+    case ItemCategory.LIFE: return 1;
+    case ItemCategory.HEALTH: return 2;
+    case ItemCategory.WORK: return 3;
+    case ItemCategory.STUDY: return 4;
+    case ItemCategory.RELAX: return 5;
+    case ItemCategory.EXPLORE: return 6;
     default: return 1;
   }
 };
@@ -59,7 +59,7 @@ const ProjectsPage = () => {
     refreshFromCache
   } = useProjectTasks();
   
-  const [activeCategory, setActiveCategory] = useState<TaskCategory>(TaskCategory.LIFE);
+  const [activeCategory, setActiveCategory] = useState<ItemCategory>(ItemCategory.LIFE);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     projects: true,
     tasks: true,
@@ -68,7 +68,7 @@ const ProjectsPage = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   // 使用统一的分类配置
-  const categories = TASK_CATEGORIES.map(category => ({
+  const categories = ITEM_CATEGORIES.map(category => ({
     id: category.label,
     label: category.label,
     emoji: category.emoji
@@ -155,7 +155,7 @@ const ProjectsPage = () => {
   };
 
   // 切换分类
-  const handleCategoryChange = async (categoryLabel: TaskCategory) => {
+  const handleCategoryChange = async (categoryLabel: ItemCategory) => {
     console.log('📂 ProjectsPage: 切换分类', { from: activeCategory, to: categoryLabel });
     
     setActiveCategory(categoryLabel);
@@ -201,7 +201,7 @@ const ProjectsPage = () => {
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => handleCategoryChange(category.label as TaskCategory)}
+                onClick={() => handleCategoryChange(category.label as ItemCategory)}
                 disabled={isLoading}
                 className={`py-3 px-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
                   activeCategory === category.label

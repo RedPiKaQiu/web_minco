@@ -2,7 +2,7 @@
  * 测试用户模拟API接口，为测试用户提供本地数据存储和模拟API响应
  */
 // 测试用户模拟API接口 - 不与后端通信
-import { Item, ItemListResponse, Project, TaskCategory } from '../types';
+import { Item, ItemListResponse, Project, ItemCategory } from '../types';
 import { CreateItemRequest, UpdateItemRequest, GetItemsQuery } from './items';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -101,7 +101,7 @@ const getMockProjects = (): Project[] => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       // 兼容性字段
-      category: TaskCategory.LIFE,
+      category: ItemCategory.LIFE,
       taskCount: 4,
       hasProgress: true,
       progress: 25,
@@ -119,7 +119,7 @@ const getMockProjects = (): Project[] => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       // 兼容性字段
-      category: TaskCategory.HEALTH,
+      category: ItemCategory.HEALTH,
       taskCount: 3,
       hasProgress: true,
       progress: 33,
@@ -137,7 +137,7 @@ const getMockProjects = (): Project[] => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       // 兼容性字段
-      category: TaskCategory.WORK,
+      category: ItemCategory.WORK,
       taskCount: 4,
       dueDate: '2024-06-30',
       hasProgress: true,
@@ -475,16 +475,16 @@ const getCategoryType = (categoryId: number): string => {
 };
 
 // 辅助函数：根据category_id获取TaskCategory枚举
-const getCategoryEnum = (categoryId: number): TaskCategory => {
-  const categoryMap: Record<number, TaskCategory> = {
-    1: TaskCategory.LIFE,
-    2: TaskCategory.HEALTH,
-    3: TaskCategory.WORK,
-    4: TaskCategory.STUDY,
-    5: TaskCategory.RELAX,
-    6: TaskCategory.EXPLORE
+const getCategoryEnum = (categoryId: number): ItemCategory => {
+  const categoryMap: Record<number, ItemCategory> = {
+    1: ItemCategory.LIFE,
+    2: ItemCategory.HEALTH,
+    3: ItemCategory.WORK,
+    4: ItemCategory.STUDY,
+    5: ItemCategory.RELAX,
+    6: ItemCategory.EXPLORE
   };
-  return categoryMap[categoryId] || TaskCategory.LIFE;
+  return categoryMap[categoryId] || ItemCategory.LIFE;
 };
 
 /**

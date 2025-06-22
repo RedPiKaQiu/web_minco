@@ -4,11 +4,11 @@
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { TaskCategory, Project } from '../types';
+import { ItemCategory, Project } from '../types';
 
 interface QuickAddProjectProps {
   onClose: () => void;
-  category: TaskCategory;
+  category: ItemCategory;
   onProjectAdded?: () => void; // 添加项目成功后的回调
 }
 
@@ -29,11 +29,11 @@ const QuickAddProject = ({ onClose, category, onProjectAdded }: QuickAddProjectP
         id: Date.now().toString(),
         title: projectName.trim(),
         description: description.trim(),
-        category_id: category === TaskCategory.LIFE ? 1 : 
-                     category === TaskCategory.HEALTH ? 2 :
-                     category === TaskCategory.WORK ? 3 :
-                     category === TaskCategory.STUDY ? 4 :
-                     category === TaskCategory.RELAX ? 5 : 6,
+        category_id: category === ItemCategory.LIFE ? 1 : 
+                     category === ItemCategory.HEALTH ? 2 :
+                     category === ItemCategory.WORK ? 3 :
+                     category === ItemCategory.STUDY ? 4 :
+                     category === ItemCategory.RELAX ? 5 : 6,
         task_count: 0,
         completed_task_count: 0,
         created_at: new Date().toISOString(),
@@ -69,26 +69,26 @@ const QuickAddProject = ({ onClose, category, onProjectAdded }: QuickAddProjectP
     }
   };
 
-  const getDefaultIcon = (category: TaskCategory): string => {
+  const getDefaultIcon = (category: ItemCategory): string => {
     switch (category) {
-      case TaskCategory.LIFE: return '🏠';
-      case TaskCategory.HEALTH: return '💪';
-      case TaskCategory.WORK: return '💼';
-      case TaskCategory.STUDY: return '📚';
-      case TaskCategory.RELAX: return '🎮';
-      case TaskCategory.EXPLORE: return '🔍';
+      case ItemCategory.LIFE: return '🏠';
+      case ItemCategory.HEALTH: return '💪';
+      case ItemCategory.WORK: return '💼';
+      case ItemCategory.STUDY: return '📚';
+      case ItemCategory.RELAX: return '🎮';
+      case ItemCategory.EXPLORE: return '🔍';
       default: return '📁';
     }
   };
 
-  const getDefaultColor = (category: TaskCategory): string => {
+  const getDefaultColor = (category: ItemCategory): string => {
     switch (category) {
-      case TaskCategory.LIFE: return '#4CAF50';
-      case TaskCategory.HEALTH: return '#E91E63';
-      case TaskCategory.WORK: return '#2196F3';
-      case TaskCategory.STUDY: return '#FF9800';
-      case TaskCategory.RELAX: return '#9C27B0';
-      case TaskCategory.EXPLORE: return '#607D8B';
+      case ItemCategory.LIFE: return '#4CAF50';
+      case ItemCategory.HEALTH: return '#E91E63';
+      case ItemCategory.WORK: return '#2196F3';
+      case ItemCategory.STUDY: return '#FF9800';
+      case ItemCategory.RELAX: return '#9C27B0';
+      case ItemCategory.EXPLORE: return '#607D8B';
       default: return '#757575';
     }
   };

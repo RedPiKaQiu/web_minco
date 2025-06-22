@@ -7,12 +7,12 @@ import { useAppContext } from '../context/AppContext';
 import { Plus, Calendar, Clock, MoreHorizontal, List, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createItem } from '../api/interceptor';
 
-interface TaskAddDrawerProps {
+interface ItemAddDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
+const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
   const navigate = useNavigate();
   const { dispatch } = useAppContext();
   const [taskTitle, setTaskTitle] = useState('');
@@ -236,7 +236,7 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
               sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
             }
             
-            console.log('✅ TaskAddDrawer: 已将新任务添加到时间轴缓存', { 
+            console.log('✅ ItemAddDrawer: 已将新任务添加到时间轴缓存', { 
               taskId: result.id, 
               taskTitle: result.title,
               totalTasks: updatedTasks.length 
@@ -247,10 +247,10 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
               detail: { action: 'add', taskId: result.id, taskTitle: result.title }
             }));
           } else {
-            console.log('💾 TaskAddDrawer: 时间轴缓存不存在，新任务将在下次加载时显示');
+            console.log('💾 ItemAddDrawer: 时间轴缓存不存在，新任务将在下次加载时显示');
           }
         } catch (error) {
-          console.error('TaskAddDrawer: 更新时间轴缓存失败:', error);
+          console.error('ItemAddDrawer: 更新时间轴缓存失败:', error);
         }
         
         // 重置所有状态
@@ -668,4 +668,4 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
   );
 };
 
-export default TaskAddDrawer; 
+export default ItemAddDrawer; 

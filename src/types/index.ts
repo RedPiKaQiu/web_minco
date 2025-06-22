@@ -45,7 +45,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   // 为了兼容性，添加旧的字段
-  category?: TaskCategory; // 兼容旧代码
+  category?: ItemCategory; // 兼容旧代码
   taskCount?: number; // 兼容旧代码
   dueDate?: string; // 兼容旧代码  
   hasProgress?: boolean; // 兼容旧代码
@@ -122,7 +122,7 @@ export interface ItemListResponse {
 }
 
 // 原有的兼容性类型定义
-export enum TaskCategory {
+export enum ItemCategory {
   LIFE = '生活',
   HEALTH = '健康', 
   WORK = '工作',
@@ -132,20 +132,20 @@ export enum TaskCategory {
 }
 
 // 事项分类配置接口
-export interface TaskCategoryConfig {
-  id: keyof typeof TaskCategory;
-  label: TaskCategory;
+export interface ItemCategoryConfig {
+  id: keyof typeof ItemCategory;
+  label: ItemCategory;
   emoji: string;
 }
 
 // 预定义的事项分类配置
-export const TASK_CATEGORIES: TaskCategoryConfig[] = [
-  { id: 'LIFE', label: TaskCategory.LIFE, emoji: '🏠' },
-  { id: 'HEALTH', label: TaskCategory.HEALTH, emoji: '💪' },
-  { id: 'WORK', label: TaskCategory.WORK, emoji: '💼' },
-  { id: 'STUDY', label: TaskCategory.STUDY, emoji: '📚' },
-  { id: 'RELAX', label: TaskCategory.RELAX, emoji: '🎮' },
-  { id: 'EXPLORE', label: TaskCategory.EXPLORE, emoji: '🔍' },
+export const ITEM_CATEGORIES: ItemCategoryConfig[] = [
+  { id: 'LIFE', label: ItemCategory.LIFE, emoji: '🏠' },
+  { id: 'HEALTH', label: ItemCategory.HEALTH, emoji: '💪' },
+  { id: 'WORK', label: ItemCategory.WORK, emoji: '💼' },
+  { id: 'STUDY', label: ItemCategory.STUDY, emoji: '📚' },
+  { id: 'RELAX', label: ItemCategory.RELAX, emoji: '🎮' },
+  { id: 'EXPLORE', label: ItemCategory.EXPLORE, emoji: '🔍' },
 ];
 
 // 兼容性类型定义 - 保持现有代码可用
@@ -157,7 +157,7 @@ export interface Task {
   startTime?: string;
   endTime?: string;
   duration?: string;
-  category?: TaskCategory;
+  category?: ItemCategory;
   project?: string; // 关联的项目标题
   type?: string;
   icon?: string;

@@ -13,7 +13,7 @@ import FocusPage from './pages/FocusPage';
 import AiChatPage from './pages/AiChatPage';
 import BottomNavigation from './components/BottomNavigation';
 import FloatingButtons from './components/FloatingButtons';
-import TaskAddDrawer from './components/TaskAddDrawer';
+import ItemAddDrawer from './components/ItemAddDrawer';
 import AuthGuard from './components/AuthGuard';
 import './index.css';
 
@@ -72,7 +72,7 @@ function AppContent() {
           <FloatingButtons onOpenTaskDrawer={() => setIsTaskAddDrawerOpen(true)} />
         )}
         {!shouldHideNavigation && <BottomNavigation />}
-        <TaskAddDrawer 
+        <ItemAddDrawer 
           isOpen={isTaskAddDrawerOpen} 
           onClose={() => setIsTaskAddDrawerOpen(false)} 
         />

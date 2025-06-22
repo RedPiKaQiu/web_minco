@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { ArrowLeft, Calendar, Clock, Flag, RefreshCw, Edit, ChevronRight, Check, AlarmClock } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
-import { Task, TaskCategory, TASK_CATEGORIES } from '../types';
+import { Task, ItemCategory, ITEM_CATEGORIES } from '../types';
 import { createItem, updateItem, CreateItemRequest, UpdateItemRequest } from '../api/items';
 
 // 事项类型选项
@@ -18,7 +18,7 @@ const taskNatureOptions = [
 ];
 
 // 使用统一的事项分类配置
-const taskCategoryOptions = TASK_CATEGORIES.map(category => ({
+const taskCategoryOptions = ITEM_CATEGORIES.map(category => ({
   id: category.id.toLowerCase(),
   icon: category.emoji,
   label: category.label
@@ -195,7 +195,7 @@ const NewTaskPage = () => {
     
     try {
       const selectedCategoryConfig = taskCategoryOptions.find(cat => cat.id === selectedCategory);
-      const selectedCategoryValue = selectedCategoryConfig?.label as TaskCategory;
+      const selectedCategoryValue = selectedCategoryConfig?.label as ItemCategory;
       
       if (isEditMode && editTask) {
         // 编辑模式：调用更新事项API
