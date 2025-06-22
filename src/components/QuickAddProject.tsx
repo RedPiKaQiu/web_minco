@@ -1,3 +1,6 @@
+/**
+ * 快速添加项目组件，提供在指定分类下快速创建新项目的功能
+ */
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';

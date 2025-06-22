@@ -1,3 +1,6 @@
+/**
+ * 个人资料页面，显示用户信息、使用统计和账户设置功能
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';

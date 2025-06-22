@@ -1,3 +1,6 @@
+/**
+ * 错误状态组件，当数据加载出错时显示的错误提示和重试界面
+ */
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
 interface ErrorStateProps {

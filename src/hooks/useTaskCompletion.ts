@@ -1,3 +1,6 @@
+/**
+ * 任务完成状态管理Hook，处理任务完成/未完成状态的切换
+ */
 import { useAppContext } from '../context/AppContext';
 import { updateItem } from '../api/items';
 

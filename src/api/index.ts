@@ -1,3 +1,6 @@
+/**
+ * API基础配置和工具函数，提供统一的API请求封装和错误处理
+ */
 // API 基础配置和公共方法
 
 // 环境配置
@@ -200,8 +203,6 @@ export interface PaginationInfo {
 export * from './interceptor';
 export * from './user';
 export * from './test';
-export * from './ai';
-export * from './focus';
 
 // 同时导出原始API（用于特殊需求）
 export * as OriginalItemsAPI from './items'; 

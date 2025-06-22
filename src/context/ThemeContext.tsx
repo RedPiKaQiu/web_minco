@@ -1,3 +1,6 @@
+/**
+ * 主题上下文管理，管理应用主题切换和自动主题模式
+ */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ThemeType } from '../types';
 

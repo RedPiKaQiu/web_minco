@@ -1,3 +1,6 @@
+/**
+ * 空状态组件，当没有任务数据时显示的占位界面
+ */
 import { Plus, Lightbulb } from 'lucide-react';
 
 interface EmptyStateProps {

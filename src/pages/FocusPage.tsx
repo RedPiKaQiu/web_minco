@@ -1,3 +1,6 @@
+/**
+ * 专注模式页面，提供专注执行单个任务的计时和管理功能
+ */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';

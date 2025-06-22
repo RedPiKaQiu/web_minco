@@ -1,3 +1,6 @@
+/**
+ * 应用全局状态管理上下文，管理任务、项目、焦点模式等全局状态
+ */
 import { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { AppState, AppAction, TaskCategory } from '../types';
 import { getItems } from '../api/interceptor';

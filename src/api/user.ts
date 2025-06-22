@@ -1,3 +1,6 @@
+/**
+ * 用户相关API接口，提供登录、注册、用户信息管理等功能
+ */
 // 用户相关 API 接口
 import { fetchApi, ApiResponse, ApiError } from './index';
 import { User } from '../types';

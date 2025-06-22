@@ -1,3 +1,6 @@
+/**
+ * 时区转换工具函数，处理本地时间与北京时间之间的转换
+ */
 import { format, parseISO, addHours } from 'date-fns';
 
 // 北京时间偏移量 (UTC+8)

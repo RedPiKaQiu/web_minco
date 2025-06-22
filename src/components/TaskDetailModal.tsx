@@ -1,3 +1,6 @@
+/**
+ * 任务详情弹窗组件，显示任务的详细信息和操作按钮
+ */
 import { X, Clock, Calendar, Tag, Target, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Task } from '../types';

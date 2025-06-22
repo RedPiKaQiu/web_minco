@@ -1,3 +1,6 @@
+/**
+ * 首页页面，导航栏点击首页显示，展示今日推荐任务和快速操作
+ */
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useTaskCompletion } from '../hooks/useTaskCompletion';

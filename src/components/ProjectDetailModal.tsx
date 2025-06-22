@@ -1,3 +1,6 @@
+/**
+ * 项目详情弹窗组件，显示项目信息及其关联的任务列表，支持任务管理操作
+ */
 import { useState, useEffect } from 'react';
 import { X, Trash2, Plus, Check, Clock, Calendar } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';

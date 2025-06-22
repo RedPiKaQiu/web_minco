@@ -1,3 +1,6 @@
+/**
+ * 任务添加抽屉组件，提供完整的任务创建表单，支持设置时间、优先级、分类等属性
+ */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';

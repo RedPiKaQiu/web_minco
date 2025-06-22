@@ -1,3 +1,6 @@
+/**
+ * 测试用户模拟API接口，为测试用户提供本地数据存储和模拟API响应
+ */
 // 测试用户模拟API接口 - 不与后端通信
 import { Item, ItemListResponse, Project, TaskCategory } from '../types';
 import { CreateItemRequest, UpdateItemRequest, GetItemsQuery } from './items';

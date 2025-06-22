@@ -1,3 +1,6 @@
+/**
+ * 用户上下文管理，管理用户登录状态和用户信息
+ */
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User } from '../types';
 

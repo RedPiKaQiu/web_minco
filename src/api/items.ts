@@ -1,3 +1,6 @@
+/**
+ * 事项管理API接口，提供事项的增删改查和高级查询功能
+ */
 // 事项管理 API 接口
 import { fetchApi, ApiResponse, ApiError } from './index';
 import { Item, ItemListResponse } from '../types';

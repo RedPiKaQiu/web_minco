@@ -1,3 +1,6 @@
+/**
+ * AI对话页面，提供与AI助手进行智能对话的功能界面
+ */
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Menu, Edit, Plus, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

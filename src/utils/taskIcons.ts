@@ -1,3 +1,6 @@
+/**
+ * 任务图标工具函数，根据任务类型和类别提供对应的图标
+ */
 import { Task, TASK_CATEGORIES, TaskCategory } from '../types';
 
 // 任务类型到图标的映射

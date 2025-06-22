@@ -1,3 +1,6 @@
+/**
+ * 测试相关API接口，提供后端连接状态测试功能
+ */
 // 测试相关 API 接口
 import { fetchApi, ApiResponse, ApiError } from './index';
 

@@ -1,3 +1,6 @@
+/**
+ * 浮动按钮组件，提供快速添加任务和AI对话的悬浮操作按钮
+ */
 import { Plus, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

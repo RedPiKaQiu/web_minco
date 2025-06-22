@@ -1,3 +1,6 @@
+/**
+ * 卡片模式组件，以卡片形式展示推荐任务，支持左右滑动操作
+ */
 import { useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Task } from '../types';

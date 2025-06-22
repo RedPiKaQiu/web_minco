@@ -1,3 +1,6 @@
+/**
+ * 认证守卫组件，保护需要登录才能访问的页面和功能
+ */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';

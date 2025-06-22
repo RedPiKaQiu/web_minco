@@ -1,3 +1,6 @@
+/**
+ * 底部导航栏组件，提供首页、时间轴、项目、个人等主要页面的导航
+ */
 import { Home, Clock, FolderKanban, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 

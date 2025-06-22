@@ -1,3 +1,6 @@
+/**
+ * 便利贴模式组件，以便利贴样式展示推荐任务，支持完成、跳过、专注等操作
+ */
 import { useState } from 'react';
 import { Check, X, Play, Loader2 } from 'lucide-react';
 import { Task } from '../types';

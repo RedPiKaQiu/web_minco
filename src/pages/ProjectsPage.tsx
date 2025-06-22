@@ -1,3 +1,6 @@
+/**
+ * 项目页面，按分类展示项目列表和项目下的任务，支持项目管理操作
+ */
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useProjectTasks } from '../hooks/useTaskData';

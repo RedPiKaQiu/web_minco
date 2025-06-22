@@ -1,3 +1,6 @@
+/**
+ * 新建任务页面，提供完整的任务创建表单和高级设置选项
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';

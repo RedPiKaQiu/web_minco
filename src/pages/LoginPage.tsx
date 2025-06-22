@@ -1,3 +1,6 @@
+/**
+ * 登录页面，提供用户账号密码登录和短信验证码登录功能
+ */
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid'; // 需要安装: npm install uuid @types/uuid
 import { useUser } from '../context/UserContext';

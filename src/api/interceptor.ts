@@ -1,3 +1,6 @@
+/**
+ * API拦截器，为测试用户自动使用模拟API，为真实用户使用真实API
+ */
 // API拦截器 - 为测试用户自动使用模拟API
 import { 
   mockGetItems, 

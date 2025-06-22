@@ -1,3 +1,6 @@
+/**
+ * 任务数据管理Hook集合，提供首页、时间轴、项目页面的数据加载和缓存功能
+ */
 import { useState, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { 

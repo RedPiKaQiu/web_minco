@@ -1,3 +1,6 @@
+/**
+ * 时间轴页面，按日期展示任务时间线，支持日期切换和任务状态管理
+ */
 import { useState, useEffect } from 'react';
 import { useTimelineTasks } from '../hooks/useTaskData';
 import { updateItem } from '../api/items';
