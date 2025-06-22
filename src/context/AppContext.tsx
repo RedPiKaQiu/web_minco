@@ -34,30 +34,39 @@ const loadInitialState = (): AppState => {
 };
 
 // 检查是否为测试用户
-const isTestUser = (): boolean => {
-  const user = localStorage.getItem('user');
-  if (!user) {
+// 改为接受用户参数的函数，避免依赖localStorage的异步更新
+const isTestUserByData = (userData: any): boolean => {
+  if (!userData) {
     console.log('🔍 用户检测: 未找到用户信息');
     return false;
   }
   
-  try {
-    const userData = JSON.parse(user);
-    console.log('🔍 用户检测: 用户数据', { username: userData.username, email: userData.email, id: userData.id });
-    
-    // 检查用户名是否为Shell或包含test
-    const isTest = userData.username === 'Shell' || 
-           userData.email === 'shell@test.com' ||
-           userData.username?.includes('test') ||
-           userData.id?.toString().includes('user-'); // 测试用户ID格式
-           
-    console.log('🔍 用户检测: 是否为测试用户?', isTest);
-    return isTest;
-  } catch (error) {
-    console.log('🔍 用户检测: 解析用户数据失败', error);
-    return false;
-  }
+  console.log('🔍 用户检测: 用户数据', { username: userData.username, email: userData.email, id: userData.id });
+  
+  // 检查用户名是否为Shell或包含test
+  const isTest = userData.username === 'Shell' || 
+         userData.email === 'shell@test.com' ||
+         userData.username?.includes('test') ||
+         userData.id?.toString().includes('user-'); // 测试用户ID格式
+         
+  console.log('🔍 用户检测: 是否为测试用户?', isTest);
+  return isTest;
 };
+
+// 注释掉未使用的函数，保留用于其他地方的兼容性
+// const isTestUser = (): boolean => {
+//   const user = localStorage.getItem('user');
+//   if (!user) {
+//     return false;
+//   }
+//   
+//   try {
+//     const userData = JSON.parse(user);
+//     return isTestUserByData(userData);
+//   } catch (error) {
+//     return false;
+//   }
+// };
 
 // 每天检查是否有postponedToTomorrow的事项需要恢复
 const checkPostponedTasks = (state: AppState): AppState => {
@@ -232,12 +241,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [userIsTest, setUserIsTest] = useState(false);
   const [hasLoadedTestData, setHasLoadedTestData] = useState(false);
+  const [hasLoadedApiData, setHasLoadedApiData] = useState(false); // 新增：API数据缓存标记
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // 获取用户上下文
   const { state: userState } = useUser();
   
-  // 监听用户状态变化
+  // 监听用户状态变化 - 只负责重置状态，不立即加载数据
   useEffect(() => {
     const newUserId = userState.user?.id || null;
     const hasUserChanged = currentUserId !== newUserId;
@@ -257,37 +267,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       // 重置加载状态
       setHasLoadedTestData(false);
+      setHasLoadedApiData(false);
       setError(null);
       setIsLoading(false);
       
       // 更新当前用户ID
       setCurrentUserId(newUserId);
       
-      // 如果有新用户登录，立即加载数据
-      if (newUserId && userState.isAuthenticated) {
-        console.log('🚀 新用户登录，立即加载数据');
-        setTimeout(() => {
-          loadTasks();
-        }, 100); // 短暂延迟确保状态更新完成
-      }
+      // 注意：这里不立即加载数据，等待用户类型确定后再加载
     }
   }, [userState.user?.id, userState.isAuthenticated]);
   
-  // 检查用户类型
+  // 检查用户类型 - 只设置用户类型，不加载数据
   useEffect(() => {
-    const checkUserType = () => {
-      const userType = isTestUser();
-      console.log('🔄 检查用户类型结果:', userType ? '测试用户' : '普通用户');
-      setUserIsTest(userType);
-      
-      // 如果用户类型变化，重置加载状态
-      if (userType !== userIsTest) {
-        setHasLoadedTestData(false);
-      }
-    };
+    // 只有在有用户数据时才进行检查
+    if (!userState.user || !currentUserId || !userState.isAuthenticated) {
+      console.log('🔄 用户信息不完整，跳过用户类型检查');
+      return;
+    }
     
-    checkUserType();
-  }, [userState.user, userIsTest]);
+    const newUserType = isTestUserByData(userState.user);
+    const userTypeChanged = newUserType !== userIsTest;
+    
+    console.log('🔄 检查用户类型:', {
+      新用户类型: newUserType ? '测试用户' : '普通用户',
+      用户类型是否变化: userTypeChanged,
+      当前用户ID: currentUserId,
+      是否已认证: userState.isAuthenticated
+    });
+    
+    // 只更新用户类型状态，不加载数据
+    if (userTypeChanged) {
+      setUserIsTest(newUserType);
+      
+      // 重置加载状态
+      setHasLoadedTestData(false);
+      setHasLoadedApiData(false);
+      
+      console.log('✅ 用户类型已更新，数据加载将由各页面处理');
+    }
+  }, [userState.user, currentUserId, userState.isAuthenticated]);
   
   // 加载测试用户数据
   const loadTestUserData = () => {
@@ -326,8 +345,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   // 加载事项列表
   const loadTasks = async () => {
-    // 优先检查是否为测试用户（不依赖token）
-    const userIsTestUser = isTestUser();
+    // 检查是否为测试用户（使用UserContext数据）
+    const userIsTestUser = userState.user ? isTestUserByData(userState.user) : false;
     console.log('🔍 检查用户类型:', userIsTestUser ? '测试用户' : '普通用户');
     
     if (userIsTestUser) {
@@ -340,6 +359,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       console.log('🚫 普通用户未登录，不加载数据');
+      return;
+    }
+    
+    // 检查是否已经加载过API数据
+    if (hasLoadedApiData) {
+      console.log('💾 API数据已缓存，跳过重复加载');
       return;
     }
     
@@ -404,6 +429,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         payload: formattedTasks
       });
       
+      // 设置API数据已加载标记
+      setHasLoadedApiData(true);
+      
     } catch (error) {
       console.error('❌ 加载事项失败:', error);
       const errorMessage = error instanceof Error ? error.message : '获取数据失败，请检查网络连接';
@@ -413,18 +441,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  // 当用户测试状态变化时重新加载数据（仅在有用户且未加载数据时）
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token && currentUserId && !hasLoadedTestData && userState.isAuthenticated) {
-      console.log('👤 用户测试状态变化，重新加载数据. 是否为测试用户:', userIsTest);
-      if (userIsTest) {
-        loadTestUserData();
-      } else {
-        loadTasks();
-      }
-    }
-  }, [userIsTest, hasLoadedTestData, currentUserId, userState.isAuthenticated]);
+
   
   // 当状态改变时保存到localStorage
   useEffect(() => {

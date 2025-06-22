@@ -162,7 +162,7 @@ const NewTaskPage = () => {
   };
 
   // 映射函数：将开始时间转换为ISO格式
-  const getStartTimeISO = (startTimeStr: string, dateStr: string): string | undefined => {
+  const getStartTimeISO = (startTimeStr: string, _dateStr: string): string | undefined => {
     if (startTimeStr === '随时') return undefined;
     
     // 提取时间部分，例如 "上午 9:00" -> "9:00"

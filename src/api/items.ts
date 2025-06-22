@@ -268,4 +268,300 @@ export async function deleteItem(itemId: string): Promise<void> {
     
     throw new ApiError(`删除事项失败，请稍后重试`, 500, 500);
   }
-} 
+}
+
+/**
+ * 获取今日任务（用于首页）
+ * @returns 今日的待办任务
+ */
+export async function getTodayTasks(): Promise<ItemListResponse> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
+  
+  return getItems({
+    date: today,
+    is_completed: false,
+    sort_by: 'priority',
+    order: 'desc',
+    limit: 50
+  });
+}
+
+
+
+/**
+ * 获取指定日期的任务（用于时间轴页面）
+ * @param date 日期字符串（YYYY-MM-DD格式）
+ * @param isCompleted 是否完成筛选
+ * @returns 指定日期的任务列表
+ */
+export async function getTasksByDate(date: string, isCompleted?: boolean): Promise<ItemListResponse> {
+  const query: GetItemsQuery = {
+    date: date,
+    sort_by: 'start_time',
+    order: 'asc',
+    limit: 100
+  };
+  
+  if (isCompleted !== undefined) {
+    query.is_completed = isCompleted;
+  }
+  
+  return getItems(query);
+}
+
+/**
+ * 获取一周的任务数据（用于时间轴页面）
+ * @param startDate 周开始日期
+ * @returns 一周的任务数据Map
+ */
+export async function getWeekTasks(startDate: Date): Promise<Record<string, ItemListResponse>> {
+  const weekTasks: Record<string, ItemListResponse> = {};
+  const promises: Promise<void>[] = [];
+  
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const promise = getTasksByDate(dateStr).then(data => {
+      weekTasks[dateStr] = data;
+    });
+    
+    promises.push(promise);
+  }
+  
+  await Promise.all(promises);
+  return weekTasks;
+}
+
+/**
+ * 获取项目相关任务（用于项目页面）
+ * @param projectId 项目ID
+ * @param options 额外的筛选选项
+ * @returns 项目相关的任务列表
+ */
+export async function getProjectTasks(projectId: string, options: {
+  isCompleted?: boolean;
+  priority?: number;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+} = {}): Promise<ItemListResponse> {
+  return getItems({
+    project_id: projectId,
+    is_completed: options.isCompleted,
+    priority: options.priority,
+    sort_by: options.sortBy || 'priority',
+    order: options.order || 'desc',
+    limit: 100
+  });
+}
+
+/**
+ * 获取项目进度统计
+ * @param projectId 项目ID
+ * @returns 项目进度信息
+ */
+export async function getProjectProgress(projectId: string): Promise<{
+  total: number;
+  completed: number;
+  progress: number;
+}> {
+  try {
+    // 并行获取总任务数和已完成任务数
+    const [allTasks, completedTasks] = await Promise.all([
+      getItems({ project_id: projectId, limit: 1000 }),
+      getItems({ project_id: projectId, is_completed: true, limit: 1000 })
+    ]);
+    
+    const total = allTasks.pagination?.total_items || 0;
+    const completed = completedTasks.pagination?.total_items || 0;
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    return { total, completed, progress };
+  } catch (error) {
+    console.error('获取项目进度失败:', error);
+    return { total: 0, completed: 0, progress: 0 };
+  }
+}
+
+/**
+ * 获取分类任务（用于项目页面的分类筛选）
+ * @param categoryId 分类ID
+ * @param options 额外筛选选项
+ * @returns 分类下的任务列表
+ */
+export async function getCategoryTasks(categoryId: number, options: {
+  projectId?: string;
+  isCompleted?: boolean;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+} = {}): Promise<ItemListResponse> {
+  return getItems({
+    category_id: categoryId,
+    project_id: options.projectId,
+    is_completed: options.isCompleted,
+    sort_by: options.sortBy || 'created_at',
+    order: options.order || 'desc',
+    limit: 100
+  });
+}
+
+/**
+ * 获取无项目分配的分类任务（用于项目页面显示未分配事项）
+ * @param categoryId 分类ID
+ * @param isCompleted 是否完成
+ * @returns 未分配给项目的分类任务
+ */
+export async function getUnassignedCategoryTasks(categoryId: number, isCompleted: boolean = false): Promise<ItemListResponse> {
+  // 注意：这里假设没有project_id参数时API返回未分配给项目的任务
+  // 如果API不支持这种逻辑，可能需要获取所有任务后在前端过滤
+  return getItems({
+    category_id: categoryId,
+    is_completed: isCompleted,
+    sort_by: 'created_at',
+    order: 'desc',
+    limit: 100
+  });
+}
+
+/**
+ * 筛选参数构建器类
+ * 用于灵活构建查询参数
+ */
+export class TaskFilterBuilder {
+  private filters: GetItemsQuery = {};
+  
+  /**
+   * 设置日期筛选
+   */
+  setDate(date: string): TaskFilterBuilder {
+    this.filters.date = date;
+    return this;
+  }
+  
+  /**
+   * 设置今日筛选
+   */
+  setToday(): TaskFilterBuilder {
+    this.filters.date = new Date().toISOString().split('T')[0];
+    return this;
+  }
+  
+  /**
+   * 设置项目筛选
+   */
+  setProject(projectId: string): TaskFilterBuilder {
+    this.filters.project_id = projectId;
+    return this;
+  }
+  
+  /**
+   * 设置分类筛选
+   */
+  setCategory(categoryId: number): TaskFilterBuilder {
+    this.filters.category_id = categoryId;
+    return this;
+  }
+  
+  /**
+   * 设置完成状态筛选
+   */
+  setCompleted(isCompleted: boolean): TaskFilterBuilder {
+    this.filters.is_completed = isCompleted;
+    return this;
+  }
+  
+  /**
+   * 设置优先级筛选
+   */
+  setPriority(priority: number): TaskFilterBuilder {
+    this.filters.priority = priority;
+    return this;
+  }
+  
+  /**
+   * 设置时间段筛选
+   */
+  setTimeSlot(timeSlotId: number): TaskFilterBuilder {
+    this.filters.time_slot_id = timeSlotId;
+    return this;
+  }
+  
+  /**
+   * 设置排序
+   */
+  setSort(sortBy: string, order: 'asc' | 'desc' = 'desc'): TaskFilterBuilder {
+    this.filters.sort_by = sortBy;
+    this.filters.order = order;
+    return this;
+  }
+  
+  /**
+   * 设置分页
+   */
+  setPagination(page: number = 1, limit: number = 20): TaskFilterBuilder {
+    this.filters.page = page;
+    this.filters.limit = limit;
+    return this;
+  }
+  
+  /**
+   * 构建查询参数
+   */
+  build(): GetItemsQuery {
+    return { ...this.filters };
+  }
+  
+  /**
+   * 执行查询
+   */
+  async execute(): Promise<ItemListResponse> {
+    return getItems(this.filters);
+  }
+}
+
+/**
+ * 常用筛选预设
+ */
+export const TaskFilters = {
+  /**
+   * 今日重要任务
+   */
+  todayImportant: () => new TaskFilterBuilder()
+    .setToday()
+    .setPriority(4)
+    .setCompleted(false)
+    .setSort('priority', 'desc'),
+  
+  /**
+   * 项目未完成任务
+   */
+  projectPending: (projectId: string) => new TaskFilterBuilder()
+    .setProject(projectId)
+    .setCompleted(false)
+    .setSort('created_at', 'desc'),
+  
+  /**
+   * 本周任务概览
+   */
+  weekOverview: () => new TaskFilterBuilder()
+    .setSort('start_time', 'asc')
+    .setPagination(1, 100),
+  
+  /**
+   * 分类未完成任务
+   */
+  categoryPending: (categoryId: number) => new TaskFilterBuilder()
+    .setCategory(categoryId)
+    .setCompleted(false)
+    .setSort('priority', 'desc'),
+    
+  /**
+   * 今日指定分类任务
+   */
+  todayCategory: (categoryId: number) => new TaskFilterBuilder()
+    .setToday()
+    .setCategory(categoryId)
+    .setCompleted(false)
+    .setSort('priority', 'desc')
+}; 

@@ -7,7 +7,7 @@ import { zhCN } from 'date-fns/locale';
 import TaskDetailModal from '../components/TaskDetailModal';
 
 const TimelinePage = () => {
-  const { state, dispatch } = useAppContext();
+  const { state } = useAppContext();
   const { toggleTaskCompletion } = useTaskCompletion();
   const [activeTab, setActiveTab] = useState<'timeline' | 'completed'>('timeline');
   const [viewMode, setViewMode] = useState<'compact' | 'expanded'>('expanded');

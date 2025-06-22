@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useTaskCompletion } from '../hooks/useTaskCompletion';
+import { useHomePageTasks } from '../hooks/useTaskData';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Loader2, Grid3X3, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Task } from '../types';
+import { Task, Item, TaskCategory } from '../types';
 import { CardMode } from '../components/CardMode';
 import { StickyNoteBoard } from '../components/StickyNoteBoard';
 import EmptyState from '../components/EmptyState';
@@ -80,16 +81,55 @@ const Fireworks = ({
   );
 };
 
+// API Item 到 Task 的转换函数
+const convertApiItemToTask = (apiItem: Item): Task => {
+  return {
+    id: apiItem.id,
+    title: apiItem.title,
+    completed: apiItem.status_id === 3, // 3表示已完成
+    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
+    startTime: apiItem.start_time ? apiItem.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+    endTime: apiItem.end_time ? apiItem.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+    priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+    // 正确映射TaskCategory枚举
+    category: apiItem.category_id === 1 ? TaskCategory.LIFE : 
+              apiItem.category_id === 2 ? TaskCategory.HEALTH :
+              apiItem.category_id === 3 ? TaskCategory.WORK :
+              apiItem.category_id === 4 ? TaskCategory.STUDY :
+              apiItem.category_id === 5 ? TaskCategory.RELAX :
+              apiItem.category_id === 6 ? TaskCategory.EXPLORE : undefined,
+    isAnytime: !apiItem.start_time,
+    icon: apiItem.emoji,
+    duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined
+  };
+};
+
 const HomePage = () => {
   const navigate = useNavigate();
-  const { state, dispatch, isLoading, error, refreshTasks, isTestUser } = useAppContext();
+  const { isTestUser } = useAppContext();
   const { toggleTaskCompletion } = useTaskCompletion();
+  
+  // 使用新的首页数据hook
+  const {
+    todayTasks: apiTodayTasks,
+    recommendedTasks: apiRecommendedTasks,
+    isLoading: homePageLoading,
+    error: homePageError,
+    loadTodayTasks,
+    getMoreRecommendations,
+    setRecommendedTasks: setApiRecommendedTasks
+  } = useHomePageTasks();
+  
   const [currentTime, setCurrentTime] = useState(new Date());
   const [greeting, setGreeting] = useState('');
   const [showFireworks, setShowFireworks] = useState(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'card' | 'sticky'>('card');
 
+  // 转换API数据为Task格式
+  const todayTasks = apiTodayTasks.map(convertApiItemToTask);
+  const recommendedTasks = apiRecommendedTasks.map(convertApiItemToTask);
+  
   // 更新时间
   useEffect(() => {
     const timer = setInterval(() => {
@@ -97,6 +137,15 @@ const HomePage = () => {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // 页面加载时获取今日任务
+  useEffect(() => {
+    console.log('🏠 HomePage: useEffect触发，检查状态', { isTestUser });
+    
+    // 调用loadTodayTasks，它内部会检查isTestUser状态
+    console.log('🏠 HomePage: 开始加载今日任务');
+    loadTodayTasks();
+  }, [loadTodayTasks]); // 只依赖loadTodayTasks，isTestUser的变化由hook内部处理
 
   // 设置问候语
   useEffect(() => {
@@ -126,69 +175,6 @@ const HomePage = () => {
     return reasons[Math.floor(Math.random() * reasons.length)];
   };
 
-  // 获取推荐事项（模拟AI推荐）- 返回3-5个推荐事项
-  const getRecommendedTask = (tasks: Task[]): Task[] => {
-    if (tasks.length === 0) return [];
-    
-    // 设置推荐数量：最少3个，最多5个，但不超过可用事项数量
-    const recommendCount = Math.min(Math.max(3, Math.min(5, tasks.length)), tasks.length);
-    
-    // 创建推荐列表，按优先级和特征排序
-    const recommendedList: Task[] = [];
-    const usedTasks = new Set<string>();
-    
-    // 1. 优先推荐高优先级事项
-    const highPriorityTasks = tasks.filter(task => 
-      task.priority === 'high' && !usedTasks.has(task.id)
-    );
-    for (const task of highPriorityTasks.slice(0, 2)) {
-      recommendedList.push(task);
-      usedTasks.add(task.id);
-      if (recommendedList.length >= recommendCount) break;
-    }
-    
-    // 2. 推荐有具体时间的事项
-    if (recommendedList.length < recommendCount) {
-      const timedTasks = tasks.filter(task => 
-        task.startTime && !task.isAnytime && !usedTasks.has(task.id)
-      );
-      for (const task of timedTasks.slice(0, 2)) {
-        recommendedList.push(task);
-        usedTasks.add(task.id);
-        if (recommendedList.length >= recommendCount) break;
-      }
-    }
-    
-    // 3. 推荐中优先级事项
-    if (recommendedList.length < recommendCount) {
-      const mediumPriorityTasks = tasks.filter(task => 
-        task.priority === 'medium' && !usedTasks.has(task.id)
-      );
-      for (const task of mediumPriorityTasks.slice(0, 2)) {
-        recommendedList.push(task);
-        usedTasks.add(task.id);
-        if (recommendedList.length >= recommendCount) break;
-      }
-    }
-    
-    // 4. 填充剩余位置（随机选择或按创建顺序）
-    if (recommendedList.length < recommendCount) {
-      const remainingTasks = tasks.filter(task => !usedTasks.has(task.id));
-      for (const task of remainingTasks.slice(0, recommendCount - recommendedList.length)) {
-        recommendedList.push(task);
-        usedTasks.add(task.id);
-      }
-    }
-    
-    return recommendedList;
-  };
-
-  // 获取今日事项和推荐事项的逻辑
-  const todayTasks = state.tasks.filter(task => !task.completed);
-  const initialRecommendedTasks = getRecommendedTask(todayTasks);
-
-  const [recommendedTasks, setRecommendedTasks] = useState<Task[]>(initialRecommendedTasks);
-
   // 处理卡片模式的滑动
   const handleCardSwipe = (dir: 'left' | 'right') => {
     if (recommendedTasks.length === 0) return;
@@ -197,14 +183,15 @@ const HomePage = () => {
       // 左滑跳过 - 从推荐列表移除
       const currentTask = recommendedTasks[0];
       if (currentTask) {
-        setRecommendedTasks(prev => prev.filter(task => task.id !== currentTask.id));
+        // 从API数据中移除
+        setApiRecommendedTasks(prev => prev.filter(task => task.id !== currentTask.id));
       }
     } else if (dir === 'right') {
       // 右滑开始专注 - 导航到专注模式
       const currentTask = recommendedTasks[0];
       if (currentTask) {
         navigate(`/focus/${currentTask.id}`);
-        setRecommendedTasks(prev => prev.filter(task => task.id !== currentTask.id));
+        setApiRecommendedTasks(prev => prev.filter(task => task.id !== currentTask.id));
       }
     }
   };
@@ -216,7 +203,7 @@ const HomePage = () => {
     console.log('🏠 HomePage: handleComplete 被调用', { id });
     
     // 获取当前任务的完成状态
-    const currentTask = state.tasks.find(task => task.id === id);
+    const currentTask = todayTasks.find(task => task.id === id) || recommendedTasks.find(task => task.id === id);
     if (!currentTask) {
       console.error('❌ HomePage: 未找到任务', { id });
       return;
@@ -242,36 +229,49 @@ const HomePage = () => {
         await toggleTaskCompletion(id, currentTask.completed);
         
         // 从推荐列表中移除已完成的事项
-        setRecommendedTasks(prev => prev.filter(task => task.id !== id));
+        setApiRecommendedTasks(prev => prev.filter(task => task.id !== id));
         
+        // 不再重新加载今日任务，避免重复API调用
+        // 任务状态已通过toggleTaskCompletion更新，推荐列表已通过setApiRecommendedTasks更新
         console.log('✅ HomePage: 任务完成状态更新成功');
       } catch (error) {
         console.error('❌ HomePage: 更新任务完成状态失败', error);
+        // 只有在API调用失败时才重新加载以恢复状态
+        console.log('🔄 API调用失败，重新加载今日任务');
+        await loadTodayTasks();
       }
     }, 800); // 调整延迟时间
   };
 
   // 获取更多推荐
-  const handleGetMoreRecommendations = () => {
-    const newRecommendations = getRecommendedTask(todayTasks);
-    setRecommendedTasks(newRecommendations);
+  const handleGetMoreRecommendations = async () => {
+    try {
+      const newRecommendations = await getMoreRecommendations();
+      setApiRecommendedTasks(prev => [...prev, ...newRecommendations]);
+    } catch (error) {
+      console.error('获取更多推荐失败:', error);
+    }
   };
 
   // 处理跳过（便利贴模式）
   const handleSkip = (id: string) => {
-    setRecommendedTasks(prev => prev.filter(task => task.id !== id));
+    setApiRecommendedTasks(prev => prev.filter(task => task.id !== id));
   };
 
   // 处理开始专注（便利贴模式）
   const handleFocus = (id: string) => {
     navigate(`/focus/${id}`);
-    setRecommendedTasks(prev => prev.filter(task => task.id !== id));
+    setApiRecommendedTasks(prev => prev.filter(task => task.id !== id));
   };
 
   // 处理创建新事项
   const handleCreateTask = () => {
     navigate('/new-task');
   };
+
+  // 使用新的loading和error状态
+  const isLoading = homePageLoading;
+  const error = homePageError;
 
   return (
     <div className="page-content safe-area-top">
@@ -320,12 +320,12 @@ const HomePage = () => {
         {error ? (
           <ErrorState 
             error={error} 
-            onRetry={refreshTasks}
+            onRetry={loadTodayTasks}
             isLoading={isLoading}
           />
         ) : /* 空状态 */ todayTasks.length === 0 && !isLoading ? (
           <EmptyState onCreateTask={handleCreateTask} />
-        ) : /* 推荐事项 */ recommendedTasks.length === 0 ? (
+        ) : /* 推荐事项 */ recommendedTasks.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <p className="text-gray-500 mb-4">目前没有推荐的事项</p>
             <button
@@ -342,6 +342,11 @@ const HomePage = () => {
                 '再给点推荐'
               )}
             </button>
+          </div>
+        ) : isLoading ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+            <p className="text-gray-500">正在加载今日任务...</p>
           </div>
         ) : viewMode === 'sticky' ? (
           <StickyNoteBoard
