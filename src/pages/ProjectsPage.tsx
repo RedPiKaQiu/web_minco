@@ -1,12 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useProjectTasks } from '../hooks/useTaskData';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { TaskCategory, TASK_CATEGORIES, Project } from '../types';
+import { TaskCategory, TASK_CATEGORIES, Project, Task, Item } from '../types';
 import QuickAddProject from '../components/QuickAddProject';
 import ProjectDetailModal from '../components/ProjectDetailModal';
 
+// API Item 到 Task 的转换函数
+const convertApiItemToTask = (apiItem: Item): Task => {
+  return {
+    id: apiItem.id,
+    title: apiItem.title,
+    completed: apiItem.status_id === 3, // 3表示已完成
+    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
+    startTime: apiItem.start_time ? apiItem.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+    endTime: apiItem.end_time ? apiItem.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+    priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+    // 正确映射TaskCategory枚举
+    category: apiItem.category_id === 1 ? TaskCategory.LIFE : 
+              apiItem.category_id === 2 ? TaskCategory.HEALTH :
+              apiItem.category_id === 3 ? TaskCategory.WORK :
+              apiItem.category_id === 4 ? TaskCategory.STUDY :
+              apiItem.category_id === 5 ? TaskCategory.RELAX :
+              apiItem.category_id === 6 ? TaskCategory.EXPLORE : undefined,
+    isAnytime: !apiItem.start_time,
+    icon: apiItem.emoji,
+    duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined,
+    project: apiItem.project_id // 添加项目关联
+  };
+};
+
+// TaskCategory 到 category_id 的映射
+const getCategoryId = (category: TaskCategory): number => {
+  switch (category) {
+    case TaskCategory.LIFE: return 1;
+    case TaskCategory.HEALTH: return 2;
+    case TaskCategory.WORK: return 3;
+    case TaskCategory.STUDY: return 4;
+    case TaskCategory.RELAX: return 5;
+    case TaskCategory.EXPLORE: return 6;
+    default: return 1;
+  }
+};
+
 const ProjectsPage = () => {
   const { state, dispatch } = useAppContext();
+  
+  // 使用新的项目任务数据hook
+  const {
+    categoryTasks: apiCategoryTasks,
+    isLoading: projectsLoading,
+    error: projectsError,
+    loadCategoryTasks,
+    setSelectedCategoryId,
+    refreshFromCache
+  } = useProjectTasks();
+  
   const [activeCategory, setActiveCategory] = useState<TaskCategory>(TaskCategory.LIFE);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     projects: true,
@@ -22,14 +71,55 @@ const ProjectsPage = () => {
     emoji: category.emoji
   }));
 
-  // 根据分类筛选项目
-  const categoryProjects = (state.projects || []).filter(project => project.category === activeCategory);
+  // 转换API数据为Task格式
+  const categoryTasks = apiCategoryTasks.map(convertApiItemToTask);
 
-  // 根据分类筛选事项（未分配给项目的事项）
-  const categoryTasks = (state.tasks || []).filter(task => {
-    if (!task.category) return false;
-    return task.category === activeCategory && !task.project;
-  });
+  // 页面初始化时加载默认分类的任务
+  useEffect(() => {
+    const categoryId = getCategoryId(activeCategory);
+    console.log('📂 ProjectsPage: 初始化，加载分类任务', { activeCategory, categoryId });
+    loadCategoryTasks(categoryId);
+  }, []); // 只在组件挂载时执行一次
+
+  // 使用useRef来追踪当前分类，避免闭包问题
+  const activeCategoryRef = useRef(activeCategory);
+  activeCategoryRef.current = activeCategory;
+
+  // 监听页面焦点，返回页面时刷新缓存数据
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('👁️ ProjectsPage: 页面重新获得焦点，尝试刷新缓存');
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 ProjectsPage: 缓存刷新失败，重新加载数据');
+        const categoryId = getCategoryId(activeCategoryRef.current);
+        loadCategoryTasks(categoryId);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 ProjectsPage: 页面变为可见，尝试刷新缓存');
+        const refreshed = refreshFromCache();
+        if (!refreshed) {
+          console.log('📡 ProjectsPage: 缓存刷新失败，重新加载数据');
+          const categoryId = getCategoryId(activeCategoryRef.current);
+          loadCategoryTasks(categoryId);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []); // 只在组件挂载时添加监听器
+
+  // 根据分类筛选项目（这部分暂时保持从全局状态获取，因为项目数据暂时还在AppContext中）
+  const categoryProjects = (state.projects || []).filter(project => project.category === activeCategory);
 
   const completedTasks = categoryTasks.filter(task => task.completed);
   const incompleteTasks = categoryTasks.filter(task => !task.completed);
@@ -50,8 +140,31 @@ const ProjectsPage = () => {
     setIsAddProjectOpen(true);
   };
 
+  const handleProjectAdded = () => {
+    console.log('📂 ProjectsPage: 项目添加成功，刷新当前分类数据');
+    // 强制刷新当前分类的数据
+    const categoryId = getCategoryId(activeCategory);
+    loadCategoryTasks(categoryId, true); // 强制刷新
+  };
+
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project);
+  };
+
+  // 切换分类
+  const handleCategoryChange = async (categoryLabel: TaskCategory) => {
+    console.log('📂 ProjectsPage: 切换分类', { from: activeCategory, to: categoryLabel });
+    
+    setActiveCategory(categoryLabel);
+    const categoryId = getCategoryId(categoryLabel);
+    setSelectedCategoryId(categoryId);
+    
+    // 加载新分类的任务
+    try {
+      await loadCategoryTasks(categoryId);
+    } catch (error) {
+      console.error('加载分类任务失败:', error);
+    }
   };
 
   const calculateProgress = (project: Project): number => {
@@ -72,6 +185,10 @@ const ProjectsPage = () => {
     };
   };
 
+  // 使用新的loading和error状态
+  const isLoading = projectsLoading;
+  const error = projectsError;
+
   return (
     <div className="page-content safe-area-top bg-gray-50">
       {/* Tab 标签栏 */}
@@ -81,8 +198,9 @@ const ProjectsPage = () => {
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setActiveCategory(category.label as TaskCategory)}
-                className={`py-3 px-1 text-xs rounded-md transition-colors ${
+                onClick={() => handleCategoryChange(category.label as TaskCategory)}
+                disabled={isLoading}
+                className={`py-3 px-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
                   activeCategory === category.label
                     ? 'bg-blue-500 text-white'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -96,6 +214,31 @@ const ProjectsPage = () => {
             ))}
           </div>
         </div>
+        
+        {/* 加载状态指示器 */}
+        {isLoading && (
+          <div className="mt-2 text-center">
+            <div className="inline-flex items-center text-sm text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+              正在加载{activeCategory}数据...
+            </div>
+          </div>
+        )}
+        
+        {/* 错误状态 */}
+        {error && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-red-600">加载失败: {error}</p>
+              <button 
+                onClick={() => loadCategoryTasks(getCategoryId(activeCategory))}
+                className="text-sm text-red-600 hover:text-red-800 underline"
+              >
+                重试
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-4 space-y-6">
@@ -190,7 +333,7 @@ const ProjectsPage = () => {
         </div>
 
         {/* 事项部分 */}
-        {incompleteTasks.length > 0 && (
+        {!isLoading && incompleteTasks.length > 0 && (
           <div className="space-y-3">
             <button
               onClick={() => toggleSection('tasks')}
@@ -245,7 +388,7 @@ const ProjectsPage = () => {
         )}
 
         {/* 已完成事项部分 */}
-        {completedTasks.length > 0 && (
+        {!isLoading && completedTasks.length > 0 && (
           <div className="space-y-3">
             <button
               onClick={() => toggleSection('completed')}
@@ -293,7 +436,7 @@ const ProjectsPage = () => {
         )}
 
         {/* 空状态 */}
-        {categoryProjects.length === 0 && incompleteTasks.length === 0 && completedTasks.length === 0 && (
+        {!isLoading && !error && categoryProjects.length === 0 && incompleteTasks.length === 0 && completedTasks.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-2">📋</div>
             <p className="mb-4">暂无{activeCategory}相关的项目或事项</p>
@@ -312,6 +455,7 @@ const ProjectsPage = () => {
         <QuickAddProject
           category={activeCategory}
           onClose={() => setIsAddProjectOpen(false)}
+          onProjectAdded={handleProjectAdded}
         />
       )}
 

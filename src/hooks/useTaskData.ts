@@ -70,38 +70,92 @@ export const useHomePageTasks = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // 使用与时间轴页面相同的缓存配置
+  const TASK_CACHE_PREFIX = 'timeline-tasks-';
+  const CACHE_METADATA_KEY = 'timeline-cache-metadata';
+  
   // 使用 useRef 追踪加载状态，避免依赖循环
-  const hasLoadedRef = useRef(false);
   const isLoadingRef = useRef(false);
-  const currentUserTypeRef = useRef<boolean | null>(null);
   const isTestUserRef = useRef(isTestUser);
   
   // 更新 ref 值
   isTestUserRef.current = isTestUser;
-  
-  // 当用户类型变化时，重置加载状态
-  if (currentUserTypeRef.current !== null && currentUserTypeRef.current !== isTestUser) {
-    console.log('🔄 useHomePageTasks: 用户类型变化，重置加载状态');
-    hasLoadedRef.current = false;
-    isLoadingRef.current = false;
-  }
+
+  // 获取缓存元数据
+  const getCacheMetadata = useCallback(() => {
+    try {
+      const metadata = sessionStorage.getItem(CACHE_METADATA_KEY);
+      return metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      console.error('读取缓存元数据失败:', error);
+      return {};
+    }
+  }, []);
+
+  // 检查今日任务缓存
+  const checkTodayCache = useCallback((): Item[] | null => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    try {
+      const metadata = getCacheMetadata();
+      const cacheTimestamp = metadata[today];
+      
+      if (!cacheTimestamp) {
+        console.log('📦 useHomePageTasks: 未找到今日缓存');
+        return null;
+      }
+
+      const age = Date.now() - cacheTimestamp;
+      // 今日数据永不过期
+      
+      const cachedData = sessionStorage.getItem(TASK_CACHE_PREFIX + today);
+      if (cachedData) {
+        const tasks = JSON.parse(cachedData) as Item[];
+        console.log('📦 useHomePageTasks: 使用今日缓存数据', { 
+          taskCount: tasks.length,
+          cacheAge: Math.round(age / 1000) + 's'
+        });
+        return tasks;
+      }
+    } catch (error) {
+      console.error('读取今日缓存失败:', error);
+    }
+    
+    return null;
+  }, [getCacheMetadata]);
+
+  // 缓存今日任务数据
+  const cacheTodayTasks = useCallback((tasks: Item[]) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const timestamp = Date.now();
+    
+    try {
+      // 缓存任务数据（与时间轴页面使用相同的缓存格式）
+      sessionStorage.setItem(TASK_CACHE_PREFIX + today, JSON.stringify(tasks));
+      
+      // 更新缓存元数据
+      const metadata = getCacheMetadata();
+      metadata[today] = timestamp;
+      sessionStorage.setItem(CACHE_METADATA_KEY, JSON.stringify(metadata));
+      
+      console.log('💾 useHomePageTasks: 缓存今日任务数据', { 
+        taskCount: tasks.length
+      });
+    } catch (error) {
+      console.error('缓存今日任务失败:', error);
+    }
+  }, [getCacheMetadata]);
 
   const loadTodayTasks = useCallback(async () => {
     const currentIsTestUser = isTestUserRef.current;
     
-    // 如果用户类型没有变化且已经加载过，跳过
-    if (hasLoadedRef.current && currentUserTypeRef.current === currentIsTestUser) {
-      console.log('💾 useHomePageTasks: 数据已加载，跳过重复调用');
-      return;
-    }
-
     // 防止重复调用
     if (isLoadingRef.current) {
       console.log('⏳ useHomePageTasks: 正在加载中，跳过重复调用');
       return;
     }
 
-    console.log('🏠 useHomePageTasks: 开始加载数据', { isTestUser: currentIsTestUser, hasLoaded: hasLoadedRef.current });
+    console.log('🏠 useHomePageTasks: 开始加载数据', { isTestUser: currentIsTestUser });
     
     isLoadingRef.current = true;
     setIsLoading(true);
@@ -125,14 +179,15 @@ export const useHomePageTasks = () => {
         console.log('📅 获取到mock今日任务:', { count: tasks.length });
         setTodayTasks(tasks);
         
+        // 缓存mock数据
+        cacheTodayTasks(tasks);
+        
         // 从今日任务中生成推荐
         const recommendations = generateRecommendationsFromTasks(tasks);
         console.log('🎯 生成推荐任务:', { count: recommendations.length });
         setRecommendedTasks(recommendations);
         
         setError(null);
-        hasLoadedRef.current = true;
-        currentUserTypeRef.current = currentIsTestUser;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : '获取mock数据失败';
         setError(errorMessage);
@@ -156,41 +211,13 @@ export const useHomePageTasks = () => {
       console.log('📅 获取到今日任务:', { count: tasks.length });
       setTodayTasks(tasks);
       
-      // 缓存今日任务数据供时间轴页面使用（使用新的缓存格式）
-      try {
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const timestamp = Date.now();
-        
-        // 使用新的缓存格式
-        sessionStorage.setItem(`timeline-tasks-${today}`, JSON.stringify(tasks));
-        
-        // 更新缓存元数据
-        const metadata = (() => {
-          try {
-            const existing = sessionStorage.getItem('timeline-cache-metadata');
-            return existing ? JSON.parse(existing) : {};
-          } catch {
-            return {};
-          }
-        })();
-        metadata[today] = timestamp;
-        sessionStorage.setItem('timeline-cache-metadata', JSON.stringify(metadata));
-        
-        console.log('💾 useHomePageTasks: 缓存今日任务数据', { 
-          taskCount: tasks.length,
-          dateKey: today
-        });
-      } catch (cacheError) {
-        console.error('缓存今日任务失败:', cacheError);
-      }
+      // 缓存今日任务数据供时间轴页面使用
+      cacheTodayTasks(tasks);
       
       // 从今日任务中生成推荐
       const recommendations = generateRecommendationsFromTasks(tasks);
       console.log('🎯 生成推荐任务:', { count: recommendations.length });
       setRecommendedTasks(recommendations);
-      
-      hasLoadedRef.current = true;
-      currentUserTypeRef.current = currentIsTestUser;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '获取今日任务失败';
       setError(errorMessage);
@@ -199,7 +226,7 @@ export const useHomePageTasks = () => {
       isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, []); // 不依赖任何变量，使用ref来访问最新值
+  }, [checkTodayCache, cacheTodayTasks]); // 依赖缓存相关函数
 
   // 获取更多推荐任务
   const getMoreRecommendations = useCallback(async () => {
@@ -217,6 +244,26 @@ export const useHomePageTasks = () => {
     }
   }, [todayTasks]); // 依赖todayTasks，当今日任务变化时重新生成推荐
 
+  // 强制刷新缓存数据到状态
+  const refreshFromCache = useCallback(() => {
+    try {
+      const cachedTasks = checkTodayCache();
+      if (cachedTasks) {
+        setTodayTasks(cachedTasks);
+        const recommendations = generateRecommendationsFromTasks(cachedTasks);
+        setRecommendedTasks(recommendations);
+        console.log('🔄 useHomePageTasks: 从缓存刷新今日任务', { 
+          taskCount: cachedTasks.length 
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('从缓存刷新失败:', error);
+      return false;
+    }
+  }, [checkTodayCache]);
+
   return {
     todayTasks,
     recommendedTasks,
@@ -224,7 +271,8 @@ export const useHomePageTasks = () => {
     error,
     loadTodayTasks,
     getMoreRecommendations,
-    setRecommendedTasks
+    setRecommendedTasks,
+    refreshFromCache // 新增：支持从缓存刷新数据
   };
 };
 
@@ -595,8 +643,229 @@ export const useProjectTasks = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 项目页面缓存配置
+  const PROJECT_CACHE_PREFIX = 'project-category-tasks-';
+  const PROJECT_CACHE_METADATA_KEY = 'project-cache-metadata';
+  const MAX_CACHE_ENTRIES = 10;
+  const CACHE_EXPIRE_TIME = 15 * 60 * 1000; // 15分钟过期
+
+  // 使用 useRef 追踪已加载的分类，避免重复调用
+  const loadedCategoryRef = useRef<number | null>(null);
+  const isLoadingRef = useRef(false);
+
+  // 获取缓存元数据
+  const getCacheMetadata = useCallback(() => {
+    try {
+      const metadata = sessionStorage.getItem(PROJECT_CACHE_METADATA_KEY);
+      return metadata ? JSON.parse(metadata) : {};
+    } catch (error) {
+      console.error('读取项目缓存元数据失败:', error);
+      return {};
+    }
+  }, []);
+
+  // 更新缓存元数据
+  const updateCacheMetadata = useCallback((categoryKey: string, timestamp: number) => {
+    try {
+      const metadata = getCacheMetadata();
+      metadata[categoryKey] = timestamp;
+      sessionStorage.setItem(PROJECT_CACHE_METADATA_KEY, JSON.stringify(metadata));
+    } catch (error) {
+      console.error('更新项目缓存元数据失败:', error);
+    }
+  }, [getCacheMetadata]);
+
+  // 清理过期和过量的缓存
+  const cleanupCache = useCallback(() => {
+    try {
+      const metadata = getCacheMetadata();
+      const now = Date.now();
+      const entries = Object.entries(metadata);
+
+      // 过滤出有效的缓存条目
+      const validEntries = entries.filter(([, timestamp]) => {
+        const age = now - (timestamp as number);
+        return age < CACHE_EXPIRE_TIME;
+      });
+
+      // 如果有效条目超过最大限制，清理最旧的数据
+      if (validEntries.length > MAX_CACHE_ENTRIES) {
+        // 按时间戳排序，保留最新的数据
+        validEntries.sort((a, b) => (b[1] as number) - (a[1] as number));
+        const entriesToKeep = validEntries.slice(0, MAX_CACHE_ENTRIES);
+        
+        // 清理要删除的缓存
+        const categoryKeysToKeep = new Set(entriesToKeep.map(([categoryKey]) => categoryKey));
+        entries.forEach(([categoryKey]) => {
+          if (!categoryKeysToKeep.has(categoryKey)) {
+            sessionStorage.removeItem(PROJECT_CACHE_PREFIX + categoryKey);
+            console.log('🗑️ ProjectTasks: 清理过期缓存', { categoryKey });
+          }
+        });
+
+        // 更新元数据
+        const newMetadata = Object.fromEntries(entriesToKeep);
+        sessionStorage.setItem(PROJECT_CACHE_METADATA_KEY, JSON.stringify(newMetadata));
+        
+        console.log('🧹 ProjectTasks: 缓存清理完成', { 
+          total: entries.length,
+          kept: entriesToKeep.length,
+          cleaned: entries.length - entriesToKeep.length
+        });
+      } else {
+        // 只清理过期的数据
+        const expiredEntries = entries.filter(([, timestamp]) => {
+          const age = now - (timestamp as number);
+          return age >= CACHE_EXPIRE_TIME;
+        });
+
+        expiredEntries.forEach(([categoryKey]) => {
+          sessionStorage.removeItem(PROJECT_CACHE_PREFIX + categoryKey);
+          delete metadata[categoryKey];
+        });
+
+        if (expiredEntries.length > 0) {
+          sessionStorage.setItem(PROJECT_CACHE_METADATA_KEY, JSON.stringify(metadata));
+          console.log('🗑️ ProjectTasks: 清理过期缓存', { 
+            expired: expiredEntries.length 
+          });
+        }
+      }
+    } catch (error) {
+      console.error('项目缓存清理失败:', error);
+    }
+  }, [getCacheMetadata]);
+
+  // 检查缓存数据
+  const checkCache = useCallback((categoryId: number): Item[] | null => {
+    const categoryKey = `category-${categoryId}`;
+    
+    try {
+      const metadata = getCacheMetadata();
+      const cacheTimestamp = metadata[categoryKey];
+      
+      if (!cacheTimestamp) {
+        return null;
+      }
+
+      const age = Date.now() - cacheTimestamp;
+      
+      // 检查过期时间
+      if (age >= CACHE_EXPIRE_TIME) {
+        console.log('⏰ ProjectTasks: 缓存已过期', { 
+          categoryKey,
+          age: Math.round(age / 1000) + 's'
+        });
+        return null;
+      }
+
+      const cachedData = sessionStorage.getItem(PROJECT_CACHE_PREFIX + categoryKey);
+      if (cachedData) {
+        const tasks = JSON.parse(cachedData) as Item[];
+        console.log('📦 ProjectTasks: 使用缓存数据', { 
+          categoryKey,
+          taskCount: tasks.length,
+          cacheAge: Math.round(age / 1000) + 's'
+        });
+        return tasks;
+      }
+    } catch (error) {
+      console.error('读取项目缓存失败:', error);
+    }
+    
+    return null;
+  }, [getCacheMetadata]);
+
+  // 缓存任务数据
+  const cacheTasksData = useCallback((categoryId: number, tasks: Item[]) => {
+    const categoryKey = `category-${categoryId}`;
+    const timestamp = Date.now();
+    
+    try {
+      // 执行清理（在缓存新数据前）
+      cleanupCache();
+      
+      // 缓存任务数据
+      sessionStorage.setItem(PROJECT_CACHE_PREFIX + categoryKey, JSON.stringify(tasks));
+      
+      // 更新元数据
+      updateCacheMetadata(categoryKey, timestamp);
+      
+      console.log('💾 ProjectTasks: 缓存分类任务数据', { 
+        categoryKey,
+        taskCount: tasks.length
+      });
+    } catch (error) {
+      console.error('缓存分类任务数据失败:', error);
+    }
+  }, [cleanupCache, updateCacheMetadata]);
+
+  // 强制刷新当前分类的缓存数据到组件状态
+  const refreshFromCache = useCallback(() => {
+    try {
+      const cachedTasks = checkCache(selectedCategoryId);
+      if (cachedTasks) {
+        setCategoryTasks(cachedTasks);
+        console.log('🔄 ProjectTasks: 从缓存刷新分类任务数据', { 
+          categoryId: selectedCategoryId,
+          taskCount: cachedTasks.length 
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('从项目缓存刷新失败:', error);
+      return false;
+    }
+  }, [checkCache, selectedCategoryId]);
+
+  // 清理所有缓存
+  const clearAllCache = useCallback(() => {
+    try {
+      const metadata = getCacheMetadata();
+      const entries = Object.keys(metadata);
+      
+      // 清理所有缓存数据
+      entries.forEach(categoryKey => {
+        sessionStorage.removeItem(PROJECT_CACHE_PREFIX + categoryKey);
+      });
+      
+      // 清理元数据
+      sessionStorage.removeItem(PROJECT_CACHE_METADATA_KEY);
+      
+      console.log('🧹 ProjectTasks: 清理所有缓存', { cleared: entries.length });
+      
+      return entries.length;
+    } catch (error) {
+      console.error('清理所有项目缓存失败:', error);
+      return 0;
+    }
+  }, [getCacheMetadata]);
+
+  // 获取缓存信息
+  const getCacheInfo = useCallback(() => {
+    try {
+      const metadata = getCacheMetadata();
+      const now = Date.now();
+      const entries = Object.entries(metadata);
+      
+      return {
+        totalEntries: entries.length,
+        currentCategoryCached: metadata[`category-${selectedCategoryId}`] ? true : false,
+        entries: entries.map(([categoryKey, timestamp]) => ({
+          category: categoryKey,
+          age: Math.round((now - (timestamp as number)) / 1000),
+          isExpired: (now - (timestamp as number)) >= CACHE_EXPIRE_TIME
+        }))
+      };
+    } catch (error) {
+      console.error('获取项目缓存信息失败:', error);
+      return { totalEntries: 0, currentCategoryCached: false, entries: [] };
+    }
+  }, [getCacheMetadata, selectedCategoryId]);
+
   // 加载指定项目的任务
-  const loadProjectTasks = async (projectId: string, options?: {
+  const loadProjectTasks = useCallback(async (projectId: string, options?: {
     isCompleted?: boolean;
     priority?: number;
   }) => {
@@ -620,10 +889,10 @@ export const useProjectTasks = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // 加载项目进度
-  const loadProjectProgress = async (projectId: string) => {
+  const loadProjectProgress = useCallback(async (projectId: string) => {
     try {
       const progress = await getProjectProgress(projectId);
       
@@ -637,35 +906,67 @@ export const useProjectTasks = () => {
       console.error('获取项目进度失败:', err);
       return { total: 0, completed: 0, progress: 0 };
     }
-  };
+  }, []);
 
-  // 加载分类下的未分配任务
-  const loadCategoryTasks = async (categoryId: number) => {
+  // 加载分类下的未分配任务（带缓存）
+  const loadCategoryTasks = useCallback(async (categoryId: number, forceRefresh: boolean = false) => {
+    // 防止重复加载
+    if (isLoadingRef.current && loadedCategoryRef.current === categoryId) {
+      console.log('📂 ProjectTasks: 正在加载中，跳过重复请求', { categoryId });
+      return;
+    }
+
+    // 如果不强制刷新，先检查缓存
+    if (!forceRefresh) {
+      const cachedTasks = checkCache(categoryId);
+      if (cachedTasks) {
+        setCategoryTasks(cachedTasks);
+        setSelectedCategoryId(categoryId);
+        loadedCategoryRef.current = categoryId;
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError(null);
+    isLoadingRef.current = true;
     
     try {
+      console.log('📡 ProjectTasks: 从API加载分类任务', { categoryId, forceRefresh });
+      
       // 获取该分类下未分配给项目的任务
       const incompleteResponse = await getUnassignedCategoryTasks(categoryId, false);
+      const tasks = incompleteResponse.items || [];
       
-      setCategoryTasks(incompleteResponse.items || []);
+      // 缓存数据
+      cacheTasksData(categoryId, tasks);
+      
+      // 更新状态
+      setCategoryTasks(tasks);
       setSelectedCategoryId(categoryId);
+      loadedCategoryRef.current = categoryId;
+      
+      console.log('✅ ProjectTasks: 分类任务加载完成', { 
+        categoryId,
+        taskCount: tasks.length
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '获取分类任务失败';
       setError(errorMessage);
       console.error('获取分类任务失败:', err);
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
-  };
+  }, [checkCache, cacheTasksData]);
 
   // 获取高优先级项目任务
-  const getHighPriorityProjectTasks = async (projectId: string) => {
+  const getHighPriorityProjectTasks = useCallback(async (projectId: string) => {
     return loadProjectTasks(projectId, {
       priority: 5,
       isCompleted: false
     });
-  };
+  }, []);
 
   return {
     selectedCategoryId,
@@ -678,7 +979,10 @@ export const useProjectTasks = () => {
     loadProjectProgress,
     loadCategoryTasks,
     getHighPriorityProjectTasks,
-    setSelectedCategoryId
+    setSelectedCategoryId,
+    refreshFromCache,
+    clearAllCache,
+    getCacheInfo
   };
 };
 

@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 demo_pics/
-docs/
+tmpDocs/
 node_modules
 dist
 dist-ssr

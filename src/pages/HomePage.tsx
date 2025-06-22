@@ -119,7 +119,8 @@ const HomePage = () => {
     error: homePageError,
     loadTodayTasks,
     getMoreRecommendations,
-    setRecommendedTasks: setApiRecommendedTasks
+    setRecommendedTasks: setApiRecommendedTasks,
+    refreshFromCache
   } = useHomePageTasks();
   
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -140,14 +141,52 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 页面加载时获取今日任务
+  // 页面加载时优先尝试从缓存加载，否则获取今日任务
   useEffect(() => {
     console.log('🏠 HomePage: useEffect触发，检查状态', { isTestUser });
     
-    // 调用loadTodayTasks，它内部会检查isTestUser状态
-    console.log('🏠 HomePage: 开始加载今日任务');
-    loadTodayTasks();
-  }, [loadTodayTasks]); // 只依赖loadTodayTasks，isTestUser的变化由hook内部处理
+    // 首先尝试从缓存刷新数据
+    console.log('🏠 HomePage: 优先尝试从缓存加载数据');
+    const refreshed = refreshFromCache();
+    if (!refreshed) {
+      // 如果缓存不可用，则调用loadTodayTasks
+      console.log('🏠 HomePage: 缓存不可用，开始加载今日任务');
+      loadTodayTasks();
+    } else {
+      console.log('✅ HomePage: 使用缓存数据初始化页面');
+    }
+  }, [loadTodayTasks, refreshFromCache]); // 依赖loadTodayTasks和refreshFromCache
+
+  // 监听页面焦点，返回页面时尝试从缓存刷新数据
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('👁️ HomePage: 页面重新获得焦点，尝试刷新缓存');
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 HomePage: 缓存刷新失败，重新加载数据');
+        loadTodayTasks();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 HomePage: 页面变为可见，尝试刷新缓存');
+        const refreshed = refreshFromCache();
+        if (!refreshed) {
+          console.log('📡 HomePage: 缓存刷新失败，重新加载数据');
+          loadTodayTasks();
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshFromCache, loadTodayTasks]);
 
   // 设置问候语
   useEffect(() => {

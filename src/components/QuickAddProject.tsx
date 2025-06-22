@@ -6,9 +6,10 @@ import { TaskCategory, Project } from '../types';
 interface QuickAddProjectProps {
   onClose: () => void;
   category: TaskCategory;
+  onProjectAdded?: () => void; // 添加项目成功后的回调
 }
 
-const QuickAddProject = ({ onClose, category }: QuickAddProjectProps) => {
+const QuickAddProject = ({ onClose, category, onProjectAdded }: QuickAddProjectProps) => {
   const { dispatch } = useAppContext();
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
@@ -47,6 +48,11 @@ const QuickAddProject = ({ onClose, category }: QuickAddProjectProps) => {
         type: 'ADD_PROJECT',
         payload: newProject,
       });
+
+      // 通知父组件项目已添加，可以刷新缓存
+      if (onProjectAdded) {
+        onProjectAdded();
+      }
 
       setIsLoading(false);
       onClose();
