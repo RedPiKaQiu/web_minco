@@ -1,11 +1,15 @@
 import { Plus, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const FloatingButtons = () => {
+interface FloatingButtonsProps {
+  onOpenTaskDrawer: () => void;
+}
+
+const FloatingButtons = ({ onOpenTaskDrawer }: FloatingButtonsProps) => {
   const navigate = useNavigate();
 
   const handleAddTaskNavigation = () => {
-    navigate('/new-task');
+    onOpenTaskDrawer();
   };
 
   const handleChat = () => {

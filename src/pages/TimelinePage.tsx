@@ -92,12 +92,24 @@ const TimelinePage = () => {
       }
     };
 
+    // 监听任务缓存更新事件
+    const handleTaskCacheUpdated = (event: CustomEvent) => {
+      console.log('📢 TimelinePage: 收到任务缓存更新事件', event.detail);
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 TimelinePage: 缓存刷新失败，重新加载数据');
+        loadTasksByDate(selectedDate);
+      }
+    };
+
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
     };
   }, [refreshFromCache, loadTasksByDate, selectedDate]);
 

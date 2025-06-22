@@ -179,12 +179,24 @@ const HomePage = () => {
       }
     };
 
+    // 监听任务缓存更新事件
+    const handleTaskCacheUpdated = (event: CustomEvent) => {
+      console.log('📢 HomePage: 收到任务缓存更新事件', event.detail);
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 HomePage: 缓存刷新失败，重新加载数据');
+        loadTodayTasks();
+      }
+    };
+
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
     };
   }, [refreshFromCache, loadTodayTasks]);
 
@@ -288,7 +300,8 @@ const HomePage = () => {
   const handleGetMoreRecommendations = async () => {
     try {
       const newRecommendations = await getMoreRecommendations();
-      setApiRecommendedTasks(prev => [...prev, ...newRecommendations]);
+      // 替换当前推荐而不是累加，避免重复key问题
+      setApiRecommendedTasks(newRecommendations);
     } catch (error) {
       console.error('获取更多推荐失败:', error);
     }

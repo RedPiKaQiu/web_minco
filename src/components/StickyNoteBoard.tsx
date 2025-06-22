@@ -22,6 +22,9 @@ export const StickyNoteBoard = ({
 }: StickyNoteBoardProps) => {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
+  // 限制显示最多3个便利贴
+  const displayTasks = tasks.slice(0, 3);
+
   // 便签纸颜色配置
   const stickyColors = [
     'bg-yellow-200 border-yellow-300', // 经典黄色
@@ -54,7 +57,7 @@ export const StickyNoteBoard = ({
     }
   };
 
-  if (tasks.length === 0) {
+  if (displayTasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <p className="text-gray-500 mb-4">便签纸白板空空如也</p>
@@ -86,15 +89,15 @@ export const StickyNoteBoard = ({
         }}
       />
 
-      {/* 便签纸网格布局 - 固定2列 */}
-      <div className="relative grid grid-cols-2 gap-4">
-        {tasks.map((task, index) => {
+      {/* 便签纸网格布局 - 根据任务数量动态调整 */}
+      <div className={`relative grid gap-4 ${displayTasks.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+        {displayTasks.map((task, index) => {
           const colorClass = stickyColors[index % stickyColors.length];
           const rotationClass = rotations[index % rotations.length];
           const isSelected = selectedTaskId === task.id;
 
           return (
-            <div key={task.id} className="relative">
+            <div key={`sticky-${index}-${task.id}`} className="relative">
               {/* 便签纸阴影 */}
               <div
                 className={`absolute inset-0 bg-gray-400 rounded-sm opacity-20 blur-sm translate-x-1 translate-y-1 ${rotationClass}`}
@@ -170,8 +173,8 @@ export const StickyNoteBoard = ({
           );
         })}
 
-        {/* 换一批按钮 - 占据第四个位置（右下角） */}
-        <div className="relative" style={{ gridColumn: tasks.length === 3 ? '2' : 'auto' }}>
+        {/* 换一批按钮 - 根据便利贴数量动态定位 */}
+        <div className={`relative ${displayTasks.length === 3 ? 'col-start-2 row-start-2' : ''}`}>
           <div
             className={`relative p-4 rounded-sm border-2 border-dashed border-gray-400 cursor-pointer transition-all duration-200 hover:scale-105 bg-gray-100 hover:bg-gray-200 min-h-[140px] flex flex-col items-center justify-center ${
               rotations[3 % rotations.length]

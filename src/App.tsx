@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { AppProvider } from './context/AppContext';
 import { UserProvider } from './context/UserContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -12,11 +13,14 @@ import FocusPage from './pages/FocusPage';
 import AiChatPage from './pages/AiChatPage';
 import BottomNavigation from './components/BottomNavigation';
 import FloatingButtons from './components/FloatingButtons';
+import TaskAddDrawer from './components/TaskAddDrawer';
 import AuthGuard from './components/AuthGuard';
 import './index.css';
 
 function AppContent() {
   const location = useLocation();
+  const [isTaskAddDrawerOpen, setIsTaskAddDrawerOpen] = useState(false);
+  
   const isAiChatPage = location.pathname === '/ai-chat';
   const isNewTaskPage = location.pathname === '/new-task';
   const isLoginPage = location.pathname === '/login';
@@ -64,8 +68,14 @@ function AppContent() {
             </AuthGuard>
           } />
         </Routes>
-        {!shouldHideNavigation && <FloatingButtons />}
+        {!shouldHideNavigation && (
+          <FloatingButtons onOpenTaskDrawer={() => setIsTaskAddDrawerOpen(true)} />
+        )}
         {!shouldHideNavigation && <BottomNavigation />}
+        <TaskAddDrawer 
+          isOpen={isTaskAddDrawerOpen} 
+          onClose={() => setIsTaskAddDrawerOpen(false)} 
+        />
       </div>
     </div>
   );

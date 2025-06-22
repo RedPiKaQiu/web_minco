@@ -212,6 +212,44 @@ const TaskAddDrawer = ({ isOpen, onClose }: TaskAddDrawerProps) => {
           },
         });
         
+        // 直接更新时间轴缓存，添加新创建的任务
+        try {
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
+          const cacheKey = `timeline-tasks-${today}`;
+          const existingCache = sessionStorage.getItem(cacheKey);
+          
+          if (existingCache) {
+            // 如果有现有缓存，添加新任务到缓存中
+            const cachedTasks = JSON.parse(existingCache);
+            const updatedTasks = [...cachedTasks, result];
+            sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+            
+            // 更新缓存元数据时间戳
+            const metadataKey = 'timeline-cache-metadata';
+            const metadata = sessionStorage.getItem(metadataKey);
+            if (metadata) {
+              const parsed = JSON.parse(metadata);
+              parsed[today] = Date.now();
+              sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
+            }
+            
+            console.log('✅ TaskAddDrawer: 已将新任务添加到时间轴缓存', { 
+              taskId: result.id, 
+              taskTitle: result.title,
+              totalTasks: updatedTasks.length 
+            });
+            
+            // 发送自定义事件通知页面刷新缓存
+            window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
+              detail: { action: 'add', taskId: result.id, taskTitle: result.title }
+            }));
+          } else {
+            console.log('💾 TaskAddDrawer: 时间轴缓存不存在，新任务将在下次加载时显示');
+          }
+        } catch (error) {
+          console.error('TaskAddDrawer: 更新时间轴缓存失败:', error);
+        }
+        
         // 重置所有状态
         setTaskTitle('');
         setShowCalendar(false);
