@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useTaskCompletion } from '../hooks/useTaskCompletion';
 import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -7,6 +8,7 @@ import TaskDetailModal from '../components/TaskDetailModal';
 
 const TimelinePage = () => {
   const { state, dispatch } = useAppContext();
+  const { toggleTaskCompletion } = useTaskCompletion();
   const [activeTab, setActiveTab] = useState<'timeline' | 'completed'>('timeline');
   const [viewMode, setViewMode] = useState<'compact' | 'expanded'>('expanded');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -214,12 +216,17 @@ const TimelinePage = () => {
     }
   };
 
-  const handleComplete = (id: string, e: React.MouseEvent) => {
+  const handleComplete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+
+    console.log('📅 TimelinePage: handleComplete 被调用', { id });
 
     // 找到当前任务
     const task = state.tasks.find(t => t.id === id);
-    if (!task) return;
+    if (!task) {
+      console.error('❌ TimelinePage: 未找到任务', { id });
+      return;
+    }
 
     // 如果任务未完成，显示烟花特效
     if (!task.completed) {
@@ -253,8 +260,13 @@ const TimelinePage = () => {
       }
     }
 
-    // 切换任务完成状态
-    dispatch({ type: 'COMPLETE_TASK', payload: id });
+    try {
+      // 使用useTaskCompletion hook调用API
+      await toggleTaskCompletion(id, task.completed);
+      console.log('✅ TimelinePage: 任务完成状态更新成功');
+    } catch (error) {
+      console.error('❌ TimelinePage: 更新任务完成状态失败', error);
+    }
   };
 
   const handleTaskClick = (taskId: string, e: React.MouseEvent) => {

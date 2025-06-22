@@ -1,5 +1,5 @@
 // 事项管理 API 接口
-import { fetchApi, ApiResponse } from './index';
+import { fetchApi, ApiResponse, ApiError } from './index';
 import { Item, ItemListResponse } from '../types';
 
 // 创建事项请求参数
@@ -64,11 +64,35 @@ export async function createItem(itemData: CreateItemRequest): Promise<Item> {
     if (response.code === 0 && response.data) {
       return response.data;
     } else {
-      throw new Error(response.message || '创建事项失败');
+      throw new ApiError(response.message || '创建事项失败', response.code, 400);
     }
   } catch (error) {
     console.error('创建事项失败:', error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      // 根据API文档处理特定的创建事项错误
+      if (error.statusCode === 400) {
+        // 常见创建事项错误映射
+        const errorMessages: Record<string, string> = {
+          '标题不能为空': '事项标题不能为空，请输入标题',
+          '分类ID无效': '请选择有效的事项分类',
+          '优先级无效': '优先级必须在1-5之间',
+          '时间格式错误': '时间格式不正确，请重新选择',
+          '事项创建失败': '创建事项失败，请检查输入信息'
+        };
+        
+        const friendlyMessage = errorMessages[error.message] || error.message;
+        throw new ApiError(friendlyMessage, error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError('创建事项失败，请稍后重试', 500, 500);
   }
 }
 
@@ -98,11 +122,19 @@ export async function getItems(query: GetItemsQuery = {}): Promise<ItemListRespo
     if (response.code === 0 && response.data) {
       return response.data;
     } else {
-      throw new Error(response.message || '获取事项列表失败');
+      throw new ApiError(response.message || '获取事项列表失败', response.code, 400);
     }
   } catch (error) {
     console.error('获取事项列表失败:', error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      throw error;
+    }
+    
+    throw new ApiError('获取事项列表失败，请稍后重试', 500, 500);
   }
 }
 
@@ -120,11 +152,24 @@ export async function getItem(itemId: string): Promise<Item> {
     if (response.code === 0 && response.data) {
       return response.data;
     } else {
-      throw new Error(response.message || `获取事项${itemId}失败`);
+      throw new ApiError(response.message || `获取事项${itemId}失败`, response.code, 400);
     }
   } catch (error) {
     console.error(`获取事项${itemId}失败:`, error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 404) {
+        throw new ApiError('事项不存在或已被删除', error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError(`获取事项详情失败，请稍后重试`, 500, 500);
   }
 }
 
@@ -135,20 +180,61 @@ export async function getItem(itemId: string): Promise<Item> {
  * @returns 更新后的事项部分信息
  */
 export async function updateItem(itemId: string, itemData: UpdateItemRequest): Promise<{ id: string; title: string; updated_at: string }> {
+  console.log(`🌐 realUpdateItem 被调用:`, { itemId, itemData });
+  
   try {
+    console.log(`📤 发送PUT请求到: /items/${itemId}`);
+    console.log(`📋 请求体数据:`, JSON.stringify(itemData));
+    
     const response = await fetchApi<ApiResponse<{ id: string; title: string; updated_at: string }>>(`/items/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify(itemData),
     });
 
+    console.log(`📨 收到服务器响应:`, response);
+
     if (response.code === 0 && response.data) {
+      console.log(`✅ 更新事项成功:`, response.data);
       return response.data;
     } else {
-      throw new Error(response.message || `更新事项${itemId}失败`);
+      console.error(`❌ 服务器返回错误:`, response);
+      throw new ApiError(response.message || `更新事项${itemId}失败`, response.code, 400);
     }
   } catch (error) {
-    console.error(`更新事项${itemId}失败:`, error);
-    throw error;
+    console.error(`❌ realUpdateItem 异常:`, error);
+    console.error(`🔍 错误详情:`, {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 400) {
+        // 常见更新事项错误映射
+        const errorMessages: Record<string, string> = {
+          '标题不能为空': '事项标题不能为空',
+          '分类ID无效': '请选择有效的事项分类',
+          '优先级无效': '优先级必须在1-5之间',
+          '时间格式错误': '时间格式不正确，请重新选择',
+          '更新事项失败': '更新失败，请检查输入信息'
+        };
+        
+        const friendlyMessage = errorMessages[error.message] || error.message;
+        throw new ApiError(friendlyMessage, error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 404) {
+        throw new ApiError('事项不存在或已被删除', error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError(`更新事项失败，请稍后重试`, 500, 500);
   }
 }
 
@@ -163,10 +249,23 @@ export async function deleteItem(itemId: string): Promise<void> {
     });
 
     if (response.code !== 0) {
-      throw new Error(response.message || `删除事项${itemId}失败`);
+      throw new ApiError(response.message || `删除事项${itemId}失败`, response.code, 400);
     }
   } catch (error) {
     console.error(`删除事项${itemId}失败:`, error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 404) {
+        throw new ApiError('事项不存在或已被删除', error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError(`删除事项失败，请稍后重试`, 500, 500);
   }
 } 

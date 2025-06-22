@@ -1,5 +1,5 @@
 // AI功能 API 接口
-import { fetchApi, ApiResponse } from './index';
+import { fetchApi, ApiResponse, ApiError } from './index';
 import { Item } from '../types';
 
 // AI推荐请求参数
@@ -45,11 +45,32 @@ export async function getAiRecommendations(request: AiRecommendationRequest): Pr
     if (response.code === 0 && response.data) {
       return response.data;
     } else {
-      throw new Error(response.message || 'AI推荐失败');
+      throw new ApiError(response.message || 'AI推荐失败', response.code, 400);
     }
   } catch (error) {
     console.error('获取AI推荐失败:', error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 400) {
+        // AI推荐相关的错误处理
+        const errorMessages: Record<string, string> = {
+          'AI推荐失败': 'AI推荐服务暂时不可用，请稍后重试',
+          '请求参数错误': '推荐参数不正确，请检查输入',
+          '推荐超时': 'AI推荐响应超时，请稍后重试'
+        };
+        
+        const friendlyMessage = errorMessages[error.message] || error.message;
+        throw new ApiError(friendlyMessage, error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError('AI推荐服务暂时不可用，请稍后重试', 500, 500);
   }
 }
 
@@ -73,6 +94,11 @@ export async function getRecommendations(query: GetRecommendationsQuery = {}): P
     return await getAiRecommendations(request);
   } catch (error) {
     console.error('获取推荐事项失败:', error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    throw new ApiError('获取推荐事项失败，请稍后重试', 500, 500);
   }
 } 

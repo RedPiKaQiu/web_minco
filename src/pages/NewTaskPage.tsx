@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { ArrowLeft, Calendar, Clock, Flag, RefreshCw, Edit, ChevronRight, Check, AlarmClock } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { Task, TaskCategory, TASK_CATEGORIES } from '../types';
+import { createItem, updateItem, CreateItemRequest, UpdateItemRequest } from '../api/items';
 
 // 事项类型选项
 const taskNatureOptions = [
@@ -85,6 +86,7 @@ const NewTaskPage = () => {
   const [showAiGeneration, setShowAiGeneration] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // 在编辑模式下预填充表单数据
   useEffect(() => {
@@ -112,14 +114,100 @@ const NewTaskPage = () => {
     }
   }, [isEditMode, editTask]);
   
+  // 映射函数：将分类标签转换为category_id
+  const getCategoryId = (categoryLabel: string): number => {
+    const categoryMap: { [key: string]: number } = {
+      '生活': 1,
+      '健康': 2,
+      '工作': 3,
+      '学习': 4,
+      '放松': 5,
+      '探索': 6
+    };
+    return categoryMap[categoryLabel] || 1;
+  };
+
+  // 映射函数：将优先级字符串转换为数字
+  const getPriorityNumber = (priorityStr: string): number => {
+    const priorityMap: { [key: string]: number } = {
+      'low': 2,
+      'medium': 3,
+      'high': 5
+    };
+    return priorityMap[priorityStr] || 3;
+  };
+
+  // 映射函数：将时间字符串转换为分钟数
+  const getDurationInMinutes = (timeStr: string): number => {
+    if (timeStr === '全天') return 480; // 8小时
+    const match = timeStr.match(/(\d+(?:\.\d+)?)\s*(分钟|小时)/);
+    if (match) {
+      const num = parseFloat(match[1]);
+      const unit = match[2];
+      return unit === '小时' ? num * 60 : num;
+    }
+    return 30; // 默认30分钟
+  };
+
+  // 映射函数：将开始时间转换为时间段ID
+  const getTimeSlotId = (startTimeStr: string): number => {
+    if (startTimeStr === '随时') return 5;
+    
+    const hour = parseInt(startTimeStr.split(' ')[1]?.split(':')[0] || '0');
+    if (hour >= 6 && hour < 12) return 1; // 上午
+    if (hour >= 12 && hour < 14) return 2; // 中午
+    if (hour >= 14 && hour < 18) return 3; // 下午
+    if (hour >= 18 && hour < 24) return 4; // 晚上
+    return 5; // 随时
+  };
+
+  // 映射函数：将开始时间转换为ISO格式
+  const getStartTimeISO = (startTimeStr: string, dateStr: string): string | undefined => {
+    if (startTimeStr === '随时') return undefined;
+    
+    // 提取时间部分，例如 "上午 9:00" -> "9:00"
+    const timeMatch = startTimeStr.match(/(\d{1,2}):(\d{2})/);
+    if (!timeMatch) return undefined;
+    
+    let hour = parseInt(timeMatch[1]);
+    const minute = parseInt(timeMatch[2]);
+    
+    // 处理下午时间（除了12点）
+    if (startTimeStr.includes('下午') && hour !== 12) {
+      hour += 12;
+    }
+    
+    // 构建今天的日期时间
+    const today = new Date();
+    today.setHours(hour, minute, 0, 0);
+    
+    return today.toISOString();
+  };
+  
   // 处理保存事项
-  const handleSaveTask = () => {
-    if (title.trim()) {
+  const handleSaveTask = async () => {
+    if (!title.trim()) return;
+    
+    setIsLoading(true);
+    
+    try {
       const selectedCategoryConfig = taskCategoryOptions.find(cat => cat.id === selectedCategory);
       const selectedCategoryValue = selectedCategoryConfig?.label as TaskCategory;
       
       if (isEditMode && editTask) {
-        // 编辑模式：更新现有事项
+        // 编辑模式：调用更新事项API
+        const updateData: UpdateItemRequest = {
+          title: title,
+          category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : undefined,
+          priority: priority ? getPriorityNumber(priority) : undefined,
+          estimated_duration: getDurationInMinutes(time),
+          time_slot_id: getTimeSlotId(startTime),
+          start_time: getStartTimeISO(startTime, date),
+        };
+
+        await updateItem(editTask.id, updateData);
+        
+        // 更新本地状态
         dispatch({
           type: 'UPDATE_TASK',
           payload: {
@@ -134,11 +222,23 @@ const NewTaskPage = () => {
           },
         });
       } else {
-        // 新建模式：创建新事项
+        // 新建模式：调用创建事项API
+        const createData: CreateItemRequest = {
+          title: title,
+          category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : 1,
+          priority: priority ? getPriorityNumber(priority) : 3,
+          estimated_duration: getDurationInMinutes(time),
+          time_slot_id: getTimeSlotId(startTime),
+          start_time: getStartTimeISO(startTime, date),
+        };
+
+        const newItem = await createItem(createData);
+        
+        // 更新本地状态
         dispatch({
           type: 'ADD_TASK',
           payload: {
-            id: Date.now().toString(),
+            id: newItem.id,
             title: title,
             completed: false,
             isAnytime: startTime === '随时',
@@ -150,7 +250,14 @@ const NewTaskPage = () => {
           },
         });
       }
+      
       navigate('/home');
+    } catch (error) {
+      console.error('保存事项失败:', error);
+      // 这里可以添加错误提示UI
+      alert('保存事项失败，请重试');
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -186,10 +293,14 @@ const NewTaskPage = () => {
         <h1 className="text-xl font-medium">{isEditMode ? '编辑事项' : '新建事项'}</h1>
         <button 
           onClick={handleSaveTask}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-          disabled={!title.trim()}
+          className={`px-4 py-2 rounded-lg ${
+            !title.trim() || isLoading 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-blue-500 text-white'
+          }`}
+          disabled={!title.trim() || isLoading}
         >
-          保存
+          {isLoading ? '保存中...' : '保存'}
         </button>
       </div>
       

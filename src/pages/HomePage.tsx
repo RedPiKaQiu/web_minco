@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useTaskCompletion } from '../hooks/useTaskCompletion';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Loader2, Grid3X3, Layers } from 'lucide-react';
@@ -82,6 +83,7 @@ const Fireworks = ({
 const HomePage = () => {
   const navigate = useNavigate();
   const { state, dispatch, isLoading, error, refreshTasks, isTestUser } = useAppContext();
+  const { toggleTaskCompletion } = useTaskCompletion();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [greeting, setGreeting] = useState('');
   const [showFireworks, setShowFireworks] = useState(false);
@@ -208,8 +210,17 @@ const HomePage = () => {
   };
 
   // 处理完成事项
-  const handleComplete = (id: string, e: React.MouseEvent) => {
+  const handleComplete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    console.log('🏠 HomePage: handleComplete 被调用', { id });
+    
+    // 获取当前任务的完成状态
+    const currentTask = state.tasks.find(task => task.id === id);
+    if (!currentTask) {
+      console.error('❌ HomePage: 未找到任务', { id });
+      return;
+    }
     
     // 获取点击位置
     const clickX = e.clientX;
@@ -225,11 +236,18 @@ const HomePage = () => {
     }, 10);
     
     // 延迟完成事项，让用户看到烟花效果
-    setTimeout(() => {
-      dispatch({ type: 'COMPLETE_TASK', payload: id });
-      
-      // 从推荐列表中移除已完成的事项
-      setRecommendedTasks(prev => prev.filter(task => task.id !== id));
+    setTimeout(async () => {
+      try {
+        // 使用useTaskCompletion hook调用API
+        await toggleTaskCompletion(id, currentTask.completed);
+        
+        // 从推荐列表中移除已完成的事项
+        setRecommendedTasks(prev => prev.filter(task => task.id !== id));
+        
+        console.log('✅ HomePage: 任务完成状态更新成功');
+      } catch (error) {
+        console.error('❌ HomePage: 更新任务完成状态失败', error);
+      }
     }, 800); // 调整延迟时间
   };
 

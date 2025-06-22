@@ -1,16 +1,16 @@
 import { Task } from '../types';
-import { useAppContext } from '../context/AppContext';
 import { Clock, Check } from 'lucide-react';
+import { useTaskCompletion } from '../hooks/useTaskCompletion';
 
 interface TaskItemProps {
   task: Task;
 }
 
 const TaskItem = ({ task }: TaskItemProps) => {
-  const { dispatch } = useAppContext();
+  const { toggleTaskCompletion } = useTaskCompletion();
 
   const handleComplete = () => {
-    dispatch({ type: 'COMPLETE_TASK', payload: task.id });
+    toggleTaskCompletion(task.id, task.completed);
   };
 
   return (

@@ -1,5 +1,5 @@
 // 测试相关 API 接口
-import { fetchApi, ApiResponse } from './index';
+import { fetchApi, ApiResponse, ApiError } from './index';
 
 // 测试连接响应数据
 interface TestConnectResponseDto {
@@ -9,7 +9,7 @@ interface TestConnectResponseDto {
 }
 
 /**
- * 测试与后端的连接状态
+ * 测试与后端的连接状态 [P0]
  * @param uuid 用户标识符（可选，如果不提供则自动生成）
  * @returns 连接测试结果
  */
@@ -28,10 +28,37 @@ export async function testConnection(uuid?: string): Promise<TestConnectResponse
       return response.data;
     } else {
       // 如果后端返回错误，抛出错误信息
-      throw new Error(response.message || '连接测试失败');
+      throw new ApiError(response.message || '连接测试失败', response.code, 400);
     }
   } catch (error) {
-    // 网络错误或其他错误，返回错误格式
-    throw new Error(error instanceof Error ? error.message : '连接失败，请检查后端服务是否正常运行');
+    console.error('连接测试失败:', error);
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 500) {
+        // 服务器内部错误
+        throw new ApiError('服务器连接失败，请检查后端服务是否正常运行', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 400) {
+        // 请求参数错误
+        const errorMessages: Record<string, string> = {
+          '连接测试失败': '连接测试失败，请稍后重试',
+          '请求参数错误': '测试参数不正确'
+        };
+        
+        const friendlyMessage = errorMessages[error.message] || error.message;
+        throw new ApiError(friendlyMessage, error.code, error.statusCode);
+      }
+      
+      // 网络连接错误
+      if (error.code === 0) {
+        throw new ApiError('网络连接失败，请检查网络状态和后端服务', error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    // 兜底错误处理
+    throw new ApiError('连接失败，请检查后端服务是否正常运行', 500, 500);
   }
 } 

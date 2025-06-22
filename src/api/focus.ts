@@ -1,5 +1,5 @@
 // 专注功能 API 接口
-import { fetchApi, ApiResponse } from './index';
+import { fetchApi, ApiResponse, ApiError } from './index';
 import { Item } from '../types';
 
 // 开始专注请求参数
@@ -39,11 +39,37 @@ export async function startFocus(request: StartFocusRequest): Promise<StartFocus
     if (response.code === 0 && response.data) {
       return response.data;
     } else {
-      throw new Error(response.message || '开始专注失败');
+      throw new ApiError(response.message || '开始专注失败', response.code, 400);
     }
   } catch (error) {
     console.error('开始专注失败:', error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 404) {
+        throw new ApiError('任务不存在或已被删除', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 400) {
+        // 专注功能相关的错误处理
+        const errorMessages: Record<string, string> = {
+          '任务不存在': '选择的任务不存在，请重新选择',
+          '开始专注失败': '开始专注失败，请检查任务是否可用',
+          '专注时长无效': '专注时长设置不正确',
+          '专注模式无效': '专注模式选择不正确'
+        };
+        
+        const friendlyMessage = errorMessages[error.message] || error.message;
+        throw new ApiError(friendlyMessage, error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError('开始专注失败，请稍后重试', 500, 500);
   }
 }
 
@@ -61,10 +87,35 @@ export async function endFocus(sessionId: string, request: EndFocusRequest): Pro
     });
 
     if (response.code !== 0) {
-      throw new Error(response.message || '结束专注失败');
+      throw new ApiError(response.message || '结束专注失败', response.code, 400);
     }
   } catch (error) {
     console.error('结束专注失败:', error);
-    throw error;
+    
+    if (error instanceof ApiError) {
+      if (error.statusCode === 401) {
+        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 404) {
+        throw new ApiError('专注会话不存在或已结束', error.code, error.statusCode);
+      }
+      
+      if (error.statusCode === 400) {
+        // 结束专注相关的错误处理
+        const errorMessages: Record<string, string> = {
+          '专注会话不存在': '专注会话不存在或已结束',
+          '结束专注失败': '结束专注失败，请稍后重试',
+          '专注时长无效': '专注时长记录不正确'
+        };
+        
+        const friendlyMessage = errorMessages[error.message] || error.message;
+        throw new ApiError(friendlyMessage, error.code, error.statusCode);
+      }
+      
+      throw error;
+    }
+    
+    throw new ApiError('结束专注失败，请稍后重试', 500, 500);
   }
 } 

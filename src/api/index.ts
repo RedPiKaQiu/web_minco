@@ -59,7 +59,18 @@ export interface ApiResponse<T = any> {
   data?: T;
 }
 
-
+// API错误类，用于包装错误信息
+export class ApiError extends Error {
+  public code: number;
+  public statusCode: number;
+  
+  constructor(message: string, code: number, statusCode: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
 
 interface RequestConfig {
   method?: string;
@@ -84,39 +95,97 @@ export async function fetchApi<T>(endpoint: string, config: RequestConfig = {}):
   const url = `${API_BASE_URL}${endpoint}`;
   console.log(`🌐 API调用: ${config.method || 'GET'} ${url}`);
 
-  const response = await fetch(url, {
-    ...config,
-    headers,
-  });
+  try {
+    const response = await fetch(url, {
+      ...config,
+      headers,
+    });
 
-  if (!response.ok) {
-    // 处理HTTP错误
-    if (response.status === 401) {
-      // 未授权，可能token过期
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('appState'); // 清除应用状态
-      throw new Error('认证失败，请重新登录');
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      // JSON解析失败，可能是网络错误或服务器异常
+      throw new ApiError(
+        '服务器响应格式错误',
+        500,
+        response.status
+      );
+    }
+
+    if (!response.ok) {
+      // 根据API文档处理不同的HTTP错误状态码
+      switch (response.status) {
+        case 400:
+          // 业务逻辑错误，使用服务器返回的具体错误信息
+          throw new ApiError(
+            data.message || '请求参数错误',
+            data.code || 400,
+            response.status
+          );
+        
+        case 401:
+          // 未授权，token过期或无效
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('appState');
+          throw new ApiError(
+            data.message || '用户未登录',
+            data.code || 401,
+            response.status
+          );
+        
+        case 403:
+          // 权限不足
+          throw new ApiError(
+            data.message || '权限不足',
+            data.code || 403,
+            response.status
+          );
+        
+        case 404:
+          // 资源不存在
+          throw new ApiError(
+            data.message || '资源不存在',
+            data.code || 404,
+            response.status
+          );
+        
+        case 500:
+        default:
+          // 服务器内部错误
+          throw new ApiError(
+            data.message || '服务器内部错误',
+            data.code || 500,
+            response.status
+          );
+      }
+    }
+
+    console.log(`✅ API响应:`, data);
+    return data;
+  } catch (error) {
+    // 网络错误或其他未捕获的错误
+    if (error instanceof ApiError) {
+      throw error;
     }
     
-    if (response.status === 403) {
-      throw new Error('权限不足');
+    // 网络连接错误
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiError(
+        '网络连接失败，请检查网络状态',
+        0,
+        0
+      );
     }
     
-    if (response.status === 404) {
-      throw new Error('资源不存在');
-    }
-    
-    if (response.status >= 500) {
-      throw new Error('服务器错误，请稍后重试');
-    }
-    
-    throw new Error(`请求失败: ${response.status}`);
+    // 其他未知错误
+    throw new ApiError(
+      error instanceof Error ? error.message : '未知错误',
+      500,
+      500
+    );
   }
-
-  const data = await response.json();
-  console.log(`✅ API响应:`, data);
-  return data;
 }
 
 // 分页信息
