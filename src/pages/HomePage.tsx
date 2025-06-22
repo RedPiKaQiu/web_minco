@@ -11,6 +11,7 @@ import { CardMode } from '../components/CardMode';
 import { StickyNoteBoard } from '../components/StickyNoteBoard';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
+import { formatBeijingTimeToLocal } from '../utils/timezone';
 
 // 烟花特效组件
 const Fireworks = ({ 
@@ -88,8 +89,9 @@ const convertApiItemToTask = (apiItem: Item): Task => {
     title: apiItem.title,
     completed: apiItem.status_id === 3, // 3表示已完成
     dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
-    startTime: apiItem.start_time ? apiItem.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-    endTime: apiItem.end_time ? apiItem.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+    // 将北京时间转换为本地时间显示
+    startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
+    endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
     priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
     // 正确映射TaskCategory枚举
     category: apiItem.category_id === 1 ? TaskCategory.LIFE : 

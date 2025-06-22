@@ -439,27 +439,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  };
-  
+      };
 
-  
   // 当状态改变时保存到localStorage
   useEffect(() => {
     localStorage.setItem('appState', JSON.stringify(state));
   }, [state]);
 
-  return (
-    <AppContext.Provider value={{ 
-      state, 
-      dispatch, 
-      refreshTasks: loadTasks, 
-      isLoading, 
-      error, 
-      isTestUser: userIsTest 
-    }}>
-      {children}
-    </AppContext.Provider>
-  );
+      return (
+      <AppContext.Provider value={{ 
+        state, 
+        dispatch, 
+        refreshTasks: loadTasks, 
+        isLoading, 
+        error, 
+        isTestUser: userIsTest 
+      }}>
+        {children}
+      </AppContext.Provider>
+    );
 };
 
 export const useAppContext = () => useContext(AppContext); 

@@ -1,17 +1,54 @@
-import { useState } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useState, useEffect } from 'react';
 import { useTaskCompletion } from '../hooks/useTaskCompletion';
+import { useTimelineTasks } from '../hooks/useTaskData';
 import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { Task, Item, TaskCategory } from '../types';
 import TaskDetailModal from '../components/TaskDetailModal';
+import { formatBeijingTimeToLocal } from '../utils/timezone';
+
+// API Item 到 Task 的转换函数
+const convertApiItemToTask = (apiItem: Item): Task => {
+  return {
+    id: apiItem.id,
+    title: apiItem.title,
+    completed: apiItem.status_id === 3, // 3表示已完成
+    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
+    // 将北京时间转换为本地时间显示
+    startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
+    endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
+    priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+    // 正确映射TaskCategory枚举
+    category: apiItem.category_id === 1 ? TaskCategory.LIFE : 
+              apiItem.category_id === 2 ? TaskCategory.HEALTH :
+              apiItem.category_id === 3 ? TaskCategory.WORK :
+              apiItem.category_id === 4 ? TaskCategory.STUDY :
+              apiItem.category_id === 5 ? TaskCategory.RELAX :
+              apiItem.category_id === 6 ? TaskCategory.EXPLORE : undefined,
+    isAnytime: !apiItem.start_time,
+    icon: apiItem.emoji,
+    duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined,
+    project: apiItem.project_id // 添加项目关联
+  };
+};
 
 const TimelinePage = () => {
-  const { state } = useAppContext();
   const { toggleTaskCompletion } = useTaskCompletion();
+  
+  // 使用新的时间轴数据hook
+  const {
+    selectedDate,
+    incompleteTasks: apiIncompleteTasks,
+    completedTasks: apiCompletedTasks,
+    isLoading: timelineLoading,
+    error: timelineError,
+    updateSelectedDate,
+    loadTasksByDate
+  } = useTimelineTasks();
+  
   const [activeTab, setActiveTab] = useState<'timeline' | 'completed'>('timeline');
   const [viewMode, setViewMode] = useState<'compact' | 'expanded'>('expanded');
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -22,9 +59,15 @@ const TimelinePage = () => {
     随时: true,
   });
 
-  // 过滤未完成的事项
-  const incompleteTasks = state.tasks.filter(task => !task.completed);
-  const completedTasks = state.tasks.filter(task => task.completed);
+  // 转换API数据为Task格式
+  const incompleteTasks = apiIncompleteTasks.map(convertApiItemToTask);
+  const completedTasks = apiCompletedTasks.map(convertApiItemToTask);
+
+  // 页面初始化时加载当天任务
+  useEffect(() => {
+    console.log('📅 TimelinePage: 初始化，加载当天任务');
+    loadTasksByDate(selectedDate);
+  }, [loadTasksByDate]);
 
   // 时间段配置
   const timeSlots = [
@@ -163,15 +206,17 @@ const TimelinePage = () => {
   }
 
   const handlePrevDay = () => {
-    setSelectedDate(subDays(selectedDate, 1));
+    const prevDay = subDays(selectedDate, 1);
+    updateSelectedDate(prevDay);
   };
 
   const handleNextDay = () => {
-    setSelectedDate(addDays(selectedDate, 1));
+    const nextDay = addDays(selectedDate, 1);
+    updateSelectedDate(nextDay);
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date());
+    updateSelectedDate(new Date());
   };
 
   const toggleWeekView = () => {
@@ -179,7 +224,7 @@ const TimelinePage = () => {
   };
 
   const selectDate = (date: Date) => {
-    setSelectedDate(date);
+    updateSelectedDate(date);
     setIsWeekViewOpen(false);
   };
 
@@ -222,7 +267,7 @@ const TimelinePage = () => {
     console.log('📅 TimelinePage: handleComplete 被调用', { id });
 
     // 找到当前任务
-    const task = state.tasks.find(t => t.id === id);
+    const task = incompleteTasks.find(t => t.id === id) || completedTasks.find(t => t.id === id);
     if (!task) {
       console.error('❌ TimelinePage: 未找到任务', { id });
       return;
@@ -263,6 +308,10 @@ const TimelinePage = () => {
     try {
       // 使用useTaskCompletion hook调用API
       await toggleTaskCompletion(id, task.completed);
+      
+      // 重新加载当前日期的任务以同步状态
+      await loadTasksByDate(selectedDate);
+      
       console.log('✅ TimelinePage: 任务完成状态更新成功');
     } catch (error) {
       console.error('❌ TimelinePage: 更新任务完成状态失败', error);
@@ -281,6 +330,10 @@ const TimelinePage = () => {
 
   // 判断当前视图模式
   const isCurrentlyExpanded = viewMode === 'expanded';
+
+  // 使用新的loading和error状态
+  const isLoading = timelineLoading;
+  const error = timelineError;
 
   const renderHeader = () => (
     <div className="py-4 space-y-4">
@@ -398,7 +451,22 @@ const TimelinePage = () => {
 
   const renderCompactView = () => (
     <div className="py-2 space-y-3">
-      {incompleteTasks.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-500">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          正在加载任务...
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 text-red-500">
+          <p>加载任务失败: {error}</p>
+          <button 
+            onClick={() => loadTasksByDate(selectedDate)}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            重试
+          </button>
+        </div>
+      ) : incompleteTasks.length === 0 ? (
         <div className="text-center py-8 text-gray-500">暂无事项</div>
       ) : (
         timeSlots.map(slot => {
@@ -480,7 +548,22 @@ const TimelinePage = () => {
 
   const renderExpandedView = () => (
     <div className="py-2 space-y-2">
-      {incompleteTasks.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-500">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          正在加载任务...
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 text-red-500">
+          <p>加载任务失败: {error}</p>
+          <button 
+            onClick={() => loadTasksByDate(selectedDate)}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            重试
+          </button>
+        </div>
+      ) : incompleteTasks.length === 0 ? (
         <div className="text-center py-8 text-gray-500">暂无事项</div>
       ) : (
         sortedTasks.map(task => (
@@ -528,7 +611,22 @@ const TimelinePage = () => {
 
   const renderCompletedView = () => (
     <div className="py-2 space-y-2">
-      {completedTasks.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-500">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          正在加载已完成任务...
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 text-red-500">
+          <p>加载任务失败: {error}</p>
+          <button 
+            onClick={() => loadTasksByDate(selectedDate)}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            重试
+          </button>
+        </div>
+      ) : completedTasks.length === 0 ? (
         <div className="text-center py-8 text-gray-500">暂无已完成事项</div>
       ) : (
         completedTasks.map(task => (
