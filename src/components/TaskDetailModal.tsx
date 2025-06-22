@@ -1,21 +1,14 @@
 import { X, Clock, Calendar, Tag, Target, Play } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { Task } from '../types';
 
 interface TaskDetailModalProps {
-  taskId: string;
+  task: Task;
   onClose: () => void;
 }
 
-const TaskDetailModal = ({ taskId, onClose }: TaskDetailModalProps) => {
-  const { state } = useAppContext();
+const TaskDetailModal = ({ task, onClose }: TaskDetailModalProps) => {
   const navigate = useNavigate();
-
-  const task = state.tasks.find(t => t.id === taskId);
-
-  if (!task) {
-    return null;
-  }
 
   const handleStartFocus = () => {
     onClose();

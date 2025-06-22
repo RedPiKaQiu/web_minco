@@ -221,6 +221,51 @@ const NewTaskPage = () => {
             duration: time,
           },
         });
+        
+        // 直接更新时间轴缓存中的任务数据
+        try {
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
+          const cacheKey = `timeline-tasks-${today}`;
+          const existingCache = sessionStorage.getItem(cacheKey);
+          
+          if (existingCache) {
+            // 如果有现有缓存，更新对应的任务
+            const cachedTasks = JSON.parse(existingCache);
+            const updatedTasks = cachedTasks.map((task: any) => 
+              task.id === editTask.id 
+                ? {
+                    ...task,
+                    title: title,
+                    category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : task.category_id,
+                    priority: priority ? getPriorityNumber(priority) : task.priority,
+                    estimated_duration: getDurationInMinutes(time),
+                    time_slot_id: getTimeSlotId(startTime),
+                    start_time: getStartTimeISO(startTime, date),
+                  }
+                : task
+            );
+            sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+            
+            // 更新缓存元数据时间戳
+            const metadataKey = 'timeline-cache-metadata';
+            const metadata = sessionStorage.getItem(metadataKey);
+            if (metadata) {
+              const parsed = JSON.parse(metadata);
+              parsed[today] = Date.now();
+              sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
+            }
+            
+            console.log('✅ NewTaskPage: 已在时间轴缓存中更新任务', { 
+              taskId: editTask.id, 
+              taskTitle: title,
+              totalTasks: updatedTasks.length 
+            });
+          } else {
+            console.log('💾 NewTaskPage: 时间轴缓存不存在，更新的任务将在下次加载时显示');
+          }
+        } catch (error) {
+          console.error('更新时间轴缓存失败:', error);
+        }
       } else {
         // 新建模式：调用创建事项API
         const createData: CreateItemRequest = {
@@ -249,9 +294,44 @@ const NewTaskPage = () => {
             duration: time,
           },
         });
+        
+        // 直接更新时间轴缓存，添加新创建的任务
+        try {
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
+          const cacheKey = `timeline-tasks-${today}`;
+          const existingCache = sessionStorage.getItem(cacheKey);
+          
+          if (existingCache) {
+            // 如果有现有缓存，添加新任务到缓存中
+            const cachedTasks = JSON.parse(existingCache);
+            const updatedTasks = [...cachedTasks, newItem];
+            sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+            
+            // 更新缓存元数据时间戳
+            const metadataKey = 'timeline-cache-metadata';
+            const metadata = sessionStorage.getItem(metadataKey);
+            if (metadata) {
+              const parsed = JSON.parse(metadata);
+              parsed[today] = Date.now();
+              sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
+            }
+            
+            console.log('✅ NewTaskPage: 已将新任务添加到时间轴缓存', { 
+              taskId: newItem.id, 
+              taskTitle: newItem.title,
+              totalTasks: updatedTasks.length 
+            });
+          } else {
+            console.log('💾 NewTaskPage: 时间轴缓存不存在，新任务将在下次加载时显示');
+          }
+        } catch (error) {
+          console.error('更新时间轴缓存失败:', error);
+        }
       }
       
-      navigate('/home');
+      // 成功保存后关闭页面，返回上一页
+      // 由于已经通过dispatch更新了缓存，上一页会自动显示新任务
+      navigate(-1);
     } catch (error) {
       console.error('保存事项失败:', error);
       // 这里可以添加错误提示UI

@@ -550,6 +550,25 @@ export const useTimelineTasks = () => {
     }
   }, [getCacheMetadata]);
 
+  // 强制刷新当前日期的缓存数据到组件状态
+  const refreshFromCache = useCallback(() => {
+    try {
+      const cachedTasks = checkCache(selectedDate);
+      if (cachedTasks) {
+        setAllTasks(cachedTasks);
+        console.log('🔄 TimelineTasks: 从缓存刷新任务数据', { 
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          taskCount: cachedTasks.length 
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('从缓存刷新失败:', error);
+      return false;
+    }
+  }, [checkCache, selectedDate]);
+
   return {
     selectedDate,
     incompleteTasks,
@@ -562,7 +581,8 @@ export const useTimelineTasks = () => {
     updateSelectedDate,
     setSelectedDate,
     clearAllCache,
-    getCacheInfo
+    getCacheInfo,
+    refreshFromCache
   };
 };
 

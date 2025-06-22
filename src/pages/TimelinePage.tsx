@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useTaskCompletion } from '../hooks/useTaskCompletion';
 import { useTimelineTasks } from '../hooks/useTaskData';
+import { updateItem } from '../api/items';
 import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -34,8 +34,6 @@ const convertApiItemToTask = (apiItem: Item): Task => {
 };
 
 const TimelinePage = () => {
-  const { toggleTaskCompletion } = useTaskCompletion();
-  
   // 使用新的时间轴数据hook
   const {
     selectedDate,
@@ -44,13 +42,15 @@ const TimelinePage = () => {
     isLoading: timelineLoading,
     error: timelineError,
     updateSelectedDate,
-    loadTasksByDate
+    loadTasksByDate,
+    refreshFromCache
   } = useTimelineTasks();
   
   const [activeTab, setActiveTab] = useState<'timeline' | 'completed'>('timeline');
   const [viewMode, setViewMode] = useState<'compact' | 'expanded'>('expanded');
   const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     上午: true,
     中午: true,
@@ -62,12 +62,44 @@ const TimelinePage = () => {
   // 转换API数据为Task格式
   const incompleteTasks = apiIncompleteTasks.map(convertApiItemToTask);
   const completedTasks = apiCompletedTasks.map(convertApiItemToTask);
+  const allTasks = [...incompleteTasks, ...completedTasks];
 
   // 页面初始化时加载当天任务
   useEffect(() => {
     console.log('📅 TimelinePage: 初始化，加载当天任务');
     loadTasksByDate(selectedDate);
   }, [loadTasksByDate]);
+
+  // 监听页面焦点，返回页面时刷新缓存数据
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('👁️ TimelinePage: 页面重新获得焦点，尝试刷新缓存');
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 TimelinePage: 缓存刷新失败，重新加载数据');
+        loadTasksByDate(selectedDate);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 TimelinePage: 页面变为可见，尝试刷新缓存');
+        const refreshed = refreshFromCache();
+        if (!refreshed) {
+          console.log('📡 TimelinePage: 缓存刷新失败，重新加载数据');
+          loadTasksByDate(selectedDate);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshFromCache, loadTasksByDate, selectedDate]);
 
   // 时间段配置
   const timeSlots = [
@@ -261,6 +293,31 @@ const TimelinePage = () => {
     }
   };
 
+  // 专门用于时间轴页面的任务完成函数
+  const toggleTaskCompletionForTimeline = async (taskId: string, currentCompleted: boolean) => {
+    console.log('🎯 toggleTaskCompletionForTimeline 被调用:', { taskId, currentCompleted });
+    
+    try {
+      console.log('🚀 准备调用 updateItem API...');
+      
+      // 调用API更新事项状态 - 切换到相反的状态
+      const updateData = {
+        status_id: currentCompleted ? 1 : 3, // 如果当前已完成，则设为pending(1)；如果当前未完成，则设为completed(3)
+      };
+      
+      console.log('📋 updateItem 请求数据:', updateData);
+      
+      const result = await updateItem(taskId, updateData);
+      
+      console.log('✅ updateItem API 调用成功:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ 更新事项状态失败:', error);
+      throw error;
+    }
+  };
+
   const handleComplete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -306,15 +363,63 @@ const TimelinePage = () => {
     }
 
     try {
-      // 使用useTaskCompletion hook调用API
-      await toggleTaskCompletion(id, task.completed);
+      // 使用专门的任务完成函数调用API
+      await toggleTaskCompletionForTimeline(id, task.completed);
       
-      // 重新加载当前日期的任务以同步状态
-      await loadTasksByDate(selectedDate);
+      // API调用成功后，直接更新本地缓存和状态
+      const currentAllTasks = [...apiIncompleteTasks, ...apiCompletedTasks];
+      const updatedTasks = currentAllTasks.map(apiTask => {
+        if (apiTask.id === id) {
+          // 切换任务完成状态：如果当前已完成(status_id=3)，改为未完成(status_id=1)；反之亦然
+          return {
+            ...apiTask,
+            status_id: apiTask.status_id === 3 ? 1 : 3
+          };
+        }
+        return apiTask;
+      });
+      
+      // 更新缓存数据
+      try {
+        const dateKey = format(selectedDate, 'yyyy-MM-dd');
+        const timestamp = Date.now();
+        
+        // 更新sessionStorage缓存
+        sessionStorage.setItem(`timeline-tasks-${dateKey}`, JSON.stringify(updatedTasks));
+        
+        // 更新缓存元数据
+        const metadata = (() => {
+          try {
+            const existing = sessionStorage.getItem('timeline-cache-metadata');
+            return existing ? JSON.parse(existing) : {};
+          } catch {
+            return {};
+          }
+        })();
+        metadata[dateKey] = timestamp;
+        sessionStorage.setItem('timeline-cache-metadata', JSON.stringify(metadata));
+        
+        console.log('💾 TimelinePage: 任务完成状态缓存已更新', { 
+          taskId: id,
+          dateKey,
+          taskCount: updatedTasks.length
+        });
+      } catch (cacheError) {
+        console.error('更新任务完成状态缓存失败:', cacheError);
+      }
+      
+      // 强制刷新页面数据从缓存
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        // 如果缓存刷新失败，强制重新加载
+        console.log('📡 TimelinePage: 缓存刷新失败，强制重新加载数据');
+        await loadTasksByDate(selectedDate);
+      }
       
       console.log('✅ TimelinePage: 任务完成状态更新成功');
     } catch (error) {
       console.error('❌ TimelinePage: 更新任务完成状态失败', error);
+      // 如果API调用失败，不更新缓存，保持原状态
     }
   };
 
@@ -323,7 +428,13 @@ const TimelinePage = () => {
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    setSelectedTaskId(taskId);
+    
+    // 查找选中的任务数据
+    const task = allTasks.find(t => t.id === taskId);
+    if (task) {
+      setSelectedTaskId(taskId);
+      setSelectedTask(task);
+    }
   };
 
   const isToday = isSameDay(selectedDate, new Date());
@@ -678,10 +789,13 @@ const TimelinePage = () => {
         )}
       </div>
       
-      {selectedTaskId && (
+      {selectedTaskId && selectedTask && (
         <TaskDetailModal 
-          taskId={selectedTaskId} 
-          onClose={() => setSelectedTaskId(null)} 
+          task={selectedTask}
+          onClose={() => {
+            setSelectedTaskId(null);
+            setSelectedTask(null);
+          }}
         />
       )}
     </>
