@@ -127,7 +127,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
     }
   }, [isOpen]);
   
-  const handleAddTask = async (e?: React.FormEvent) => {
+  const handleAddItem = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (itemTitle.trim() && !isSubmitting) {
       setIsSubmitting(true);
@@ -135,26 +135,26 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
       try {
         // 根据日期选择设置事项day属性
         const today = new Date();
-        let taskDay: string | undefined;
-        let taskStartTime: string | undefined;
+        let itemDay: string | undefined;
+        let itemStartTime: string | undefined;
         
         switch (selectedDate) {
           case '今天':
-            taskDay = today.toISOString().split('T')[0]; // YYYY-MM-DD格式
+            itemDay = today.toISOString().split('T')[0]; // YYYY-MM-DD格式
             break;
           case '明天':
             const tomorrow = new Date();
             tomorrow.setDate(today.getDate() + 1);
-            taskDay = tomorrow.toISOString().split('T')[0];
+            itemDay = tomorrow.toISOString().split('T')[0];
             break;
           case '随时':
             // 不设置特定日期
-            taskDay = undefined;
+            itemDay = undefined;
             break;
           default:
             // 处理自定义日期，如"5月6日"格式
             if (selectedDate && selectedCalendarDate) {
-              taskDay = selectedCalendarDate.toISOString().split('T')[0];
+              itemDay = selectedCalendarDate.toISOString().split('T')[0];
             } else if (selectedDate) {
               // 尝试解析自定义日期格式 (如 "5月6日")
               const match = selectedDate.match(/(\d+)月(\d+)日/);
@@ -168,16 +168,16 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
                   customDate.setFullYear(today.getFullYear() + 1);
                 }
                 
-                taskDay = customDate.toISOString().split('T')[0];
+                itemDay = customDate.toISOString().split('T')[0];
               } else {
                 // 默认使用今天日期
-                taskDay = today.toISOString().split('T')[0];
+                itemDay = today.toISOString().split('T')[0];
               }
             }
         }
         
         // 根据时间区域设置开始时间
-        if (selectedTimeZone && taskDay) {
+        if (selectedTimeZone && itemDay) {
           const timeMap: Record<string, string> = {
             '上午': '09:00',
             '中午': '12:00',
@@ -186,7 +186,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
           };
           
           if (timeMap[selectedTimeZone]) {
-            taskStartTime = timeMap[selectedTimeZone];
+            itemStartTime = timeMap[selectedTimeZone];
           }
         }
         
@@ -195,7 +195,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
           title: itemTitle,
           description: '',
           category_id: 1, // 默认分类：生活
-          start_time: taskStartTime ? `${taskDay}T${taskStartTime}:00` : undefined,
+          start_time: itemStartTime ? `${itemDay}T${itemStartTime}:00` : undefined,
           priority: 3, // 默认优先级：中等
           time_slot_id: 5, // 默认时间段：随时
         });
@@ -208,7 +208,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
             title: result.title,
             completed: result.status_id === 3, // 3表示已完成
             isAnytime: !result.start_time,
-            dueDate: result.start_time ? result.start_time.split('T')[0] : taskDay,
+            dueDate: result.start_time ? result.start_time.split('T')[0] : itemDay,
             startTime: result.start_time ? result.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
             endTime: result.end_time ? result.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
             priority: result.priority, // 直接使用数字priority
@@ -655,7 +655,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
           </div>
           
           <button 
-            onClick={() => handleAddTask()} 
+            onClick={() => handleAddItem()} 
             className={`w-10 h-10 flex items-center justify-center rounded-full text-white ${isSubmitting ? 'bg-blue-300' : 'bg-blue-500'}`}
             disabled={!itemTitle.trim() || isSubmitting}
             aria-label="添加事项"

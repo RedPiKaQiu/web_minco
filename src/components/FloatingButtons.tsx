@@ -11,7 +11,7 @@ interface FloatingButtonsProps {
 const FloatingButtons = ({ onOpenItemDrawer: onOpenItemDrawer }: FloatingButtonsProps) => {
   const navigate = useNavigate();
 
-  const handleAddTaskNavigation = () => {
+  const handleAddItemNavigation = () => {
     onOpenItemDrawer();
   };
 
@@ -31,7 +31,7 @@ const FloatingButtons = ({ onOpenItemDrawer: onOpenItemDrawer }: FloatingButtons
       
       {/* 添加事项按钮 */}
       <button
-        onClick={handleAddTaskNavigation}
+        onClick={handleAddItemNavigation}
         className="floating-button bg-primary text-white w-12 h-12 rounded-full shadow-lg hover:bg-primary-dark transition-colors flex items-center justify-center"
       >
         <Plus size={24} />
