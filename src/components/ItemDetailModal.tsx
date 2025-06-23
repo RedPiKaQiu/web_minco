@@ -114,19 +114,14 @@ const ItemDetailModal = ({ task, onClose }: ItemDetailModalProps) => {
                       {task.category}
                     </span>
                   )}
-                  {task.type && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                      {task.type}
-                    </span>
-                  )}
                   {task.priority && (
                     <span className={`px-2 py-1 rounded text-xs ${
-                      task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                      task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                      task.priority >= 4 ? 'bg-red-100 text-red-700' :
+                      task.priority >= 3 ? 'bg-yellow-100 text-yellow-700' :
                       'bg-green-100 text-green-700'
                     }`}>
-                      {task.priority === 'high' ? '高优先级' :
-                       task.priority === 'medium' ? '中优先级' : '低优先级'}
+                      {task.priority >= 4 ? '高优先级' :
+                       task.priority >= 3 ? '中优先级' : '低优先级'}
                     </span>
                   )}
                 </div>

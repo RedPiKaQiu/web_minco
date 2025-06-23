@@ -7,34 +7,11 @@ import { updateItem } from '../api/items';
 import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Task, Item, ItemCategory } from '../types';
+import { Task } from '../types';
 import ItemDetailModal from '../components/ItemDetailModal';
-import { formatBeijingTimeToLocal } from '../utils/timezone';
+import { adaptItemToTask } from '../utils/itemAdapters';
 
-// API Item 到 Task 的转换函数
-const convertApiItemToTask = (apiItem: Item): Task => {
-  return {
-    id: apiItem.id,
-    title: apiItem.title,
-    completed: apiItem.status_id === 3, // 3表示已完成
-    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
-    // 将北京时间转换为本地时间显示
-    startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
-    endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
-    priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
-    // 正确映射TaskCategory枚举
-    category: apiItem.category_id === 1 ? ItemCategory.LIFE : 
-              apiItem.category_id === 2 ? ItemCategory.HEALTH :
-              apiItem.category_id === 3 ? ItemCategory.WORK :
-              apiItem.category_id === 4 ? ItemCategory.STUDY :
-              apiItem.category_id === 5 ? ItemCategory.RELAX :
-              apiItem.category_id === 6 ? ItemCategory.EXPLORE : undefined,
-    isAnytime: !apiItem.start_time,
-    icon: apiItem.emoji,
-    duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined,
-    project: apiItem.project_id // 添加项目关联
-  };
-};
+
 
 const TimelinePage = () => {
   // 使用新的时间轴数据hook
@@ -63,8 +40,8 @@ const TimelinePage = () => {
   });
 
   // 转换API数据为Task格式
-  const incompleteTasks = apiIncompleteTasks.map(convertApiItemToTask);
-  const completedTasks = apiCompletedTasks.map(convertApiItemToTask);
+  const incompleteTasks = apiIncompleteTasks.map(adaptItemToTask);
+  const completedTasks = apiCompletedTasks.map(adaptItemToTask);
   const allTasks = [...incompleteTasks, ...completedTasks];
 
   // 页面初始化时加载当天任务

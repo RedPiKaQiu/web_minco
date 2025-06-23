@@ -1,80 +1,43 @@
 /**
- * 任务图标工具函数，根据任务类型和类别提供对应的图标
+ * 任务图标工具函数，根据任务类别提供对应的图标
  */
-import { Task, ITEM_CATEGORIES, ItemCategory } from '../types';
-
-// 任务类型到图标的映射
-const ITEM_TYPE_ICONS: Record<string, string> = {
-  // 工作相关
-  '会议': '💼',
-  '邮件': '📧',
-  '文档': '📄',
-  '报告': '📊',
-  '编程': '💻',
-  '设计': '🎨',
-  '开发': '⚙️',
-  
-  // 学习相关
-  '阅读': '📖',
-  '学习': '📚',
-  '练习': '✏️',
-  '考试': '📝',
-  '课程': '🎓',
-  
-  // 生活相关
-  '购物': '🛒',
-  '做饭': '🍳',
-  '清洁': '🧹',
-  '洗衣': '👔',
-  '缴费': '💳',
-  '维修': '🔧',
-  
-  // 健康相关
-  '运动': '🏃‍♂️',
-  '健身': '💪',
-  '跑步': '🏃',
-  '瑜伽': '🧘‍♀️',
-  '医疗': '🏥',
-  '体检': '🩺',
-  
-  // 放松相关
-  '游戏': '🎮',
-  '电影': '🎬',
-  '音乐': '🎵',
-  '旅行': '✈️',
-  '散步': '🚶‍♂️',
-  
-  // 探索相关
-  '研究': '🔍',
-  '调查': '🕵️‍♂️',
-  '实验': '🧪',
-  '探索': '🗺️',
-};
+import { ITEM_CATEGORIES, ItemCategory } from '../types';
 
 /**
  * 根据任务获取对应的图标
- * 优先级：task.icon > 任务类型图标 > 任务类别图标 > 默认图标
+ * 优先级：task.icon > 任务类别图标 > 默认图标
  */
-export function getItemIcon(task: Task): string {
+export function getItemIcon(task: any): string {
   // 1. 如果任务已有自定义图标，直接使用
-  if (task.icon) {
-    return task.icon;
+  if (task.icon || task.emoji) {
+    return task.icon || task.emoji;
   }
   
-  // 2. 根据任务类型查找图标
-  if (task.type && ITEM_TYPE_ICONS[task.type]) {
-    return ITEM_TYPE_ICONS[task.type];
-  }
-  
-  // 3. 根据任务类别查找图标
+  // 2. 根据任务类别查找图标 (支持Task.category或根据Item.category_id计算)
+  let category: ItemCategory | undefined;
   if (task.category) {
-    const categoryConfig = ITEM_CATEGORIES.find(config => config.label === task.category);
+    category = task.category;
+  } else if (task.category_id) {
+    // 从category_id映射到ItemCategory
+    const categoryMap: Record<number, ItemCategory> = {
+      1: ItemCategory.LIFE,
+      2: ItemCategory.HEALTH,
+      3: ItemCategory.WORK,
+      4: ItemCategory.STUDY,
+      5: ItemCategory.RELAX,
+      6: ItemCategory.EXPLORE
+    };
+    category = categoryMap[task.category_id];
+  }
+  
+  if (category) {
+    const categoryConfig = ITEM_CATEGORIES.find(config => config.label === category);
     if (categoryConfig) {
       return categoryConfig.emoji;
     }
   }
   
-  // 4. 默认图标
+  // 3. 默认图标
   return '📌';
 }
 

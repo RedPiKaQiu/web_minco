@@ -211,7 +211,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
             dueDate: result.start_time ? result.start_time.split('T')[0] : taskDay,
             startTime: result.start_time ? result.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
             endTime: result.end_time ? result.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-            priority: result.priority >= 4 ? 'high' : result.priority >= 3 ? 'medium' : 'low',
+            priority: result.priority, // 直接使用数字priority
           },
         });
         

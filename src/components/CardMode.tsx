@@ -88,9 +88,9 @@ export const CardMode = ({ tasks, onComplete, onSwipe, generateRecommendReason }
   };
 
   const safeIndex = Math.min(currentIndex, tasks.length - 1);
-  const currentTask = tasks[safeIndex];
+  const currentItem = tasks[safeIndex];
 
-  if (!currentTask) return null;
+  if (!currentItem) return null;
 
   return (
     <>
@@ -133,7 +133,7 @@ export const CardMode = ({ tasks, onComplete, onSwipe, generateRecommendReason }
         >
           <div className="absolute top-4 right-4 z-10">
             <button
-              onClick={(e) => onComplete(currentTask.id, e)}
+              onClick={(e) => onComplete(currentItem.id, e)}
               className="rounded-full h-8 w-8 border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center touch-target no-tap-highlight"
             >
               <Check className="h-4 w-4" />
@@ -141,24 +141,19 @@ export const CardMode = ({ tasks, onComplete, onSwipe, generateRecommendReason }
           </div>
 
           <div className="flex flex-col h-full">
-            <div className="text-3xl mb-2">{getItemIcon(currentTask)}</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-900">{currentTask.title}</h3>
+            <div className="text-3xl mb-2">{getItemIcon(currentItem)}</div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">{currentItem.title}</h3>
 
             <div className="flex items-center gap-2 mb-4">
               <span className="px-2 py-1 bg-gray-100 rounded-full text-sm border">
-                {currentTask.type || '未分类'}
+                {currentItem.category || '未分类'}
               </span>
-              {currentTask.category && (
-                <span className="px-2 py-1 bg-gray-100 rounded-full text-sm border">
-                  {currentTask.category}
-                </span>
-              )}
             </div>
 
-            {currentTask.duration && (
+            {currentItem.duration && (
               <div className="flex items-center text-sm text-gray-500 mb-2">
                 <Clock className="h-4 w-4 mr-1" />
-                {currentTask.duration}
+                {currentItem.duration}
               </div>
             )}
 

@@ -418,7 +418,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           dueDate: apiTask.start_time ? apiTask.start_time.split('T')[0] : undefined,
           startTime: apiTask.start_time ? apiTask.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
           endTime: apiTask.end_time ? apiTask.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-          priority: (apiTask.priority >= 4 ? 'high' : apiTask.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+          priority: apiTask.priority, // 直接使用数字priority
           category: mappedCategory,
           isAnytime: !apiTask.start_time, // 如果没有开始时间，则视为"随时可做"
         };

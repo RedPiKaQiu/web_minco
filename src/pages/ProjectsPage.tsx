@@ -5,33 +5,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useProjectTasks } from '../hooks/useItemData';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { ItemCategory, ITEM_CATEGORIES, Project, Task, Item } from '../types';
+import { ItemCategory, ITEM_CATEGORIES, Project } from '../types';
+import { adaptItemToTask } from '../utils/itemAdapters';
 import QuickAddProject from '../components/QuickAddProject';
 import ProjectDetailModal from '../components/ProjectDetailModal';
 
-// API Item 到 Task 的转换函数
-const convertApiItemToTask = (apiItem: Item): Task => {
-  return {
-    id: apiItem.id,
-    title: apiItem.title,
-    completed: apiItem.status_id === 3, // 3表示已完成
-    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
-    startTime: apiItem.start_time ? apiItem.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-    endTime: apiItem.end_time ? apiItem.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-    priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
-    // 正确映射TaskCategory枚举
-    category: apiItem.category_id === 1 ? ItemCategory.LIFE : 
-              apiItem.category_id === 2 ? ItemCategory.HEALTH :
-              apiItem.category_id === 3 ? ItemCategory.WORK :
-              apiItem.category_id === 4 ? ItemCategory.STUDY :
-              apiItem.category_id === 5 ? ItemCategory.RELAX :
-              apiItem.category_id === 6 ? ItemCategory.EXPLORE : undefined,
-    isAnytime: !apiItem.start_time,
-    icon: apiItem.emoji,
-    duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined,
-    project: apiItem.project_id // 添加项目关联
-  };
-};
+
 
 // TaskCategory 到 category_id 的映射
 const getCategoryId = (category: ItemCategory): number => {
@@ -75,7 +54,7 @@ const ProjectsPage = () => {
   }));
 
   // 转换API数据为Task格式
-  const categoryTasks = apiCategoryTasks.map(convertApiItemToTask);
+  const categoryTasks = apiCategoryTasks.map(adaptItemToTask);
 
   // 页面初始化时加载默认分类的任务
   useEffect(() => {

@@ -149,7 +149,7 @@ export const ITEM_CATEGORIES: ItemCategoryConfig[] = [
 ];
 
 // 兼容性类型定义 - 逐步迁移到Item
-export interface Task extends Partial<Omit<Item, 'priority'>> {
+export interface Task extends Partial<Item> {
   // 基本必需字段
   id: string;
   title: string;
@@ -158,12 +158,11 @@ export interface Task extends Partial<Omit<Item, 'priority'>> {
   dueDate?: string;
   startTime?: string;
   endTime?: string;
-  duration?: string;
-  category?: ItemCategory;
+  duration?: string; // 计算属性：从estimated_duration或时间差得出
+  category?: ItemCategory; // 计算属性：从category_id转换
   project?: string; // 关联的项目标题
-  type?: string;
   icon?: string;
-  priority?: 'low' | 'medium' | 'high'; // 保持原有格式，与Item.priority分离
+  // priority现在直接继承Item.priority: number (1-5)
   isAnytime?: boolean;
   postponedToTomorrow?: boolean;
   subtasks?: {id: string, title: string, completed: boolean}[];
@@ -186,7 +185,7 @@ export interface Collection {
 }
 
 export interface AppState {
-  tasks: Task[];
+  tasks: Task[]; // 暂时保持Task类型，待组件全部适配后再统一
   projects: Project[]; // 添加项目列表
   tickets: Ticket[];
   focusMode: boolean;
@@ -194,8 +193,8 @@ export interface AppState {
 }
 
 export type AppAction = 
-  | { type: 'ADD_TASK'; payload: Task }
-  | { type: 'UPDATE_TASK'; payload: Task }
+  | { type: 'ADD_TASK'; payload: Task } // 暂时保持Task类型，待组件全部适配后再统一
+  | { type: 'UPDATE_TASK'; payload: Task } // 暂时保持Task类型，待组件全部适配后再统一
   | { type: 'COMPLETE_TASK'; payload: string }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'ADD_TICKET'; payload: Ticket }
@@ -204,7 +203,7 @@ export type AppAction =
   | { type: 'CLEAR_ALL_PROJECTS' }
   | { type: 'POSTPONE_TASKS_TO_TOMORROW'; payload: string[] }
   | { type: 'ADD_COLLECTION'; payload: Collection }
-  | { type: 'LOAD_TASKS'; payload: Task[] }
+  | { type: 'LOAD_TASKS'; payload: Task[] } // 暂时保持Task类型，待组件全部适配后再统一
   | { type: 'LOAD_PROJECTS'; payload: Project[] }
   | { type: 'ADD_PROJECT'; payload: Project }
   | { type: 'UPDATE_PROJECT'; payload: { id: string; updates: Partial<Project> } }

@@ -5,14 +5,14 @@ import { Plus, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface FloatingButtonsProps {
-  onOpenTaskDrawer: () => void;
+  onOpenItemDrawer: () => void;
 }
 
-const FloatingButtons = ({ onOpenTaskDrawer }: FloatingButtonsProps) => {
+const FloatingButtons = ({ onOpenItemDrawer: onOpenItemDrawer }: FloatingButtonsProps) => {
   const navigate = useNavigate();
 
   const handleAddTaskNavigation = () => {
-    onOpenTaskDrawer();
+    onOpenItemDrawer();
   };
 
   const handleChat = () => {

@@ -446,13 +446,12 @@ export const getMockDataForAppContext = () => {
     title: task.title,
     completed: task.status_id === 3, // 3表示已完成
     icon: task.emoji || '📌',
-    type: getCategoryType(task.category_id),
     duration: task.estimated_duration ? `${Math.floor(task.estimated_duration / 60)} 小时 ${task.estimated_duration % 60} 分钟` : undefined,
     startTime: task.start_time,
     dueDate: task.start_time ? task.start_time.split('T')[0] : undefined,
     category: getCategoryEnum(task.category_id),
     isAnytime: !task.start_time,
-    priority: task.priority >= 4 ? 'high' : task.priority >= 3 ? 'medium' : 'low' as 'low' | 'medium' | 'high'
+    priority: task.priority // 直接使用数字priority
   }));
   
   return {
@@ -461,18 +460,7 @@ export const getMockDataForAppContext = () => {
   };
 };
 
-// 辅助函数：根据category_id获取类型字符串
-const getCategoryType = (categoryId: number): string => {
-  const typeMap: Record<number, string> = {
-    1: 'life',
-    2: 'health', 
-    3: 'work',
-    4: 'study',
-    5: 'relax',
-    6: 'explore'
-  };
-  return typeMap[categoryId] || 'life';
-};
+// type字段已移除，不再需要类型映射
 
 // 辅助函数：根据category_id获取TaskCategory枚举
 const getCategoryEnum = (categoryId: number): ItemCategory => {

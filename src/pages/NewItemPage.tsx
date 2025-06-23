@@ -68,7 +68,7 @@ interface LocationState {
   editTask?: Task;
 }
 
-const NewTaskPage = () => {
+const NewItemPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { dispatch } = useAppContext();
@@ -97,7 +97,14 @@ const NewTaskPage = () => {
       setTitle(editTask.title);
       setStartTime(editTask.startTime || '随时');
       setTime(editTask.duration || '30 分钟');
-      setPriority(editTask.priority || '');
+      // 将数字priority转换为字符串显示
+      if (editTask.priority) {
+        if (editTask.priority >= 4) setPriority('high');
+        else if (editTask.priority >= 3) setPriority('medium');
+        else setPriority('low');
+      } else {
+        setPriority('');
+      }
       
       // 根据category找到对应的分类ID
       if (editTask.category) {
@@ -107,13 +114,7 @@ const NewTaskPage = () => {
         }
       }
       
-      // 根据type找到对应的性质ID
-      if (editTask.type) {
-        const natureOption = taskNatureOptions.find(opt => opt.label === editTask.type);
-        if (natureOption) {
-          setSelectedNature(natureOption.id);
-        }
-      }
+      // type字段已删除 - 不再设置性质
     }
   }, [isEditMode, editTask]);
   
@@ -219,8 +220,7 @@ const NewTaskPage = () => {
             isAnytime: startTime === '随时',
             startTime: startTime !== '随时' ? startTime : undefined,
             category: selectedCategoryValue,
-            type: selectedNature ? taskNatureOptions.find(nat => nat.id === selectedNature)?.label : undefined,
-            priority: priority as 'low' | 'medium' | 'high' | undefined,
+            priority: priority ? getPriorityNumber(priority) : editTask.priority,
             duration: time,
           },
         });
@@ -292,8 +292,7 @@ const NewTaskPage = () => {
             isAnytime: startTime === '随时',
             startTime: startTime !== '随时' ? startTime : undefined,
             category: selectedCategoryValue,
-            type: selectedNature ? taskNatureOptions.find(nat => nat.id === selectedNature)?.label : undefined,
-            priority: priority as 'low' | 'medium' | 'high' | undefined,
+            priority: priority ? getPriorityNumber(priority) : 3,
             duration: time,
           },
         });
@@ -635,4 +634,4 @@ const NewTaskPage = () => {
   );
 };
 
-export default NewTaskPage; 
+export default NewItemPage; 

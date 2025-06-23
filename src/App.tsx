@@ -8,7 +8,7 @@ import TimelinePage from './pages/TimelinePage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
-import NewTaskPage from './pages/NewTaskPage';
+import NewItemPage from './pages/NewItemPage';
 import FocusPage from './pages/FocusPage';
 import AiChatPage from './pages/AiChatPage';
 import BottomNavigation from './components/BottomNavigation';
@@ -22,9 +22,9 @@ function AppContent() {
   const [isTaskAddDrawerOpen, setIsTaskAddDrawerOpen] = useState(false);
   
   const isAiChatPage = location.pathname === '/ai-chat';
-  const isNewTaskPage = location.pathname === '/new-task';
+  const isNewItemPage = location.pathname === '/new-task';
   const isLoginPage = location.pathname === '/login';
-  const shouldHideNavigation = isAiChatPage || isNewTaskPage || isLoginPage;
+  const shouldHideNavigation = isAiChatPage || isNewItemPage || isLoginPage;
 
   return (
     <div className="mobile-container">
@@ -54,7 +54,7 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/new-task" element={
             <AuthGuard>
-              <NewTaskPage />
+              <NewItemPage />
             </AuthGuard>
           } />
           <Route path="/focus/:taskId" element={
@@ -69,7 +69,7 @@ function AppContent() {
           } />
         </Routes>
         {!shouldHideNavigation && (
-          <FloatingButtons onOpenTaskDrawer={() => setIsTaskAddDrawerOpen(true)} />
+          <FloatingButtons onOpenItemDrawer={() => setIsTaskAddDrawerOpen(true)} />
         )}
         {!shouldHideNavigation && <BottomNavigation />}
         <ItemAddDrawer 

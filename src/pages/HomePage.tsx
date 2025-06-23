@@ -9,12 +9,12 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Loader2, Grid3X3, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Task, Item, ItemCategory } from '../types';
+
 import { CardMode } from '../components/CardMode';
 import { StickyNoteBoard } from '../components/StickyNoteBoard';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
-import { formatBeijingTimeToLocal } from '../utils/timezone';
+import { adaptItemToTask } from '../utils/itemAdapters';
 
 // 烟花特效组件
 const Fireworks = ({ 
@@ -85,29 +85,7 @@ const Fireworks = ({
   );
 };
 
-// API Item 到 Task 的转换函数
-const convertApiItemToTask = (apiItem: Item): Task => {
-  return {
-    id: apiItem.id,
-    title: apiItem.title,
-    completed: apiItem.status_id === 3, // 3表示已完成
-    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
-    // 将北京时间转换为本地时间显示
-    startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
-    endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
-    priority: (apiItem.priority >= 4 ? 'high' : apiItem.priority >= 3 ? 'medium' : 'low') as 'low' | 'medium' | 'high',
-    // 正确映射TaskCategory枚举
-    category: apiItem.category_id === 1 ? ItemCategory.LIFE : 
-              apiItem.category_id === 2 ? ItemCategory.HEALTH :
-              apiItem.category_id === 3 ? ItemCategory.WORK :
-              apiItem.category_id === 4 ? ItemCategory.STUDY :
-              apiItem.category_id === 5 ? ItemCategory.RELAX :
-              apiItem.category_id === 6 ? ItemCategory.EXPLORE : undefined,
-    isAnytime: !apiItem.start_time,
-    icon: apiItem.emoji,
-    duration: apiItem.estimated_duration ? `${apiItem.estimated_duration}分钟` : undefined
-  };
-};
+
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -133,8 +111,8 @@ const HomePage = () => {
   const [viewMode, setViewMode] = useState<'card' | 'sticky'>('card');
 
   // 转换API数据为Task格式
-  const todayTasks = apiTodayTasks.map(convertApiItemToTask);
-  const recommendedTasks = apiRecommendedTasks.map(convertApiItemToTask);
+  const todayTasks = apiTodayTasks.map(adaptItemToTask);
+  const recommendedTasks = apiRecommendedTasks.map(adaptItemToTask);
   
   // 更新时间
   useEffect(() => {
