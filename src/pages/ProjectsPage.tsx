@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { useProjectTasks } from '../hooks/useTaskData';
+import { useProjectTasks } from '../hooks/useItemData';
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { ItemCategory, ITEM_CATEGORIES, Project, Task, Item } from '../types';
 import QuickAddProject from '../components/QuickAddProject';

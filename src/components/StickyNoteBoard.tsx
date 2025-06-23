@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Check, X, Play, Loader2 } from 'lucide-react';
 import { Task } from '../types';
-import { getTaskIcon } from '../utils/taskIcons';
+import { getItemIcon } from '../utils/taskIcons';
 
 interface StickyNoteBoardProps {
   tasks: Task[];
@@ -118,7 +118,7 @@ export const StickyNoteBoard = ({
 
                 {/* 便签内容 */}
                 <div className="flex-1 flex flex-col">
-                  <div className="text-2xl mb-2 text-center">{getTaskIcon(task)}</div>
+                  <div className="text-2xl mb-2 text-center">{getItemIcon(task)}</div>
 
                   <h3 className="text-sm font-semibold text-gray-800 mb-2 leading-tight line-clamp-2">{task.title}</h3>
 

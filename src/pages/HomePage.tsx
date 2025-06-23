@@ -3,8 +3,8 @@
  */
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { useTaskCompletion } from '../hooks/useTaskCompletion';
-import { useHomePageTasks } from '../hooks/useTaskData';
+import { useTaskCompletion } from '../hooks/useItemCompletion';
+import { useHomePageTasks } from '../hooks/useItemData';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Loader2, Grid3X3, Layers } from 'lucide-react';

@@ -5,12 +5,12 @@ import { X, Clock, Calendar, Tag, Target, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Task } from '../types';
 
-interface TaskDetailModalProps {
+interface ItemDetailModalProps {
   task: Task;
   onClose: () => void;
 }
 
-const TaskDetailModal = ({ task, onClose }: TaskDetailModalProps) => {
+const ItemDetailModal = ({ task, onClose }: ItemDetailModalProps) => {
   const navigate = useNavigate();
 
   const handleStartFocus = () => {
@@ -192,4 +192,4 @@ const TaskDetailModal = ({ task, onClose }: TaskDetailModalProps) => {
   );
 };
 
-export default TaskDetailModal; 
+export default ItemDetailModal; 

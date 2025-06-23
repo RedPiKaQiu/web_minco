@@ -16,6 +16,7 @@ import {
 import { Item } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { localDateToBeijingString } from '../utils/timezone';
+import { ApiError } from '../api/index';
 
 /**
  * 前端推荐算法 - 从今日任务中筛选推荐
@@ -191,7 +192,7 @@ export const useHomePageTasks = () => {
         setRecommendedTasks(recommendations);
         
         setError(null);
-      } catch (err) {
+      } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : '获取mock数据失败';
         setError(errorMessage);
         console.error('❌ 获取mock数据失败:', err);
@@ -221,7 +222,7 @@ export const useHomePageTasks = () => {
       const recommendations = generateRecommendationsFromTasks(tasks);
       console.log('🎯 生成推荐任务:', { count: recommendations.length });
       setRecommendedTasks(recommendations);
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '获取今日任务失败';
       setError(errorMessage);
       console.error('❌ 获取首页任务失败:', err);
@@ -241,7 +242,7 @@ export const useHomePageTasks = () => {
       console.log('🎯 刷新后的推荐:', { count: newRecommendations.length });
       
       return newRecommendations;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('❌ 获取更多推荐失败:', err);
       return [];
     }
@@ -267,6 +268,17 @@ export const useHomePageTasks = () => {
     }
   }, [checkTodayCache]);
 
+  // 在认证失败时清理所有缓存
+  const handleAuthError = useCallback(() => {
+    // 清理timeline缓存
+    sessionStorage.removeItem('timeline-cache-metadata');
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('timeline-tasks-')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  }, []);
+
   return {
     todayTasks,
     recommendedTasks,
@@ -275,7 +287,8 @@ export const useHomePageTasks = () => {
     loadTodayTasks,
     getMoreRecommendations,
     setRecommendedTasks,
-    refreshFromCache // 新增：支持从缓存刷新数据
+    refreshFromCache,
+    handleAuthError
   };
 };
 
@@ -522,10 +535,19 @@ export const useTimelineTasks = () => {
         incomplete: incomplete.length,
         completed: completed.length
       });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '获取任务失败';
-      setError(errorMessage);
-      console.error('获取时间轴任务失败:', err);
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.statusCode === 401) {
+        // 给用户更友好的提示
+        setError('登录已过期，正在重新登录...');
+        // 触发重新登录流程
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+      } else {
+        const errorMessage = err instanceof Error ? err.message : '获取任务失败';
+        setError(errorMessage);
+        console.error('获取时间轴任务失败:', err);
+      }
     } finally {
       isLoadingRef.current = false;
       setIsLoading(false);
@@ -547,7 +569,7 @@ export const useTimelineTasks = () => {
       });
       
       setWeekTasks(weekTasksMap);
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '获取周任务失败';
       setError(errorMessage);
       console.error('获取周任务失败:', err);
@@ -884,7 +906,7 @@ export const useProjectTasks = () => {
       }));
       
       return response.items || [];
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '获取项目任务失败';
       setError(errorMessage);
       console.error('获取项目任务失败:', err);
@@ -905,7 +927,7 @@ export const useProjectTasks = () => {
       }));
       
       return progress;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('获取项目进度失败:', err);
       return { total: 0, completed: 0, progress: 0 };
     }
@@ -953,10 +975,18 @@ export const useProjectTasks = () => {
         categoryId,
         taskCount: tasks.length
       });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '获取分类任务失败';
-      setError(errorMessage);
-      console.error('获取分类任务失败:', err);
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.statusCode === 401) {
+        // 给用户更友好的提示
+        setError('登录已过期，正在重新登录...');
+        // 触发重新登录流程
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+      } else {
+        const errorMessage = err instanceof Error ? err.message : '获取事项失败';
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
       isLoadingRef.current = false;
@@ -1003,7 +1033,7 @@ export const useTaskFilter = () => {
       const response = await builder.execute();
       setTasks(response.items || []);
       return response;
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '筛选任务失败';
       setError(errorMessage);
       console.error('任务筛选失败:', err);

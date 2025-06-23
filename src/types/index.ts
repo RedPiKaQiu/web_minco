@@ -148,10 +148,12 @@ export const ITEM_CATEGORIES: ItemCategoryConfig[] = [
   { id: 'EXPLORE', label: ItemCategory.EXPLORE, emoji: '🔍' },
 ];
 
-// 兼容性类型定义 - 保持现有代码可用
-export interface Task {
+// 兼容性类型定义 - 逐步迁移到Item
+export interface Task extends Partial<Omit<Item, 'priority'>> {
+  // 基本必需字段
   id: string;
   title: string;
+  // 兼容字段的计算属性
   completed: boolean;
   dueDate?: string;
   startTime?: string;
@@ -161,7 +163,7 @@ export interface Task {
   project?: string; // 关联的项目标题
   type?: string;
   icon?: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority?: 'low' | 'medium' | 'high'; // 保持原有格式，与Item.priority分离
   isAnytime?: boolean;
   postponedToTomorrow?: boolean;
   subtasks?: {id: string, title: string, completed: boolean}[];

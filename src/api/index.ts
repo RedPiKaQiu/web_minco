@@ -132,6 +132,10 @@ export async function fetchApi<T>(endpoint: string, config: RequestConfig = {}):
           localStorage.removeItem('access_token');
           localStorage.removeItem('user');
           localStorage.removeItem('appState');
+          
+          // 触发全局登出事件（新增）
+          window.dispatchEvent(new CustomEvent('auth:logout'));
+          
           throw new ApiError(
             data.message || '用户未登录',
             data.code || 401,

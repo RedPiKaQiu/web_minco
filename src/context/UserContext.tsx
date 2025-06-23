@@ -84,6 +84,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [state.user]);
 
+  // 在UserProvider中添加全局事件监听
+  useEffect(() => {
+    const handleGlobalLogout = () => {
+      dispatch({ type: 'LOGOUT' });
+      // 可选：重定向到登录页
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('auth:logout', handleGlobalLogout);
+    
+    return () => {
+      window.removeEventListener('auth:logout', handleGlobalLogout);
+    };
+  }, [dispatch]);
+
   return (
     <UserContext.Provider value={{ state, dispatch }}>
       {children}

@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Task } from '../types';
-import { getTaskIcon } from '../utils/taskIcons';
+import { getItemIcon } from '../utils/taskIcons';
 
 interface CardModeProps {
   tasks: Task[];
@@ -141,7 +141,7 @@ export const CardMode = ({ tasks, onComplete, onSwipe, generateRecommendReason }
           </div>
 
           <div className="flex flex-col h-full">
-            <div className="text-3xl mb-2">{getTaskIcon(currentTask)}</div>
+            <div className="text-3xl mb-2">{getItemIcon(currentTask)}</div>
             <h3 className="text-xl font-semibold mb-2 text-gray-900">{currentTask.title}</h3>
 
             <div className="flex items-center gap-2 mb-4">

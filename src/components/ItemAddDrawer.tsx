@@ -15,7 +15,7 @@ interface ItemAddDrawerProps {
 const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
   const navigate = useNavigate();
   const { dispatch } = useAppContext();
-  const [taskTitle, setTaskTitle] = useState('');
+  const [itemTitle, setItemTitle] = useState('');
   const [selectedDate, setSelectedDate] = useState('今天');
   const [selectedTimeZone, setSelectedTimeZone] = useState<string | null>(null);
   const [showTimeZones, setShowTimeZones] = useState(true);
@@ -109,7 +109,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
   useEffect(() => {
     if (!isOpen) {
       // 清空事项标题
-      setTaskTitle('');
+      setItemTitle('');
       // 重置日期选择
       setSelectedDate('今天');
       // 重置时间区域选择
@@ -129,7 +129,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
   
   const handleAddTask = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (taskTitle.trim() && !isSubmitting) {
+    if (itemTitle.trim() && !isSubmitting) {
       setIsSubmitting(true);
       
       try {
@@ -192,7 +192,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
         
         // 调用API创建事项
         const result = await createItem({
-          title: taskTitle,
+          title: itemTitle,
           description: '',
           category_id: 1, // 默认分类：生活
           start_time: taskStartTime ? `${taskDay}T${taskStartTime}:00` : undefined,
@@ -254,7 +254,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
         }
         
         // 重置所有状态
-        setTaskTitle('');
+        setItemTitle('');
         setShowCalendar(false);
         onClose();
       } catch (error) {
@@ -473,8 +473,8 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
         <div className="mb-6">
           <input
             type="text"
-            value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
+            value={itemTitle}
+            onChange={(e) => setItemTitle(e.target.value)}
             placeholder="准备做什么？"
             className="w-full text-lg px-2 py-3 border-0 border-b border-gray-200 focus:outline-none focus:ring-0 bg-transparent text-app"
             autoFocus
@@ -657,7 +657,7 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
           <button 
             onClick={() => handleAddTask()} 
             className={`w-10 h-10 flex items-center justify-center rounded-full text-white ${isSubmitting ? 'bg-blue-300' : 'bg-blue-500'}`}
-            disabled={!taskTitle.trim() || isSubmitting}
+            disabled={!itemTitle.trim() || isSubmitting}
             aria-label="添加事项"
           >
             <Plus size={20} />

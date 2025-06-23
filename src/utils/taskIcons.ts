@@ -4,7 +4,7 @@
 import { Task, ITEM_CATEGORIES, ItemCategory } from '../types';
 
 // 任务类型到图标的映射
-const TASK_TYPE_ICONS: Record<string, string> = {
+const ITEM_TYPE_ICONS: Record<string, string> = {
   // 工作相关
   '会议': '💼',
   '邮件': '📧',
@@ -55,15 +55,15 @@ const TASK_TYPE_ICONS: Record<string, string> = {
  * 根据任务获取对应的图标
  * 优先级：task.icon > 任务类型图标 > 任务类别图标 > 默认图标
  */
-export function getTaskIcon(task: Task): string {
+export function getItemIcon(task: Task): string {
   // 1. 如果任务已有自定义图标，直接使用
   if (task.icon) {
     return task.icon;
   }
   
   // 2. 根据任务类型查找图标
-  if (task.type && TASK_TYPE_ICONS[task.type]) {
-    return TASK_TYPE_ICONS[task.type];
+  if (task.type && ITEM_TYPE_ICONS[task.type]) {
+    return ITEM_TYPE_ICONS[task.type];
   }
   
   // 3. 根据任务类别查找图标

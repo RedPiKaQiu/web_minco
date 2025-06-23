@@ -205,4 +205,25 @@ export function getTestUser(): User {
     timezone: 'Asia/Shanghai',
     created_at: new Date().toISOString()
   };
+}
+
+// 新增自动刷新token的函数
+export async function refreshToken(): Promise<boolean> {
+  try {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) return false;
+
+    const response = await fetchApi<ApiResponse<LoginResponse>>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (response.code === 0 && response.data) {
+      localStorage.setItem('access_token', response.data.access_token);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
 } 
