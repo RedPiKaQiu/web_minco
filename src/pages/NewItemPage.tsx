@@ -64,6 +64,13 @@ const startTimeOptions = [
   '晚上 9:00'
 ];
 
+// 日期选择选项
+const dateOptions = [
+  '今天',
+  '明天', 
+  '随时'
+];
+
 interface LocationState {
   editTask?: Task;
 }
@@ -82,13 +89,14 @@ const NewItemPage = () => {
   const [selectedNature, setSelectedNature] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isRepeating, setIsRepeating] = useState(false);
-  const [date] = useState('今天');
+  const [date, setDate] = useState('今天');
   const [startTime, setStartTime] = useState('随时');
   const [time, setTime] = useState('30 分钟');
   const [priority, setPriority] = useState('');
   const [showAiGeneration, setShowAiGeneration] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // 在编辑模式下预填充表单数据
@@ -97,6 +105,25 @@ const NewItemPage = () => {
       setTitle(editTask.title);
       setStartTime(editTask.startTime || '随时');
       setTime(editTask.duration || '30 分钟');
+      
+      // 根据任务的日期设置日期选择
+      if (editTask.dueDate) {
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        if (editTask.dueDate === today) {
+          setDate('今天');
+        } else if (editTask.dueDate === tomorrowStr) {
+          setDate('明天');
+        } else {
+          setDate('随时'); // 或者可以考虑添加自定义日期支持
+        }
+      } else {
+        setDate('随时');
+      }
+      
       // 将数字priority转换为字符串显示
       if (editTask.priority) {
         if (editTask.priority >= 4) setPriority('high');
@@ -154,8 +181,17 @@ const NewItemPage = () => {
   };
 
   // 映射函数：将开始时间转换为时间段ID
-  const getTimeSlotId = (startTimeStr: string): number => {
-    if (startTimeStr === '随时') return 5;
+  const getTimeSlotId = (startTimeStr: string, dateStr: string): number => {
+    // 如果开始时间是"随时"且日期也是"随时"，则为真正的随时事项
+    if (startTimeStr === '随时' && dateStr === '随时') {
+      return 5;
+    }
+    
+    // 如果开始时间是"随时"但有具体日期，使用默认时间段（上午，对应上午9:00）
+    if (startTimeStr === '随时') {
+      console.log(`⏰ NewItemPage: 日期为${dateStr}但开始时间为随时，设置时间段为上午(1)`);
+      return 1; // 上午
+    }
     
     const hour = parseInt(startTimeStr.split(' ')[1]?.split(':')[0] || '0');
     if (hour >= 6 && hour < 12) return 1; // 上午
@@ -166,12 +202,45 @@ const NewItemPage = () => {
   };
 
   // 映射函数：将开始时间转换为ISO格式
-  const getStartTimeISO = (startTimeStr: string, _dateStr: string): string | undefined => {
-    if (startTimeStr === '随时') return undefined;
+  const getStartTimeISO = (startTimeStr: string, dateStr: string): string | undefined => {
+    // 如果开始时间是"随时"且日期也是"随时"，则返回undefined（真正的随时事项）
+    if (startTimeStr === '随时' && dateStr === '随时') {
+      return undefined;
+    }
     
+    // 根据dateStr构建正确的日期
+    let targetDate: Date;
+    if (dateStr === '今天') {
+      targetDate = new Date();
+    } else if (dateStr === '明天') {
+      targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + 1);
+    } else if (dateStr === '随时') {
+      // 如果日期是随时但有具体开始时间，使用今天的日期
+      targetDate = new Date();
+    } else {
+      // 默认使用今天
+      targetDate = new Date();
+    }
+    
+    // 如果开始时间是"随时"但有具体日期，设置为该日期的默认时间（上午9:00）
+    if (startTimeStr === '随时') {
+      targetDate.setHours(9, 0, 0, 0); // 默认上午9:00
+      console.log(`⏰ NewItemPage: 日期为${dateStr}但开始时间为随时，设置默认时间为上午9:00`, {
+        dateStr,
+        targetDate: targetDate.toISOString()
+      });
+      return targetDate.toISOString();
+    }
+    
+    // 处理具体的开始时间
     // 提取时间部分，例如 "上午 9:00" -> "9:00"
     const timeMatch = startTimeStr.match(/(\d{1,2}):(\d{2})/);
-    if (!timeMatch) return undefined;
+    if (!timeMatch) {
+      // 如果无法解析时间格式，使用默认时间
+      targetDate.setHours(9, 0, 0, 0);
+      return targetDate.toISOString();
+    }
     
     let hour = parseInt(timeMatch[1]);
     const minute = parseInt(timeMatch[2]);
@@ -181,11 +250,10 @@ const NewItemPage = () => {
       hour += 12;
     }
     
-    // 构建今天的日期时间
-    const today = new Date();
-    today.setHours(hour, minute, 0, 0);
+    // 设置时间
+    targetDate.setHours(hour, minute, 0, 0);
     
-    return today.toISOString();
+    return targetDate.toISOString();
   };
   
   // 处理保存事项
@@ -198,136 +266,373 @@ const NewItemPage = () => {
       const selectedCategoryConfig = taskCategoryOptions.find(cat => cat.id === selectedCategory);
       const selectedCategoryValue = selectedCategoryConfig?.label as ItemCategory;
       
+      // 生成处理后的数据
+      const processedData = {
+        title: title,
+        category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : (isEditMode ? undefined : 1),
+        priority: priority ? getPriorityNumber(priority) : (isEditMode ? undefined : 3),
+        estimated_duration: getDurationInMinutes(time),
+        time_slot_id: getTimeSlotId(startTime, date),
+        start_time: getStartTimeISO(startTime, date),
+      };
+      
+      console.log('🎯 NewItemPage: 准备保存事项', {
+        mode: isEditMode ? '编辑' : '新建',
+        originalData: {
+          title,
+          selectedCategory,
+          priority,
+          startTime,
+          time,
+          date
+        },
+        processedData,
+        isAnytime: !processedData.start_time
+      });
+      
       if (isEditMode && editTask) {
         // 编辑模式：调用更新事项API
-        const updateData: UpdateItemRequest = {
-          title: title,
-          category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : undefined,
-          priority: priority ? getPriorityNumber(priority) : undefined,
-          estimated_duration: getDurationInMinutes(time),
-          time_slot_id: getTimeSlotId(startTime),
-          start_time: getStartTimeISO(startTime, date),
-        };
+        const updateData: UpdateItemRequest = processedData;
 
-        await updateItem(editTask.id, updateData);
+        console.log('📤 NewItemPage: 发送更新事项请求', { itemId: editTask.id, updateData });
+        const result = await updateItem(editTask.id, updateData);
+        console.log('✅ NewItemPage: 收到更新响应', result);
         
         // 更新本地状态
+        const updatedTask = {
+          ...editTask,
+          title: title,
+          isAnytime: startTime === '随时' && date === '随时', // 只有当开始时间和日期都是"随时"时才是真正的随时事项
+          startTime: startTime !== '随时' ? startTime : undefined,
+          category: selectedCategoryValue,
+          priority: priority ? getPriorityNumber(priority) : editTask.priority,
+          duration: time,
+        };
+        
+        console.log('🏪 NewItemPage: 更新本地状态', updatedTask);
         dispatch({
           type: 'UPDATE_TASK',
-          payload: {
-            ...editTask,
-            title: title,
-            isAnytime: startTime === '随时',
-            startTime: startTime !== '随时' ? startTime : undefined,
-            category: selectedCategoryValue,
-            priority: priority ? getPriorityNumber(priority) : editTask.priority,
-            duration: time,
-          },
+          payload: updatedTask,
         });
         
-        // 直接更新时间轴缓存中的任务数据
+        // 完整更新编辑任务的相关缓存
         try {
-          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
-          const cacheKey = `timeline-tasks-${today}`;
-          const existingCache = sessionStorage.getItem(cacheKey);
-          
-          if (existingCache) {
-            // 如果有现有缓存，更新对应的任务
-            const cachedTasks = JSON.parse(existingCache);
-            const updatedTasks = cachedTasks.map((task: any) => 
-              task.id === editTask.id 
-                ? {
-                    ...task,
-                    title: title,
-                    category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : task.category_id,
-                    priority: priority ? getPriorityNumber(priority) : task.priority,
-                    estimated_duration: getDurationInMinutes(time),
-                    time_slot_id: getTimeSlotId(startTime),
-                    start_time: getStartTimeISO(startTime, date),
-                  }
-                : task
-            );
-            sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+          // 1. 更新时间轴缓存中的任务数据
+          const updateTimelineCache = (targetDate: string) => {
+            const cacheKey = `timeline-tasks-${targetDate}`;
+            const existingCache = sessionStorage.getItem(cacheKey);
             
-            // 更新缓存元数据时间戳
-            const metadataKey = 'timeline-cache-metadata';
-            const metadata = sessionStorage.getItem(metadataKey);
-            if (metadata) {
-              const parsed = JSON.parse(metadata);
-              parsed[today] = Date.now();
-              sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
+            if (existingCache) {
+              try {
+                const cachedTasks = JSON.parse(existingCache);
+                const updatedTasks = cachedTasks.map((task: any) => 
+                  task.id === editTask.id 
+                    ? {
+                        ...task,
+                        title: title,
+                        category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : task.category_id,
+                        priority: priority ? getPriorityNumber(priority) : task.priority,
+                        estimated_duration: getDurationInMinutes(time),
+                        time_slot_id: getTimeSlotId(startTime, date),
+                        start_time: getStartTimeISO(startTime, date),
+                      }
+                    : task
+                );
+                sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+                
+                console.log(`✅ NewItemPage: 已在时间轴缓存中更新任务 [${targetDate}]`, { 
+                  taskId: editTask.id, 
+                  taskTitle: title,
+                  totalTasks: updatedTasks.length 
+                });
+                return true;
+              } catch (parseError) {
+                console.error(`编辑任务缓存解析失败 [${targetDate}]:`, parseError);
+                return false;
+              }
             }
+            return false;
+          };
+          
+          // 确定需要更新的缓存日期
+          let targetDate = new Date().toISOString().split('T')[0]; // 默认今天
+          
+          // 如果有新的start_time，使用新的日期
+          const newStartTime = getStartTimeISO(startTime, date);
+          if (newStartTime) {
+            targetDate = newStartTime.split('T')[0];
+          } else if (date === '明天') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            targetDate = tomorrow.toISOString().split('T')[0];
+          }
+          
+          const cacheUpdated = updateTimelineCache(targetDate);
+          
+          // 如果任务的日期发生了变化，需要从原日期的缓存中移除
+          if (editTask.dueDate && editTask.dueDate !== targetDate) {
+            const oldCacheKey = `timeline-tasks-${editTask.dueDate}`;
+            const oldCache = sessionStorage.getItem(oldCacheKey);
+            if (oldCache) {
+              try {
+                const oldTasks = JSON.parse(oldCache);
+                const filteredTasks = oldTasks.filter((task: any) => task.id !== editTask.id);
+                sessionStorage.setItem(oldCacheKey, JSON.stringify(filteredTasks));
+                console.log(`🔄 NewItemPage: 已从旧日期缓存中移除任务 [${editTask.dueDate}]`);
+              } catch (error) {
+                console.error('移除旧日期缓存失败:', error);
+              }
+            }
+          }
+          
+          // 2. 更新时间轴缓存元数据
+          const metadataKey = 'timeline-cache-metadata';
+          let metadata = sessionStorage.getItem(metadataKey);
+          let metadataObj: Record<string, number> = {};
+          
+          try {
+            metadataObj = metadata ? JSON.parse(metadata) : {};
+          } catch (error) {
+            console.error('缓存元数据解析失败:', error);
+            metadataObj = {};
+          }
+          
+          metadataObj[targetDate] = Date.now();
+          if (editTask.dueDate && editTask.dueDate !== targetDate) {
+            metadataObj[editTask.dueDate] = Date.now(); // 也更新旧日期的元数据
+          }
+          sessionStorage.setItem(metadataKey, JSON.stringify(metadataObj));
+          
+          // 3. 更新项目页面相关缓存
+          const newCategoryId = selectedCategoryValue ? getCategoryId(selectedCategoryValue) : null;
+          const oldCategoryId = editTask.category ? getCategoryId(editTask.category as any) : null;
+          
+          // 如果分类发生变化，需要从旧分类缓存中移除，添加到新分类缓存
+          if (newCategoryId && oldCategoryId && newCategoryId !== oldCategoryId) {
+            // 从旧分类缓存中移除
+            const oldProjectCacheKey = `project-category-tasks-${oldCategoryId}`;
+            const oldProjectCache = sessionStorage.getItem(oldProjectCacheKey);
+            if (oldProjectCache) {
+              try {
+                const oldProjectTasks = JSON.parse(oldProjectCache);
+                const filteredProjectTasks = oldProjectTasks.filter((task: any) => task.id !== editTask.id);
+                sessionStorage.setItem(oldProjectCacheKey, JSON.stringify(filteredProjectTasks));
+                console.log(`🔄 NewItemPage: 已从旧分类缓存中移除任务 [category:${oldCategoryId}]`);
+              } catch (error) {
+                console.error('移除旧分类缓存失败:', error);
+              }
+            }
+          }
+          
+          // 更新当前分类缓存
+          const currentCategoryId = newCategoryId || oldCategoryId;
+          if (currentCategoryId) {
+            const projectCacheKey = `project-category-tasks-${currentCategoryId}`;
+            const projectCache = sessionStorage.getItem(projectCacheKey);
             
-            console.log('✅ NewTaskPage: 已在时间轴缓存中更新任务', { 
+            if (projectCache) {
+              try {
+                const projectTasks = JSON.parse(projectCache);
+                const updatedProjectTasks = projectTasks.map((task: any) =>
+                  task.id === editTask.id
+                    ? {
+                        ...task,
+                        title: title,
+                        category_id: currentCategoryId,
+                        priority: priority ? getPriorityNumber(priority) : task.priority,
+                        estimated_duration: getDurationInMinutes(time),
+                        time_slot_id: getTimeSlotId(startTime, date),
+                        start_time: getStartTimeISO(startTime, date),
+                      }
+                    : task
+                );
+                sessionStorage.setItem(projectCacheKey, JSON.stringify(updatedProjectTasks));
+                
+                // 更新项目缓存元数据
+                const projectMetadataKey = 'project-cache-metadata';
+                let projectMetadata = sessionStorage.getItem(projectMetadataKey);
+                let projectMetadataObj: Record<number, number> = {};
+                
+                try {
+                  projectMetadataObj = projectMetadata ? JSON.parse(projectMetadata) : {};
+                } catch (error) {
+                  projectMetadataObj = {};
+                }
+                
+                projectMetadataObj[currentCategoryId] = Date.now();
+                if (oldCategoryId && oldCategoryId !== currentCategoryId) {
+                  projectMetadataObj[oldCategoryId] = Date.now(); // 也更新旧分类的元数据
+                }
+                sessionStorage.setItem(projectMetadataKey, JSON.stringify(projectMetadataObj));
+                
+                console.log('✅ NewItemPage: 已在项目缓存中更新任务', { 
+                  categoryId: currentCategoryId,
+                  taskId: editTask.id 
+                });
+              } catch (error) {
+                console.error('更新项目缓存失败:', error);
+              }
+            }
+          }
+          
+          // 4. 发送全局事件通知所有页面刷新
+          console.log('📢 NewItemPage: 发送缓存更新事件');
+          window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
+            detail: { 
+              action: 'update', 
               taskId: editTask.id, 
               taskTitle: title,
-              totalTasks: updatedTasks.length 
-            });
-          } else {
-            console.log('💾 NewTaskPage: 时间轴缓存不存在，更新的任务将在下次加载时显示');
+              oldCategoryId: oldCategoryId,
+              newCategoryId: newCategoryId,
+              targetDate: targetDate,
+              oldDate: editTask.dueDate,
+              cacheUpdated: cacheUpdated
+            }
+          }));
+          
+          if (!cacheUpdated) {
+            console.log('💾 NewItemPage: 时间轴缓存不存在，更新的任务将在下次加载时显示');
           }
+          
         } catch (error) {
-          console.error('更新时间轴缓存失败:', error);
+          console.error('NewItemPage: 更新编辑任务缓存失败:', error);
         }
       } else {
         // 新建模式：调用创建事项API
-        const createData: CreateItemRequest = {
-          title: title,
-          category_id: selectedCategoryValue ? getCategoryId(selectedCategoryValue) : 1,
-          priority: priority ? getPriorityNumber(priority) : 3,
-          estimated_duration: getDurationInMinutes(time),
-          time_slot_id: getTimeSlotId(startTime),
-          start_time: getStartTimeISO(startTime, date),
-        };
+        const createData: CreateItemRequest = processedData as CreateItemRequest;
 
+        console.log('📤 NewItemPage: 发送创建事项请求', createData);
         const newItem = await createItem(createData);
+        console.log('✅ NewItemPage: 收到服务器响应', newItem);
         
         // 更新本地状态
+        const newTask = {
+          id: newItem.id,
+          title: title,
+          completed: false,
+          isAnytime: startTime === '随时' && date === '随时', // 只有当开始时间和日期都是"随时"时才是真正的随时事项
+          startTime: startTime !== '随时' ? startTime : undefined,
+          category: selectedCategoryValue,
+          priority: priority ? getPriorityNumber(priority) : 3,
+          duration: time,
+        };
+        
+        console.log('🏪 NewItemPage: 更新本地状态', newTask);
         dispatch({
           type: 'ADD_TASK',
-          payload: {
-            id: newItem.id,
-            title: title,
-            completed: false,
-            isAnytime: startTime === '随时',
-            startTime: startTime !== '随时' ? startTime : undefined,
-            category: selectedCategoryValue,
-            priority: priority ? getPriorityNumber(priority) : 3,
-            duration: time,
-          },
+          payload: newTask,
         });
         
-        // 直接更新时间轴缓存，添加新创建的任务
+        // 完整更新所有相关缓存
         try {
-          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
-          const cacheKey = `timeline-tasks-${today}`;
-          const existingCache = sessionStorage.getItem(cacheKey);
-          
-          if (existingCache) {
-            // 如果有现有缓存，添加新任务到缓存中
-            const cachedTasks = JSON.parse(existingCache);
-            const updatedTasks = [...cachedTasks, newItem];
-            sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+          // 1. 更新时间轴缓存（主页和时间轴页面共享）
+          const updateTimelineCache = (targetDate: string) => {
+            const cacheKey = `timeline-tasks-${targetDate}`;
+            const existingCache = sessionStorage.getItem(cacheKey);
             
-            // 更新缓存元数据时间戳
-            const metadataKey = 'timeline-cache-metadata';
-            const metadata = sessionStorage.getItem(metadataKey);
-            if (metadata) {
-              const parsed = JSON.parse(metadata);
-              parsed[today] = Date.now();
-              sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
+            if (existingCache) {
+              try {
+                const cachedTasks = JSON.parse(existingCache);
+                const updatedTasks = [...cachedTasks, newItem];
+                sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+                
+                console.log(`✅ NewItemPage: 已将新任务添加到时间轴缓存 [${targetDate}]`, { 
+                  taskId: newItem.id, 
+                  taskTitle: newItem.title,
+                  totalTasks: updatedTasks.length 
+                });
+                return true;
+              } catch (parseError) {
+                console.error(`缓存解析失败 [${targetDate}]:`, parseError);
+                return false;
+              }
             }
+            return false;
+          };
+          
+          // 根据事项的实际日期更新对应的缓存
+          let targetDate = new Date().toISOString().split('T')[0]; // 默认今天
+          
+          // 如果有start_time，使用start_time的日期
+          if (newItem.start_time) {
+            targetDate = newItem.start_time.split('T')[0];
+          } else if (date === '明天') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            targetDate = tomorrow.toISOString().split('T')[0];
+          }
+          
+          const cacheUpdated = updateTimelineCache(targetDate);
+          
+          // 2. 更新时间轴缓存元数据
+          const metadataKey = 'timeline-cache-metadata';
+          let metadata = sessionStorage.getItem(metadataKey);
+          let metadataObj: Record<string, number> = {};
+          
+          try {
+            metadataObj = metadata ? JSON.parse(metadata) : {};
+          } catch (error) {
+            console.error('缓存元数据解析失败:', error);
+            metadataObj = {};
+          }
+          
+          metadataObj[targetDate] = Date.now();
+          sessionStorage.setItem(metadataKey, JSON.stringify(metadataObj));
+          
+          // 3. 更新项目页面相关缓存（如果新任务有分类）
+          if (newItem.category_id) {
+            const projectCacheKey = `project-category-tasks-${newItem.category_id}`;
+            const projectCache = sessionStorage.getItem(projectCacheKey);
             
-            console.log('✅ NewTaskPage: 已将新任务添加到时间轴缓存', { 
+            if (projectCache) {
+              try {
+                const projectTasks = JSON.parse(projectCache);
+                const updatedProjectTasks = [...projectTasks, newItem];
+                sessionStorage.setItem(projectCacheKey, JSON.stringify(updatedProjectTasks));
+                
+                // 更新项目缓存元数据
+                const projectMetadataKey = 'project-cache-metadata';
+                let projectMetadata = sessionStorage.getItem(projectMetadataKey);
+                let projectMetadataObj: Record<number, number> = {};
+                
+                try {
+                  projectMetadataObj = projectMetadata ? JSON.parse(projectMetadata) : {};
+                } catch (error) {
+                  projectMetadataObj = {};
+                }
+                
+                projectMetadataObj[newItem.category_id] = Date.now();
+                sessionStorage.setItem(projectMetadataKey, JSON.stringify(projectMetadataObj));
+                
+                console.log('✅ NewItemPage: 已将新任务添加到项目缓存', { 
+                  categoryId: newItem.category_id,
+                  taskId: newItem.id 
+                });
+              } catch (error) {
+                console.error('更新项目缓存失败:', error);
+              }
+            }
+          }
+          
+          // 4. 发送全局事件通知所有页面刷新
+          console.log('📢 NewItemPage: 发送缓存更新事件');
+          window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
+            detail: { 
+              action: 'add', 
               taskId: newItem.id, 
               taskTitle: newItem.title,
-              totalTasks: updatedTasks.length 
-            });
-          } else {
-            console.log('💾 NewTaskPage: 时间轴缓存不存在，新任务将在下次加载时显示');
+              categoryId: newItem.category_id,
+              targetDate: targetDate,
+              cacheUpdated: cacheUpdated
+            }
+          }));
+          
+          if (!cacheUpdated) {
+            console.log('💾 NewItemPage: 时间轴缓存不存在，新任务将在下次加载时显示');
           }
+          
         } catch (error) {
-          console.error('更新时间轴缓存失败:', error);
+          console.error('NewItemPage: 更新缓存失败:', error);
         }
       }
       
@@ -363,6 +668,17 @@ const NewItemPage = () => {
   const handleSelectStartTime = (selectedStartTime: string) => {
     setStartTime(selectedStartTime);
     setIsStartTimePickerOpen(false);
+  };
+
+  // 处理日期选择
+  const handleSelectDate = (selectedDate: string) => {
+    setDate(selectedDate);
+    setIsDatePickerOpen(false);
+    
+    console.log('📅 NewItemPage: 日期选择', {
+      selectedDate,
+      currentStartTime: startTime
+    });
   };
 
   return (
@@ -458,14 +774,18 @@ const NewItemPage = () => {
       </div>
       
       {/* 日期设置 */}
-      <div className="p-4 border-b border-gray-100">
+      <div 
+        className="p-4 border-b border-gray-100 cursor-pointer"
+        onClick={() => setIsDatePickerOpen(true)}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Calendar size={20} className="text-gray-500 mr-3" />
             <span>日期</span>
           </div>
-          <div className="text-gray-500">
-            {date} <span className="ml-1">&#10095;</span>
+          <div className="flex items-center text-gray-500">
+            <span>{date}</span>
+            <ChevronRight size={18} className="ml-1" />
           </div>
         </div>
       </div>
@@ -553,6 +873,45 @@ const NewItemPage = () => {
         </div>
       </div>
       
+      {/* 日期选择对话框 */}
+      <Dialog
+        open={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-4">
+            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4 px-2">
+              选择日期
+            </Dialog.Title>
+            
+            <div className="mb-4 max-h-80 overflow-y-auto">
+              {dateOptions.map((option) => (
+                <div
+                  key={option}
+                  onClick={() => handleSelectDate(option)}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
+                >
+                  <span>{option}</span>
+                  {date === option && <Check size={18} className="text-blue-500" />}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => setIsDatePickerOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                取消
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
       {/* 时间选择对话框 */}
       <Dialog
         open={isTimePickerOpen}

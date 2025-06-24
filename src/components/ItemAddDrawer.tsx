@@ -190,67 +190,179 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
           }
         }
         
+        // 根据时间区域设置时间段ID
+        const getTimeSlotId = (timeZone: string | null): number => {
+          if (!timeZone) return 5; // 随时
+          
+          const timeZoneMap: Record<string, number> = {
+            '上午': 1,
+            '中午': 2,
+            '下午': 3,
+            '晚上': 4
+          };
+          
+          return timeZoneMap[timeZone] || 5;
+        };
+        
+        const timeSlotId = getTimeSlotId(selectedTimeZone);
+        const startTimeISO = itemStartTime && itemDay ? `${itemDay}T${itemStartTime}:00` : undefined;
+        
+        // 输出详细的事项创建信息日志
+        console.log('🎯 ItemAddDrawer: 准备创建新事项', {
+          title: itemTitle,
+          selectedDate,
+          selectedTimeZone,
+          itemDay,
+          itemStartTime,
+          startTimeISO,
+          timeSlotId,
+          isAnytime: !startTimeISO
+        });
+        
         // 调用API创建事项
-        const result = await createItem({
+        const createData = {
           title: itemTitle,
           description: '',
           category_id: 1, // 默认分类：生活
-          start_time: itemStartTime ? `${itemDay}T${itemStartTime}:00` : undefined,
+          start_time: startTimeISO,
           priority: 3, // 默认优先级：中等
-          time_slot_id: 5, // 默认时间段：随时
-        });
+          time_slot_id: timeSlotId,
+        };
+        
+        console.log('📤 ItemAddDrawer: 发送创建事项请求', createData);
+        const result = await createItem(createData);
+        console.log('✅ ItemAddDrawer: 收到服务器响应', result);
         
         // 创建成功后，更新本地状态
+        const newTask = {
+          id: result.id?.toString() || Date.now().toString(),
+          title: result.title,
+          completed: result.status_id === 3, // 3表示已完成
+          isAnytime: !result.start_time,
+          dueDate: result.start_time ? result.start_time.split('T')[0] : itemDay,
+          startTime: result.start_time ? result.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+          endTime: result.end_time ? result.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
+          priority: result.priority, // 直接使用数字priority
+        };
+        
+        console.log('🏪 ItemAddDrawer: 更新本地状态', newTask);
         dispatch({
           type: 'ADD_TASK',
-          payload: {
-            id: result.id?.toString() || Date.now().toString(),
-            title: result.title,
-            completed: result.status_id === 3, // 3表示已完成
-            isAnytime: !result.start_time,
-            dueDate: result.start_time ? result.start_time.split('T')[0] : itemDay,
-            startTime: result.start_time ? result.start_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-            endTime: result.end_time ? result.end_time.split('T')[1]?.split(':').slice(0, 2).join(':') : undefined,
-            priority: result.priority, // 直接使用数字priority
-          },
+          payload: newTask,
         });
         
-        // 直接更新时间轴缓存，添加新创建的任务
+        // 完整更新所有相关缓存
         try {
-          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
-          const cacheKey = `timeline-tasks-${today}`;
-          const existingCache = sessionStorage.getItem(cacheKey);
-          
-          if (existingCache) {
-            // 如果有现有缓存，添加新任务到缓存中
-            const cachedTasks = JSON.parse(existingCache);
-            const updatedTasks = [...cachedTasks, result];
-            sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+          // 1. 更新时间轴缓存（主页和时间轴页面共享）
+          const updateTimelineCache = (targetDate: string) => {
+            const cacheKey = `timeline-tasks-${targetDate}`;
+            const existingCache = sessionStorage.getItem(cacheKey);
             
-            // 更新缓存元数据时间戳
-            const metadataKey = 'timeline-cache-metadata';
-            const metadata = sessionStorage.getItem(metadataKey);
-            if (metadata) {
-              const parsed = JSON.parse(metadata);
-              parsed[today] = Date.now();
-              sessionStorage.setItem(metadataKey, JSON.stringify(parsed));
+            if (existingCache) {
+              try {
+                const cachedTasks = JSON.parse(existingCache);
+                const updatedTasks = [...cachedTasks, result];
+                sessionStorage.setItem(cacheKey, JSON.stringify(updatedTasks));
+                
+                console.log(`✅ ItemAddDrawer: 已将新任务添加到时间轴缓存 [${targetDate}]`, { 
+                  taskId: result.id, 
+                  taskTitle: result.title,
+                  totalTasks: updatedTasks.length 
+                });
+                return true;
+              } catch (parseError) {
+                console.error(`缓存解析失败 [${targetDate}]:`, parseError);
+                return false;
+              }
             }
+            return false;
+          };
+          
+          // 根据事项的实际日期更新对应的缓存
+          let targetDate = new Date().toISOString().split('T')[0]; // 默认今天
+          
+          // 如果有start_time，使用start_time的日期
+          if (result.start_time) {
+            targetDate = result.start_time.split('T')[0];
+          } else if (selectedDate === '明天') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            targetDate = tomorrow.toISOString().split('T')[0];
+          } else if (selectedCalendarDate) {
+            targetDate = selectedCalendarDate.toISOString().split('T')[0];
+          }
+          
+          const cacheUpdated = updateTimelineCache(targetDate);
+          
+          // 2. 更新时间轴缓存元数据
+          const metadataKey = 'timeline-cache-metadata';
+          let metadata = sessionStorage.getItem(metadataKey);
+          let metadataObj: Record<string, number> = {};
+          
+          try {
+            metadataObj = metadata ? JSON.parse(metadata) : {};
+          } catch (error) {
+            console.error('缓存元数据解析失败:', error);
+            metadataObj = {};
+          }
+          
+          metadataObj[targetDate] = Date.now();
+          sessionStorage.setItem(metadataKey, JSON.stringify(metadataObj));
+          
+          // 3. 更新项目页面相关缓存（如果新任务有分类）
+          if (result.category_id) {
+            const projectCacheKey = `project-category-tasks-${result.category_id}`;
+            const projectCache = sessionStorage.getItem(projectCacheKey);
             
-            console.log('✅ ItemAddDrawer: 已将新任务添加到时间轴缓存', { 
+            if (projectCache) {
+              try {
+                const projectTasks = JSON.parse(projectCache);
+                const updatedProjectTasks = [...projectTasks, result];
+                sessionStorage.setItem(projectCacheKey, JSON.stringify(updatedProjectTasks));
+                
+                                 // 更新项目缓存元数据
+                 const projectMetadataKey = 'project-cache-metadata';
+                 let projectMetadata = sessionStorage.getItem(projectMetadataKey);
+                 let projectMetadataObj: Record<number, number> = {};
+                 
+                 try {
+                   projectMetadataObj = projectMetadata ? JSON.parse(projectMetadata) : {};
+                 } catch (error) {
+                   projectMetadataObj = {};
+                 }
+                 
+                 projectMetadataObj[result.category_id] = Date.now();
+                sessionStorage.setItem(projectMetadataKey, JSON.stringify(projectMetadataObj));
+                
+                console.log('✅ ItemAddDrawer: 已将新任务添加到项目缓存', { 
+                  categoryId: result.category_id,
+                  taskId: result.id 
+                });
+              } catch (error) {
+                console.error('更新项目缓存失败:', error);
+              }
+            }
+          }
+          
+          // 4. 发送全局事件通知所有页面刷新
+          console.log('📢 ItemAddDrawer: 发送缓存更新事件');
+          window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
+            detail: { 
+              action: 'add', 
               taskId: result.id, 
               taskTitle: result.title,
-              totalTasks: updatedTasks.length 
-            });
-            
-            // 发送自定义事件通知页面刷新缓存
-            window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
-              detail: { action: 'add', taskId: result.id, taskTitle: result.title }
-            }));
-          } else {
+              categoryId: result.category_id,
+              targetDate: targetDate,
+              cacheUpdated: cacheUpdated
+            }
+          }));
+          
+          if (!cacheUpdated) {
             console.log('💾 ItemAddDrawer: 时间轴缓存不存在，新任务将在下次加载时显示');
           }
+          
         } catch (error) {
-          console.error('ItemAddDrawer: 更新时间轴缓存失败:', error);
+          console.error('ItemAddDrawer: 更新缓存失败:', error);
         }
         
         // 重置所有状态

@@ -2,7 +2,7 @@
  * 事项管理API接口，提供事项的增删改查和高级查询功能
  */
 // 事项管理 API 接口
-import { fetchApi, ApiResponse, ApiError } from './index';
+import { fetchApi, ApiResponse, ApiError, API_BASE_URL } from './index';
 import { Item, ItemListResponse } from '../types';
 
 // 创建事项请求参数
@@ -247,26 +247,84 @@ export async function updateItem(itemId: string, itemData: UpdateItemRequest): P
  */
 export async function deleteItem(itemId: string): Promise<void> {
   try {
-    const response = await fetchApi<ApiResponse<void>>(`/items/${itemId}`, {
+    console.log(`🌐 realDeleteItem 被调用:`, { itemId });
+    
+    const token = localStorage.getItem('access_token');
+    const url = `${API_BASE_URL}/items/${itemId}`;
+    
+    console.log(`📤 发送DELETE请求到: ${url}`);
+    
+    const response = await fetch(url, {
       method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log(`📨 删除请求响应:`, { 
+      status: response.status, 
+      statusText: response.statusText,
+      ok: response.ok 
     });
 
-    if (response.code !== 0) {
-      throw new ApiError(response.message || `删除事项${itemId}失败`, response.code, 400);
+    // 处理204 No Content响应（删除成功）
+    if (response.status === 204) {
+      console.log(`✅ 删除事项成功: ${itemId}`);
+      return;
     }
+    
+    // 处理其他成功状态码但有响应体的情况
+    if (response.ok) {
+      try {
+        const data = await response.json();
+        if (data.code === 0) {
+          console.log(`✅ 删除事项成功: ${itemId}`);
+          return;
+        } else {
+          throw new ApiError(data.message || `删除事项${itemId}失败`, data.code, response.status);
+        }
+      } catch (jsonError) {
+        // 如果JSON解析失败但状态码是成功的，认为删除成功
+        console.log(`✅ 删除事项成功 (无JSON响应): ${itemId}`);
+        return;
+      }
+    }
+    
+    // 处理错误响应
+    let errorMessage = `删除事项${itemId}失败`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      // JSON解析失败，使用默认错误消息
+    }
+    
+    if (response.status === 401) {
+      // 清理认证信息
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('appState');
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      throw new ApiError('登录已过期，请重新登录', 401, 401);
+    }
+    
+    if (response.status === 404) {
+      throw new ApiError('事项不存在或已被删除', 404, 404);
+    }
+    
+    throw new ApiError(errorMessage, response.status, response.status);
+    
   } catch (error) {
-    console.error(`删除事项${itemId}失败:`, error);
+    console.error(`❌ realDeleteItem 异常:`, error);
     
     if (error instanceof ApiError) {
-      if (error.statusCode === 401) {
-        throw new ApiError('登录已过期，请重新登录', error.code, error.statusCode);
-      }
-      
-      if (error.statusCode === 404) {
-        throw new ApiError('事项不存在或已被删除', error.code, error.statusCode);
-      }
-      
       throw error;
+    }
+    
+    // 网络错误或其他异常
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiError('网络连接失败，请检查网络状态', 0, 0);
     }
     
     throw new ApiError(`删除事项失败，请稍后重试`, 500, 500);

@@ -1,10 +1,10 @@
 /**
  * 时间轴页面，按日期展示任务时间线，支持日期切换和任务状态管理
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTimelineTasks } from '../hooks/useItemData';
-import { updateItem } from '../api/items';
-import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
+import { updateItem, deleteItem } from '../api/items';
+import { Check, ChevronDown, ChevronRight, Calendar, ChevronLeft, Trash2 } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Task } from '../types';
@@ -38,6 +38,13 @@ const TimelinePage = () => {
     晚上: true,
     随时: true,
   });
+
+  // 左滑删除相关状态
+  const [swipedTaskId, setSwipedTaskId] = useState<string | null>(null);
+  const [swipePosition, setSwipePosition] = useState<number>(0);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const isDragging = useRef<boolean>(false);
 
   // 转换API数据为Task格式
   const incompleteTasks = apiIncompleteTasks.map(adaptItemToTask);
@@ -82,16 +89,35 @@ const TimelinePage = () => {
       }
     };
 
+    // 点击页面其他地方时重置滑动状态
+    const handleClickOutside = () => {
+      if (swipedTaskId) {
+        resetSwipe();
+      }
+    };
+
+    // 键盘事件处理（ESC键取消删除状态）
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && swipedTaskId) {
+        resetSwipe();
+        console.log('⌨️ TimelinePage: ESC键取消删除状态');
+      }
+    };
+
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [refreshFromCache, loadTasksByDate, selectedDate]);
+  }, [refreshFromCache, loadTasksByDate, selectedDate, swipedTaskId]);
 
   // 时间段配置
   const timeSlots = [
@@ -415,8 +441,159 @@ const TimelinePage = () => {
     }
   };
 
+  // 处理左滑删除（移动端）
+  const handleTouchStart = (e: React.TouchEvent, _taskId: string) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, taskId: string) => {
+    if (swipedTaskId && swipedTaskId !== taskId) {
+      // 如果有其他任务正在滑动，先重置它
+      setSwipedTaskId(null);
+      setSwipePosition(0);
+    }
+
+    const touchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+    const deltaX = touchStartX.current - touchX;
+    const deltaY = Math.abs(touchStartY.current - touchY);
+
+    // 如果垂直滑动距离大于水平滑动距离，不触发左滑
+    if (deltaY > Math.abs(deltaX)) {
+      return;
+    }
+
+    // 只处理向左滑动
+    if (deltaX > 10) {
+      isDragging.current = true;
+      e.preventDefault(); // 防止页面滚动
+      
+      const maxSwipe = 80; // 最大滑动距离
+      const swipeDistance = Math.min(deltaX, maxSwipe);
+      
+      setSwipedTaskId(taskId);
+      setSwipePosition(swipeDistance);
+    }
+  };
+
+  const handleTouchEnd = (_e: React.TouchEvent, _taskId: string) => {
+    if (isDragging.current) {
+      // 如果滑动距离超过阈值，保持显示删除按钮
+      if (swipePosition > 40) {
+        setSwipePosition(80); // 完全显示删除按钮
+      } else {
+        // 否则回弹
+        setSwipedTaskId(null);
+        setSwipePosition(0);
+      }
+    }
+    isDragging.current = false;
+  };
+
+  // 处理鼠标右键（PC端）
+  const handleContextMenu = (e: React.MouseEvent, taskId: string) => {
+    e.preventDefault(); // 阻止默认的右键菜单
+    
+    // 如果有其他任务正在显示删除按钮，先重置
+    if (swipedTaskId && swipedTaskId !== taskId) {
+      setSwipedTaskId(null);
+      setSwipePosition(0);
+    }
+    
+    // 如果当前任务已经显示删除按钮，则隐藏；否则显示
+    if (swipedTaskId === taskId) {
+      setSwipedTaskId(null);
+      setSwipePosition(0);
+    } else {
+      setSwipedTaskId(taskId);
+      setSwipePosition(80); // 直接完全显示删除按钮
+    }
+    
+    console.log('🖱️ TimelinePage: 鼠标右键显示删除按钮', { taskId });
+  };
+
+  // 重置滑动状态
+  const resetSwipe = () => {
+    setSwipedTaskId(null);
+    setSwipePosition(0);
+  };
+
+  // 删除事项
+  const handleDeleteTask = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      console.log('🗑️ TimelinePage: 开始删除事项', { taskId });
+      
+      // 调用删除API
+      await deleteItem(taskId);
+      console.log('✅ TimelinePage: 删除事项API调用成功');
+      
+      // 更新本地缓存
+      const currentAllTasks = [...apiIncompleteTasks, ...apiCompletedTasks];
+      const updatedTasks = currentAllTasks.filter(task => task.id !== taskId);
+      
+      // 更新sessionStorage缓存
+      try {
+        const dateKey = format(selectedDate, 'yyyy-MM-dd');
+        const timestamp = Date.now();
+        
+        sessionStorage.setItem(`timeline-tasks-${dateKey}`, JSON.stringify(updatedTasks));
+        
+        // 更新缓存元数据
+        const metadata = (() => {
+          try {
+            const existing = sessionStorage.getItem('timeline-cache-metadata');
+            return existing ? JSON.parse(existing) : {};
+          } catch {
+            return {};
+          }
+        })();
+        metadata[dateKey] = timestamp;
+        sessionStorage.setItem('timeline-cache-metadata', JSON.stringify(metadata));
+        
+        console.log('💾 TimelinePage: 删除事项缓存已更新', { 
+          taskId,
+          dateKey,
+          taskCount: updatedTasks.length
+        });
+      } catch (cacheError) {
+        console.error('更新删除事项缓存失败:', cacheError);
+      }
+      
+      // 发送全局事件通知其他页面
+      window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
+        detail: { action: 'delete', taskId }
+      }));
+      
+      // 重置滑动状态
+      resetSwipe();
+      
+      // 强制刷新页面数据从缓存
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 TimelinePage: 缓存刷新失败，强制重新加载数据');
+        await loadTasksByDate(selectedDate);
+      }
+      
+      console.log('✅ TimelinePage: 事项删除完成');
+    } catch (error) {
+      console.error('❌ TimelinePage: 删除事项失败', error);
+      // 删除失败时重置滑动状态
+      resetSwipe();
+    }
+  };
+
   const handleTaskClick = (taskId: string, e: React.MouseEvent) => {
-    // 不要在点击完成按钮时打开模态框
+    // 如果当前有滑动状态，点击重置
+    if (swipedTaskId) {
+      resetSwipe();
+      return;
+    }
+    
+    // 不要在点击完成按钮或删除按钮时打开模态框
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
@@ -549,6 +726,14 @@ const TimelinePage = () => {
           已完成
         </button>
       </div>
+      
+      {/* 操作提示 */}
+      {(incompleteTasks.length > 0 || completedTasks.length > 0) && (
+        <div className="text-xs text-gray-500 text-center py-1">
+          <span className="hidden sm:inline">右键单击事项可删除，或在移动设备上左滑删除</span>
+          <span className="sm:hidden">左滑事项可删除</span>
+        </div>
+      )}
     </div>
   );
 
@@ -605,38 +790,68 @@ const TimelinePage = () => {
                     sectionTasks.map(task => (
                       <div
                         key={task.id}
-                        className="p-3 cursor-pointer transition-colors hover:bg-gray-50 no-tap-highlight border-b border-gray-100 last:border-b-0"
-                        onClick={(e) => handleTaskClick(task.id, e)}
+                        className="relative overflow-hidden border-b border-gray-100 last:border-b-0"
                       >
-                        <div className="flex items-center">
-                          <button
-                            onClick={(e) => handleComplete(task.id, e)}
-                            className="h-5 w-5 rounded-full border border-gray-300 flex items-center justify-center mr-3 relative hover:bg-gray-50 touch-target no-tap-highlight"
-                          >
-                            <Check className="h-2 w-2" />
-                          </button>
+                        <div
+                          className="p-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 no-tap-highlight"
+                          style={{
+                            transform: swipedTaskId === task.id ? `translateX(-${swipePosition}px)` : 'translateX(0)',
+                          }}
+                          onClick={(e) => handleTaskClick(task.id, e)}
+                          onTouchStart={(e) => handleTouchStart(e, task.id)}
+                          onTouchMove={(e) => handleTouchMove(e, task.id)}
+                          onTouchEnd={(e) => handleTouchEnd(e, task.id)}
+                          onContextMenu={(e) => handleContextMenu(e, task.id)}
+                        >
+                          <div className="flex items-center">
+                            <button
+                              onClick={(e) => handleComplete(task.id, e)}
+                              className="h-5 w-5 rounded-full border border-gray-300 flex items-center justify-center mr-3 relative hover:bg-gray-50 touch-target no-tap-highlight"
+                            >
+                              <Check className="h-2 w-2" />
+                            </button>
 
-                          <div className="flex-grow min-w-0">
-                            <div className="font-medium truncate">{task.title}</div>
-                            {task.startTime && (
-                              <div className="text-sm text-gray-500">{task.startTime}</div>
-                            )}
-                          </div>
+                            <div className="flex-grow min-w-0">
+                              <div className="font-medium truncate">{task.title}</div>
+                              {task.startTime && (
+                                <div className="text-sm text-gray-500">{task.startTime}</div>
+                              )}
+                            </div>
 
-                          <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                            {task.icon && <div className="text-lg">{task.icon}</div>}
-                            {task.duration && (
-                              <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                                {task.duration}
-                              </span>
-                            )}
-                            {task.category && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                {task.category}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                              {task.icon && <div className="text-lg">{task.icon}</div>}
+                              {task.duration && (
+                                <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                  {task.duration}
+                                </span>
+                              )}
+                              {task.category && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                  {task.category}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        
+                        {/* 删除按钮 */}
+                        {swipedTaskId === task.id && (
+                          <div 
+                            className="absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center"
+                            style={{
+                              transform: `translateX(${80 - swipePosition}px)`,
+                            }}
+                          >
+                            <button
+                              onClick={(e) => handleDeleteTask(task.id, e)}
+                              className="w-full h-full flex flex-col items-center justify-center text-white hover:bg-red-600 transition-colors touch-target group"
+                              title="删除事项"
+                            >
+                              <Trash2 className="h-4 w-4 mb-0.5" />
+                              <span className="text-xs hidden sm:block">删除</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -672,40 +887,70 @@ const TimelinePage = () => {
         sortedTasks.map(task => (
           <div
             key={task.id}
-            className="p-3 bg-white rounded-lg border cursor-pointer transition-colors hover:bg-gray-50 no-tap-highlight"
-            onClick={(e) => handleTaskClick(task.id, e)}
+            className="relative overflow-hidden bg-white rounded-lg border"
           >
-            <div className="flex items-center">
-              <div className="flex items-center mr-3">
-                <button
-                  onClick={(e) => handleComplete(task.id, e)}
-                  className="h-5 w-5 rounded-full border border-gray-300 flex items-center justify-center relative hover:bg-gray-50 touch-target no-tap-highlight flex-shrink-0 mr-2"
-                >
-                  <Check className="h-2 w-2" />
-                </button>
-                {task.startTime && (
-                  <div className="text-sm text-gray-500 whitespace-nowrap">{task.startTime}</div>
-                )}
-              </div>
+            <div
+              className="p-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 no-tap-highlight"
+              style={{
+                transform: swipedTaskId === task.id ? `translateX(-${swipePosition}px)` : 'translateX(0)',
+              }}
+              onClick={(e) => handleTaskClick(task.id, e)}
+              onTouchStart={(e) => handleTouchStart(e, task.id)}
+              onTouchMove={(e) => handleTouchMove(e, task.id)}
+              onTouchEnd={(e) => handleTouchEnd(e, task.id)}
+              onContextMenu={(e) => handleContextMenu(e, task.id)}
+            >
+              <div className="flex items-center">
+                <div className="flex items-center mr-3">
+                  <button
+                    onClick={(e) => handleComplete(task.id, e)}
+                    className="h-5 w-5 rounded-full border border-gray-300 flex items-center justify-center relative hover:bg-gray-50 touch-target no-tap-highlight flex-shrink-0 mr-2"
+                  >
+                    <Check className="h-2 w-2" />
+                  </button>
+                  {task.startTime && (
+                    <div className="text-sm text-gray-500 whitespace-nowrap">{task.startTime}</div>
+                  )}
+                </div>
 
-              <div className="flex-grow min-w-0">
-                <div className="font-medium truncate">{task.title}</div>
-              </div>
+                <div className="flex-grow min-w-0">
+                  <div className="font-medium truncate">{task.title}</div>
+                </div>
 
-              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                {task.icon && <div className="text-lg">{task.icon}</div>}
-                {task.duration && (
-                  <span className="px-2 py-1 bg-gray-100 rounded text-xs whitespace-nowrap">
-                    {task.duration}
-                  </span>
-                )}
-                {task.category && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs whitespace-nowrap">
-                    {task.category}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  {task.icon && <div className="text-lg">{task.icon}</div>}
+                  {task.duration && (
+                    <span className="px-2 py-1 bg-gray-100 rounded text-xs whitespace-nowrap">
+                      {task.duration}
+                    </span>
+                  )}
+                  {task.category && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs whitespace-nowrap">
+                      {task.category}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
+            
+            {/* 删除按钮 */}
+            {swipedTaskId === task.id && (
+              <div 
+                className="absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center rounded-r-lg"
+                style={{
+                  transform: `translateX(${80 - swipePosition}px)`,
+                }}
+              >
+                <button
+                  onClick={(e) => handleDeleteTask(task.id, e)}
+                  className="w-full h-full flex flex-col items-center justify-center text-white hover:bg-red-600 transition-colors touch-target rounded-r-lg group"
+                  title="删除事项"
+                >
+                  <Trash2 className="h-4 w-4 mb-0.5" />
+                  <span className="text-xs hidden sm:block">删除</span>
+                </button>
+              </div>
+            )}
           </div>
         ))
       )}
@@ -735,34 +980,64 @@ const TimelinePage = () => {
         completedTasks.map(task => (
           <div
             key={task.id}
-            className="p-3 bg-white rounded-lg shadow-sm border opacity-75 cursor-pointer transition-colors hover:bg-gray-50"
-            onClick={(e) => handleTaskClick(task.id, e)}
+            className="relative overflow-hidden bg-white rounded-lg shadow-sm border opacity-75"
           >
-            <div className="flex items-center">
-              <button
-                onClick={(e) => handleComplete(task.id, e)}
-                className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mr-3 relative hover:bg-green-600 touch-target no-tap-highlight transition-colors"
-                title="点击取消完成"
-              >
-                <Check className="h-3 w-3 text-white" />
-              </button>
+            <div
+              className="p-3 cursor-pointer transition-all duration-200 hover:bg-gray-50"
+              style={{
+                transform: swipedTaskId === task.id ? `translateX(-${swipePosition}px)` : 'translateX(0)',
+              }}
+              onClick={(e) => handleTaskClick(task.id, e)}
+              onTouchStart={(e) => handleTouchStart(e, task.id)}
+              onTouchMove={(e) => handleTouchMove(e, task.id)}
+              onTouchEnd={(e) => handleTouchEnd(e, task.id)}
+              onContextMenu={(e) => handleContextMenu(e, task.id)}
+            >
+              <div className="flex items-center">
+                <button
+                  onClick={(e) => handleComplete(task.id, e)}
+                  className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center mr-3 relative hover:bg-green-600 touch-target no-tap-highlight transition-colors"
+                  title="点击取消完成"
+                >
+                  <Check className="h-3 w-3 text-white" />
+                </button>
 
-              <div className="flex-grow">
-                <div className="font-medium line-through text-gray-500">{task.title}</div>
-                {task.startTime && (
-                  <div className="text-sm text-gray-400">{task.startTime}</div>
-                )}
-              </div>
+                <div className="flex-grow">
+                  <div className="font-medium line-through text-gray-500">{task.title}</div>
+                  {task.startTime && (
+                    <div className="text-sm text-gray-400">{task.startTime}</div>
+                  )}
+                </div>
 
-              <div className="flex items-center gap-2">
-                {task.icon && <div className="text-lg opacity-50">{task.icon}</div>}
-                {task.duration && (
-                  <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-500">
-                    {task.duration}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {task.icon && <div className="text-lg opacity-50">{task.icon}</div>}
+                  {task.duration && (
+                    <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-500">
+                      {task.duration}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
+            
+            {/* 删除按钮 */}
+            {swipedTaskId === task.id && (
+              <div 
+                className="absolute right-0 top-0 h-full w-20 bg-red-500 flex items-center justify-center rounded-r-lg"
+                style={{
+                  transform: `translateX(${80 - swipePosition}px)`,
+                }}
+              >
+                <button
+                  onClick={(e) => handleDeleteTask(task.id, e)}
+                  className="w-full h-full flex flex-col items-center justify-center text-white hover:bg-red-600 transition-colors touch-target rounded-r-lg group"
+                  title="删除事项"
+                >
+                  <Trash2 className="h-4 w-4 mb-0.5" />
+                  <span className="text-xs hidden sm:block">删除</span>
+                </button>
+              </div>
+            )}
           </div>
         ))
       )}
@@ -790,6 +1065,8 @@ const TimelinePage = () => {
           }}
         />
       )}
+      
+
     </>
   );
 };
