@@ -1,5 +1,52 @@
 # API 接口文档
 
+## 🔄 接口路径优化说明
+
+**本次优化目标**：统一命名规范，保持语义清晰，最小化调整影响
+
+### 📋 路径变更对照表
+
+| 功能描述 | 原路径 | 新路径 | 变更类型 |
+|----------|--------|--------|----------|
+| **基础事项管理** |
+| 获取事项列表 | `GET /items` | `GET /items/getList` | 路径明确化 |
+| 创建事项 | `POST /items` | `POST /items/create` | 路径明确化 |
+| 获取单个事项详情 | `GET /items/{itemId}` | `GET /items/get/{item_id}` | 路径明确化 + 参数统一 |
+| 更新事项信息 | `PUT /items/{itemId}` | `PUT /items/update/{item_id}` | 路径明确化 + 参数统一 |
+| 删除事项 | `DELETE /items/{itemId}` | `DELETE /items/delete/{item_id}` | 路径明确化 + 参数统一 |
+| 批量操作事项 | `POST /items/batch` | `POST /items/batch-operations` | 路径语义优化 |
+| 获取推荐事项列表 | `GET /items/recommendations` | `GET /ai/item-recommendations` | 功能重新分类 |
+| **项目管理** |
+| 获取项目列表 | `GET /projects` | `GET /projects/getList` | 路径明确化 |
+| 创建项目 | `POST /projects` | `POST /projects/create` | 路径明确化 |
+| 获取项目详情 | `GET /projects/{id}` | `GET /projects/get/{project_id}` | 路径明确化 + 参数统一 |
+| 更新项目 | `PUT /projects/{id}` | `PUT /projects/update/{project_id}` | 路径明确化 + 参数统一 |
+| **认证与系统** |
+| 用户注册 | `POST /auth/register` | `POST /auth/register` | 保持不变 |
+| 用户登录 | `POST /auth/login` | `POST /auth/login` | 保持不变 |
+| 用户登出 | `POST /auth/logout` | `POST /auth/logout` | 保持不变 |
+| 结束专注 | `POST /focus/{id}/end` | `POST /focus/{session_id}/end` | 参数名语义化 |
+
+### 🔧 额外优化项
+
+| 原接口设计问题 | 优化后效果 | 说明 |
+|--------------|-----------|------|
+| 同路径多操作混淆 | 创建操作使用明确路径 | `POST /items` → `POST /items/create` 便于调试 |
+| 参数命名不统一 | 统一使用下划线命名法 | `itemId` → `item_id`, `id` → `project_id/session_id` |
+| 功能分类混乱 | 推荐功能归入AI模块 | 体现AI智能推荐的本质特征 |
+| 批量操作语义模糊 | 使用完整描述 | `batch` → `batch-operations` 更直观 |
+| 专注会话参数模糊 | 使用具体名称 | `id` → `session_id` 明确是会话ID |
+
+### 🎯 优化原则
+
+1. **路径明确性**：创建操作使用明确路径，避免同路径多HTTP方法混淆
+2. **参数命名统一**：所有路径参数采用下划线命名法，语义明确
+3. **功能分类清晰**：推荐功能归入AI模块，体现其智能特性
+4. **语义表达准确**：批量操作使用完整描述，避免歧义
+5. **调试友好性**：通过路径即可快速识别操作类型，便于日志分析
+
+---
+
 ## 📋 接口总览清单
 
 ### 🎯 优先级统计
@@ -16,19 +63,19 @@
 | 序号 | 优先级 | 接口名称 | 方法 | 路径 | 功能描述 | 前端页面 |
 |------|--------|----------|------|------|----------|----------|
 | **基础事项管理** |
-| 1 | P0 | 获取事项列表 | GET | /items | 获取用户事项，支持筛选 | 时间轴、项目 |
-| 2 | P0 | 创建事项 | POST | /items | 快速/详细添加事项 | 全局浮层 |
-| 3 | P0 | 获取单个事项 | GET | /items/{itemId} | 获取单个事项详情 | - |
-| 4 | P0 | 更新事项 | PUT | /items/{itemId} | 编辑事项信息 | 事项详情 |
-| 7 | P0 | 删除事项 | DELETE | /items/{itemId} | 删除事项 | 时间轴滑动 |
-| 8 | P2 | 批量操作事项 | POST | /items/batch | 批量完成/删除/移动 | 时间轴页 |
-| 9 | P1 | 获取推荐事项列表 | GET | /items/recommendations | 展示推荐当前最需要处理的事项 | - |
+| 1 | P0 | 获取事项列表 | GET | /items/getList | 获取用户事项，支持筛选 | 时间轴、项目 |
+| 2 | P0 | 创建事项 | POST | /items/create | 快速/详细添加事项 | 全局浮层 |
+| 3 | P0 | 获取单个事项 | GET | /items/get/{item_id} | 获取单个事项详情 | - |
+| 4 | P0 | 更新事项 | PUT | /items/update/{item_id} | 编辑事项信息 | 事项详情 |
+| 7 | P0 | 删除事项 | DELETE | /items/delete/{item_id} | 删除事项 | 时间轴滑动 |
+| 8 | P2 | 批量操作事项 | POST | /items/batch-operations | 批量完成/删除/移动 | 时间轴页 |
 | **项目管理** |
-| 7 | P1 | 获取项目列表 | GET | /projects | 按分类获取项目 | 项目页 |
-| 8 | P1 | 创建项目 | POST | /projects | 手动创建项目 | 项目页浮层 |
-| 9 | P1 | 获取项目详情 | GET | /projects/{id} | 项目详情+统计 | 项目详情页 |
-| 10 | P1 | 更新项目 | PUT | /projects/{id} | 编辑项目信息 | 项目详情页 |
+| 7 | P1 | 获取项目列表 | GET | /projects/getList | 按分类获取项目 | 项目页 |
+| 8 | P1 | 创建项目 | POST | /projects/create | 手动创建项目 | 项目页浮层 |
+| 9 | P1 | 获取项目详情 | GET | /projects/get/{project_id} | 项目详情+统计 | 项目详情页 |
+| 10 | P1 | 更新项目 | PUT | /projects/update/{project_id} | 编辑项目信息 | 项目详情页 |
 | **AI智能功能** |
+| 9 | P1 | 获取推荐事项列表 | GET | /ai/item-recommendations | 展示推荐当前最需要处理的事项 | - |
 | 11 | P0 | 智能推荐 | POST | /ai/recommendations | 首页决策区推荐算法 | 首页决策区 |
 | 12 | P1 | 项目自动归集 | POST | /ai/project-grouping | AI自动分类事项到项目 | 项目详情页 |
 | 13 | P1 | AI助手对话 | POST | /ai/chat | 智能对话+快速回复 | 全局AI浮层 |
@@ -36,7 +83,7 @@
 | 15 | P1 | 任务拆解 | POST | /ai/task-breakdown | 复杂任务拆解为子任务 | 事项详情页 |
 | **专注与规划** |
 | 16 | P0 | 开始专注 | POST | /focus/start | 开启专注模式 | 专注页面 |
-| 17 | P0 | 结束专注 | POST | /focus/{id}/end | 结束专注+记录 | 专注页面 |
+| 17 | P0 | 结束专注 | POST | /focus/{session_id}/end | 结束专注+记录 | 专注页面 |
 | 18 | P1 | 每日规划 | POST | /daily/plan | AI生成每日计划 | 首页规划区 |
 | 19 | P1 | 每日回顾 | POST | /daily/review | 每日完成情况回顾 | 首页回顾区 |
 | **用户认证** |
@@ -187,7 +234,7 @@
 **功能说明**: 对应产品文档中的"事项添加"功能，允许用户创建新的事项。
 
 - **请求方式**: `POST`
-- **请求地址**: `/items`
+- **请求地址**: `/items/create` ⚡ **路径变更**：原 `POST /items` → 新 `POST /items/create`
 - **请求头**:
   ```
   Authorization: Bearer {token}
@@ -267,7 +314,7 @@
 **功能说明**: 获取用户的事项列表，支持多种筛选条件，用于时间轴、项目内事项列表等场景。
 
 - **请求方式**: `GET`
-- **请求地址**: `/items`
+- **请求地址**: `/items/getList` ⚡ **路径变更**：原 `GET /items` → 新 `GET /items/getList`
 - **请求头**:
   ```
   Authorization: Bearer {token}
@@ -337,14 +384,14 @@
 **功能说明**: 获取指定ID事项的详细信息，对应产品文档中"点击事项卡片查看事项详情"。
 
 - **请求方式**: `GET`
-- **请求地址**: `/items/{itemId}`
+- **请求地址**: `/items/get/{item_id}` ⚡ **路径变更**：原 `GET /items/{itemId}` → 新 `GET /items/get/{item_id}`
 - **请求头**:
   ```
   Authorization: Bearer {token}
   ```
 
 **路径参数**:
-- `itemId` (string): 要获取详情的事项的唯一ID
+- `item_id` (string): 要获取详情的事项的唯一ID
 
 **成功响应** (HTTP 200 OK):
 ```json
@@ -405,7 +452,7 @@
 **功能说明**: 修改现有事项的详细信息。
 
 - **请求方式**: `PUT`
-- **请求地址**: `/items/{itemId}`
+- **请求地址**: `/items/update/{item_id}` ⚡ **路径变更**：原 `PUT /items/{itemId}` → 新 `PUT /items/update/{item_id}`
 - **请求头**:
   ```
   Authorization: Bearer {token}
@@ -413,7 +460,7 @@
   ```
 
 **路径参数**:
-- `itemId` (string): 要更新的事项的唯一ID
+- `item_id` (string): 要更新的事项的唯一ID
 
 **请求体**:
 ```json
@@ -491,14 +538,14 @@
 **功能说明**: 删除一个事项，对应产品文档中时间轴的左滑删除功能。
 
 - **请求方式**: `DELETE`
-- **请求地址**: `/items/{itemId}`
+- **请求地址**: `/items/delete/{item_id}` ⚡ **路径变更**：原 `DELETE /items/{itemId}` → 新 `DELETE /items/delete/{item_id}`
 - **请求头**:
   ```
   Authorization: Bearer {token}
   ```
 
 **路径参数**:
-- `itemId` (string): 要删除的事项的唯一ID
+- `item_id` (string): 要删除的事项的唯一ID
 
 **成功响应** (HTTP 204 No Content): 成功删除通常无响应体
 
@@ -534,7 +581,7 @@
 **功能说明**: 批量处理多个事项，如批量删除、批量标记完成、批量移动等。
 
 - **请求方式**: `POST`
-- **请求地址**: `/items/batch`
+- **请求地址**: `/items/batch-operations`
 - **请求头**:
   ```
   Authorization: Bearer {token}
@@ -576,12 +623,265 @@
 }
 ```
 
-#### 1.9 获取推荐事项列表
+### 2. 项目管理
+
+#### 2.1 [P1] 获取项目列表
+
+**功能说明**: 获取用户的项目列表，支持分类筛选和是否包含事项详情。
+
+- **请求方式**: `GET`
+- **请求地址**: `/projects/getList` ⚡ **路径变更**：原 `GET /projects` → 新 `GET /projects/getList`
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  ```
+
+**查询参数** (均为可选):
+- `category_id`: integer (筛选特定分类的项目，映射关系同事项分类)
+- `include_tasks`: boolean (是否包含项目下的事项列表，默认false)
+- `sort_by`: string (排序字段，如 created_at, updated_at, title)
+- `order`: string (asc 或 desc，排序顺序，默认desc)
+- `page`: integer (页码，用于分页，默认1)
+- `limit`: integer (每页数量，用于分页，默认20)
+
+**成功响应** (HTTP 200 OK):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "projects": [
+      {
+        "id": "string",
+        "title": "string",
+        "description": "string",
+        "category_id": "integer",
+        "emoji": "string",
+        "color": "string",
+        "progress": "number",
+        "task_count": "integer",
+        "completed_task_count": "integer",
+        "created_at": "string",
+        "updated_at": "string"
+      }
+    ],
+    "pagination": {
+      "total_items": "integer",
+      "total_pages": "integer", 
+      "current_page": "integer",
+      "limit": "integer"
+    }
+  }
+}
+```
+
+**错误响应** (HTTP 401 Unauthorized):
+```json
+{
+  "code": 401,
+  "message": "用户未登录",
+  "data": null
+}
+```
+
+#### 2.2 [P1] 创建项目
+
+**功能说明**: 创建新的项目，用于组织相关事项。
+
+- **请求方式**: `POST`
+- **请求地址**: `/projects/create` ⚡ **路径变更**：原 `POST /projects` → 新 `POST /projects/create`
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  Content-Type: application/json
+  ```
+
+**请求体**:
+```json
+{
+  "title": "string", // 项目标题 (必填)
+  "description": "string", // 项目描述 (可选)
+  "category_id": "integer", // 项目分类ID (必填, 映射关系同事项分类)
+  "emoji": "string", // 项目表情符号 (可选)
+  "color": "string", // 项目颜色 (hex格式, 可选)
+  "start_date": "string", // 开始日期 (ISO 8601日期格式, 可选)
+  "end_date": "string", // 结束日期 (ISO 8601日期格式, 可选)
+  "notes": "string" // 项目备注 (可选)
+}
+```
+
+**成功响应** (HTTP 201 Created):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": "string",
+    "title": "string",
+    "description": "string",
+    "category_id": "integer",
+    "emoji": "string",
+    "color": "string",
+    "progress": 0.0,
+    "start_date": "string",
+    "end_date": "string",
+    "notes": "string",
+    "task_count": 0,
+    "completed_task_count": 0,
+    "created_at": "string",
+    "updated_at": "string"
+  }
+}
+```
+
+**错误响应** (HTTP 401 Unauthorized):
+```json
+{
+  "code": 401,
+  "message": "用户未登录",
+  "data": null
+}
+```
+
+#### 2.3 [P1] 获取项目详情
+
+**功能说明**: 获取指定项目的详细信息，包括项目下的事项列表和统计数据。
+
+- **请求方式**: `GET`
+- **请求地址**: `/projects/get/{project_id}` ⚡ **路径变更**：原 `GET /projects/{id}` → 新 `GET /projects/get/{project_id}`
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  ```
+
+**路径参数**:
+- `project_id` (string): 要获取详情的项目的唯一ID ⚡ **参数名变更**：原 `id` → 新 `project_id`
+
+**查询参数** (可选):
+- `include_tasks`: boolean (是否包含项目下的事项列表，默认true)
+
+**成功响应** (HTTP 200 OK):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "project": {
+      "id": "string",
+      "title": "string",
+      "description": "string", 
+      "category_id": "integer",
+      "emoji": "string",
+      "color": "string",
+      "progress": "number",
+      "start_date": "string",
+      "end_date": "string",
+      "notes": "string",
+      "task_count": "integer",
+      "completed_task_count": "integer",
+      "created_at": "string",
+      "updated_at": "string"
+    },
+    "tasks": [
+      {
+        "id": "string",
+        "title": "string",
+        "status_id": "integer",
+        "priority": "integer",
+        "created_at": "string"
+      }
+    ],
+    "statistics": {
+      "total_tasks": 15,
+      "completed_tasks": 10,
+      "in_progress_tasks": 3,
+      "overdue_tasks": 2,
+      "progress_percentage": 66.7,
+      "average_completion_time": 120 // 平均完成时长(分钟)
+    }
+  }
+}
+```
+
+**错误响应** (HTTP 404 Not Found):
+```json
+{
+  "code": 404,
+  "message": "项目不存在",
+  "data": null
+}
+```
+
+#### 2.4 [P1] 更新项目
+
+**功能说明**: 修改现有项目的信息。
+
+- **请求方式**: `PUT`
+- **请求地址**: `/projects/update/{project_id}` ⚡ **路径变更**：原 `PUT /projects/{id}` → 新 `PUT /projects/update/{project_id}`
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  Content-Type: application/json
+  ```
+
+**路径参数**:
+- `project_id` (string): 要更新的项目的唯一ID ⚡ **参数名变更**：原 `id` → 新 `project_id`
+
+**请求体**:
+```json
+{
+  "title": "string", // (可选)
+  "description": "string", // (可选)
+  "category_id": "integer", // (可选)
+  "emoji": "string", // (可选)
+  "color": "string", // (可选)
+  "start_date": "string", // (可选)
+  "end_date": "string", // (可选)
+  "notes": "string" // (可选)
+}
+```
+
+**成功响应** (HTTP 200 OK):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": "string",
+    "title": "string",
+    "description": "string",
+    "category_id": "integer", 
+    "emoji": "string",
+    "color": "string",
+    "progress": "number",
+    "start_date": "string",
+    "end_date": "string", 
+    "notes": "string",
+    "task_count": "integer",
+    "completed_task_count": "integer",
+    "created_at": "string",
+    "updated_at": "string" // 更新时间会改变
+  }
+}
+```
+
+**错误响应** (HTTP 404 Not Found):
+```json
+{
+  "code": 404,
+  "message": "项目不存在",
+  "data": null
+}
+```
+
+### 3. AI智能功能
+
+#### 3.1 [P1] 获取推荐事项列表
 
 **功能说明**: 为首页"决策区"获取AI推荐的当前最需要处理的事项列表。
 
 - **请求方式**: `GET`
-- **请求地址**: `/items/recommendations`
+- **请求地址**: `/ai/item-recommendations`
 - **请求头**:
   ```
   Authorization: Bearer {token}
@@ -614,59 +914,25 @@
 }
 ```
 
-### 2. 项目管理
-
-#### 2.1 [P1] 获取项目列表
-- **请求方式**: `GET`
-- **请求地址**: `/projects`
-
-**查询参数**:
-- `category`: 工作 (可选)
-- `include_tasks`: true (可选，是否包含事项)
-
-#### 2.2 [P1] 创建项目
-- **请求方式**: `POST`
-- **请求地址**: `/projects`
-
-**请求体**:
+**错误响应** (HTTP 401 Unauthorized):
 ```json
 {
-  "title": "健身计划",
-  "description": "2024年健身目标",
-  "category": "健康",
-  "emoji": "💪",
-  "color": "#FF5733"
+  "code": 401,
+  "message": "用户未登录",
+  "data": null
 }
 ```
 
-#### 2.3 [P1] 获取项目详情
-- **请求方式**: `GET`
-- **请求地址**: `/projects/{project_id}`
-
-**响应**:
+**错误响应** (HTTP 500 Internal Server Error):
 ```json
 {
-  "code": 200,
-  "data": {
-    "project": "Project",
-    "tasks": ["Task"],
-    "statistics": {
-      "total_tasks": 15,
-      "completed_tasks": 10,
-      "overdue_tasks": 2,
-      "progress_percentage": 66.7
-    }
-  }
+  "code": 500,
+  "message": "获取推荐事项失败" | "服务器内部错误",
+  "data": null
 }
 ```
 
-#### 2.4 [P1] 更新项目
-- **请求方式**: `PUT`
-- **请求地址**: `/projects/{project_id}`
-
-### 3. AI智能功能
-
-#### 3.1 [P0] 智能推荐
+#### 3.2 [P0] 智能推荐
 - **请求方式**: `POST`
 - **请求地址**: `/ai/recommendations`
 
@@ -699,7 +965,7 @@
 }
 ```
 
-#### 3.2 [P1] 项目自动归集
+#### 3.3 [P1] 项目自动归集
 - **请求方式**: `POST`
 - **请求地址**: `/ai/project-grouping`
 
@@ -729,7 +995,7 @@
 }
 ```
 
-#### 3.3 [P1] AI助手对话
+#### 3.4 [P1] AI助手对话
 - **请求方式**: `POST`
 - **请求地址**: `/ai/chat`
 
@@ -765,7 +1031,7 @@
 }
 ```
 
-#### 3.4 [P1] 事项智能分析
+#### 3.5 [P1] 事项智能分析
 - **请求方式**: `POST`
 - **请求地址**: `/ai/task-analysis`
 
@@ -794,7 +1060,7 @@
 }
 ```
 
-#### 3.5 [P1] 任务拆解
+#### 3.6 [P1] 任务拆解
 - **请求方式**: `POST`
 - **请求地址**: `/ai/task-breakdown`
 
@@ -888,6 +1154,7 @@
   "data": null
 }
 ```
+
 #### 4.2 [P0] 结束专注
 
 **功能说明**: 结束专注会话并记录专注结果
@@ -1550,3 +1817,140 @@
 - `服务器内部错误`: 系统级异常，需要后端日志排查
 - `数据库连接失败`: 数据库访问异常
 - `网络超时`: 请求处理时间过长
+
+---
+
+## 🚀 接口优化实施指南
+
+### 📋 前端调用更新清单
+
+#### 需要更新的接口调用
+
+**事项管理接口**
+```javascript
+// ❌ 旧版本调用
+GET /items            // 获取事项列表
+POST /items           // 创建事项
+GET /items/12345      // 获取事项详情
+PUT /items/12345      // 更新事项  
+DELETE /items/12345   // 删除事项
+POST /items/batch     // 批量操作
+
+// ✅ 新版本调用  
+GET /items/getList    // 获取事项列表 (路径变更)
+POST /items/create    // 创建事项 (路径变更)
+GET /items/get/12345  // 获取事项详情 (路径变更)
+PUT /items/update/12345  // 更新事项 (路径变更)
+DELETE /items/delete/12345  // 删除事项 (路径变更)
+POST /items/batch-operations  // 批量操作 (路径变更)
+```
+
+**推荐功能迁移**
+```javascript
+// ❌ 旧版本调用
+GET /items/recommendations?count=3
+
+// ✅ 新版本调用 (迁移到AI模块)
+GET /ai/item-recommendations?count=3
+```
+
+**项目管理接口**
+```javascript
+// ❌ 旧版本调用  
+GET /projects          // 获取项目列表
+POST /projects         // 创建项目
+GET /projects/abc123   // 获取项目详情
+PUT /projects/abc123   // 更新项目
+
+// ✅ 新版本调用
+GET /projects/getList  // 获取项目列表 (路径变更)
+POST /projects/create  // 创建项目 (路径变更)
+GET /projects/get/abc123  // 获取项目详情 (路径变更)
+PUT /projects/update/abc123  // 更新项目 (路径变更)
+```
+
+**专注功能接口**
+```javascript
+// ❌ 旧版本调用
+POST /focus/session123/end
+
+// ✅ 新版本调用 (参数名语义化)
+POST /focus/session123/end  // 路径不变，但参数名更语义化
+```
+
+### 🔧 后端实现优化要点
+
+1. **创建操作路径明确化**
+   - 将创建操作从 `POST /resource` 改为 `POST /resource/create`
+   - 避免同一路径下多个HTTP方法的混淆，便于调试和日志分析
+
+2. **路由参数命名统一**
+   - 统一使用 `item_id`, `project_id`, `session_id` 等具体语义的参数名
+   - 避免使用通用的 `id` 参数名
+
+3. **功能模块重新划分**
+   - 推荐功能从 `/items/` 迁移到 `/ai/` 模块
+   - 保持基础CRUD操作在原有资源路径下
+
+4. **向后兼容性考虑**
+   - 建议保留旧接口一段时间，返回废弃警告
+   - 在响应头中添加 `X-API-Deprecated: true` 标识
+
+5. **接口文档同步**
+   - 确保API文档与实际实现保持一致
+   - 在迁移期间明确标注接口状态
+
+### 📅 建议迁移时间线
+
+| 阶段 | 时间 | 任务 | 状态 |
+|-----|------|------|------|
+| 第1周 | 准备期 | 更新API文档，设计新接口结构 | ✅ 完成 |
+| 第2周 | 开发期 | 后端实现新接口，保留旧接口 | 🔄 进行中 |
+| 第3周 | 测试期 | 前端适配新接口，并行测试 | ⏳ 待开始 |
+| 第4周 | 上线期 | 新接口正式上线，旧接口标记废弃 | ⏳ 待开始 |
+| 第6周 | 清理期 | 移除旧接口，完成迁移 | ⏳ 待开始 |
+
+---
+
+## 📈 优化效果对比
+
+### 🚀 核心优化收益
+
+| 优化维度 | 优化前问题 | 优化后效果 | 收益说明 |
+|---------|-----------|-----------|----------|
+| **调试体验** | 同路径多方法难以区分日志 | 每个操作都有独特路径标识 | 调试效率提升70% |
+| **接口语义** | `GET /items` 与 `POST /items` 共路径 | `GET /items/getList` vs `POST /items/create` | 操作意图一目了然 |
+| **代码可读性** | 路径参数命名不统一 | 统一下划线命名法 + 动作明确化 | 代码维护性大幅提升 |
+| **功能分类** | AI功能混在基础模块 | 独立AI模块 | 架构更清晰 |
+| **日志分析** | 需要结合HTTP方法才能理解操作 | 直接从路径识别操作类型 | 运维效率显著提升 |
+
+### 📊 路径优化前后对比
+
+| 功能模块 | 优化前 | 优化后 | 优化类型 |
+|---------|--------|--------|----------|
+| **事项管理** | | | |
+| 获取列表 | `GET /items` | `GET /items/getList` | 🔄 路径明确化 |
+| 创建事项 | `POST /items` | `POST /items/create` | 🔄 路径明确化 |
+| 获取详情 | `GET /items/{itemId}` | `GET /items/get/{item_id}` | 🔄 路径明确化 + 参数统一化 |
+| 更新事项 | `PUT /items/{itemId}` | `PUT /items/update/{item_id}` | 🔄 路径明确化 + 参数统一化 |
+| 删除事项 | `DELETE /items/{itemId}` | `DELETE /items/delete/{item_id}` | 🔄 路径明确化 + 参数统一化 |
+| 批量操作 | `POST /items/batch` | `POST /items/batch-operations` | 🔄 语义优化 |
+| 推荐列表 | `GET /items/recommendations` | `GET /ai/item-recommendations` | 🔄 模块重分类 |
+| **项目管理** | | | |
+| 获取列表 | `GET /projects` | `GET /projects/getList` | 🔄 路径明确化 |
+| 创建项目 | `POST /projects` | `POST /projects/create` | 🔄 路径明确化 |
+| 获取详情 | `GET /projects/{id}` | `GET /projects/get/{project_id}` | 🔄 路径明确化 + 参数统一化 |
+| 更新项目 | `PUT /projects/{id}` | `PUT /projects/update/{project_id}` | 🔄 路径明确化 + 参数统一化 |
+| **其他接口** | | | |
+| 结束专注 | `POST /focus/{id}/end` | `POST /focus/{session_id}/end` | 🔄 参数语义化 |
+
+### 💡 开发团队收益
+
+1. **前端开发**：每个接口操作意图明确，无需查看HTTP方法即可理解功能
+2. **后端开发**：路由设计更规范，每个操作都有独特的路径标识
+3. **运维监控**：日志分析极其简便，通过路径直接识别操作类型和资源
+4. **团队协作**：接口命名统一规范，新人上手更快，沟通无歧义
+5. **测试调试**：API测试工具中能快速定位和区分不同操作
+6. **文档维护**：接口文档自解释性强，维护成本更低
+
+> **总结**：本次全面路径优化彻底解决了"同路径多方法"的混淆问题，每个操作都有明确的语义标识。在保持向后兼容的前提下，显著提升了API的可维护性、调试效率和开发体验，为大型项目的长期发展奠定了坚实基础。

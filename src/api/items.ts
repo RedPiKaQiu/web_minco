@@ -59,7 +59,7 @@ export interface GetItemsQuery {
  */
 export async function createItem(itemData: CreateItemRequest): Promise<Item> {
   try {
-    const response = await fetchApi<ApiResponse<Item>>('/items', {
+    const response = await fetchApi<ApiResponse<Item>>('/items/create', {
       method: 'POST',
       body: JSON.stringify(itemData),
     });
@@ -116,7 +116,7 @@ export async function getItems(query: GetItemsQuery = {}): Promise<ItemListRespo
     });
     
     const queryString = params.toString();
-    const endpoint = queryString ? `/items?${queryString}` : '/items';
+    const endpoint = queryString ? `/items/getList?${queryString}` : '/items/getList';
     
     const response = await fetchApi<ApiResponse<ItemListResponse>>(endpoint, {
       method: 'GET',
@@ -148,7 +148,7 @@ export async function getItems(query: GetItemsQuery = {}): Promise<ItemListRespo
  */
 export async function getItem(itemId: string): Promise<Item> {
   try {
-    const response = await fetchApi<ApiResponse<Item>>(`/items/${itemId}`, {
+    const response = await fetchApi<ApiResponse<Item>>(`/items/get/${itemId}`, {
       method: 'GET',
     });
 
@@ -186,10 +186,10 @@ export async function updateItem(itemId: string, itemData: UpdateItemRequest): P
   console.log(`🌐 realUpdateItem 被调用:`, { itemId, itemData });
   
   try {
-    console.log(`📤 发送PUT请求到: /items/${itemId}`);
+    console.log(`📤 发送PUT请求到: /items/update/${itemId}`);
     console.log(`📋 请求体数据:`, JSON.stringify(itemData));
     
-    const response = await fetchApi<ApiResponse<{ id: string; title: string; updated_at: string }>>(`/items/${itemId}`, {
+    const response = await fetchApi<ApiResponse<{ id: string; title: string; updated_at: string }>>(`/items/update/${itemId}`, {
       method: 'PUT',
       body: JSON.stringify(itemData),
     });
@@ -250,7 +250,7 @@ export async function deleteItem(itemId: string): Promise<void> {
     console.log(`🌐 realDeleteItem 被调用:`, { itemId });
     
     const token = localStorage.getItem('access_token');
-    const url = `${API_BASE_URL}/items/${itemId}`;
+    const url = `${API_BASE_URL}/items/delete/${itemId}`;
     
     console.log(`📤 发送DELETE请求到: ${url}`);
     
