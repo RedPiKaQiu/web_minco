@@ -10,19 +10,43 @@ import { formatBeijingTimeToLocal } from './timezone';
  * 将API返回的Item格式转换为现有组件期望的Task格式
  */
 export const adaptItemToTask = (apiItem: Item) => {
-  return {
-    ...apiItem, // 继承所有Item字段（包括priority: number）
-    // 兼容字段的计算属性
-    completed: apiItem.status_id === 3, // 3表示已完成
-    dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
-    startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
-    endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
-    category: mapCategoryIdToEnum(apiItem.category_id), // 从category_id转换
-    duration: calculateDuration(apiItem), // 计算时长
-    isAnytime: !apiItem.start_time,
-    icon: apiItem.emoji,
-    project: undefined, // 项目关联暂时保持为空，后续可以根据project_id查询
-  };
+  try {
+    return {
+      ...apiItem, // 继承所有Item字段（包括priority: number）
+      // 兼容字段的计算属性
+      completed: apiItem.status_id === 3, // 3表示已完成
+      dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
+      startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
+      endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
+      category: mapCategoryIdToEnum(apiItem.category_id), // 从category_id转换
+      duration: calculateDuration(apiItem), // 计算时长
+      isAnytime: !apiItem.start_time,
+      icon: apiItem.emoji,
+      project: undefined, // 项目关联暂时保持为空，后续可以根据project_id查询
+    };
+  } catch (error) {
+    console.error('❌ adaptItemToTask: 事项数据转换失败', {
+      itemId: apiItem.id,
+      itemTitle: apiItem.title,
+      startTime: apiItem.start_time,
+      endTime: apiItem.end_time,
+      error: error instanceof Error ? error.message : error
+    });
+    
+    // 返回一个安全的默认值，避免应用崩溃
+    return {
+      ...apiItem,
+      completed: false,
+      dueDate: undefined,
+      startTime: undefined,
+      endTime: undefined,
+      category: mapCategoryIdToEnum(apiItem.category_id),
+      duration: undefined,
+      isAnytime: true,
+      icon: apiItem.emoji || '📝',
+      project: undefined,
+    };
+  }
 };
 
 

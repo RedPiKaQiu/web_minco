@@ -81,12 +81,44 @@ export const beijingStringToLocalDate = (beijingTimeString: string): Date => {
  * 格式化时间显示 (北京时间转本地时间显示)
  */
 export const formatBeijingTimeToLocal = (beijingTimeString: string): string => {
-  // 如果本地时区就是北京时间，直接格式化时间部分
-  if (isLocalTimeBeijing()) {
-    const date = parseISO(beijingTimeString);
-    return format(date, 'HH:mm');
+  try {
+    // 检查输入是否为有效字符串
+    if (!beijingTimeString || typeof beijingTimeString !== 'string') {
+      console.warn('⚠️ formatBeijingTimeToLocal: 无效的时间字符串', beijingTimeString);
+      return '--:--';
+    }
+
+    // 处理只有时间部分的情况（如 "09:00"）
+    let fullDateTimeString = beijingTimeString;
+    if (beijingTimeString.length <= 5 && beijingTimeString.includes(':')) {
+      // 如果只是时间格式，添加今天的日期
+      const today = new Date().toISOString().split('T')[0];
+      fullDateTimeString = `${today}T${beijingTimeString}:00`;
+      console.log('🕐 时间格式转换: 补充日期部分', {
+        original: beijingTimeString,
+        converted: fullDateTimeString
+      });
+    }
+
+    // 如果本地时区就是北京时间，直接格式化时间部分
+    if (isLocalTimeBeijing()) {
+      const date = parseISO(fullDateTimeString);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date after parseISO');
+      }
+      return format(date, 'HH:mm');
+    }
+    
+    const localDate = beijingStringToLocalDate(fullDateTimeString);
+    if (isNaN(localDate.getTime())) {
+      throw new Error('Invalid date from beijingStringToLocalDate');
+    }
+    return format(localDate, 'HH:mm');
+  } catch (error) {
+    console.error('❌ formatBeijingTimeToLocal: 时间格式化失败', {
+      input: beijingTimeString,
+      error: error instanceof Error ? error.message : error
+    });
+    return '--:--';
   }
-  
-  const localDate = beijingStringToLocalDate(beijingTimeString);
-  return format(localDate, 'HH:mm');
 }; 

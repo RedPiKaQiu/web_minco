@@ -51,10 +51,34 @@ const TimelinePage = () => {
   const completedTasks = apiCompletedTasks.map(adaptItemToTask);
   const allTasks = [...incompleteTasks, ...completedTasks];
 
-  // 页面初始化时加载当天任务
+  // 页面初始化时的数据获取策略
   useEffect(() => {
-    console.log('📅 TimelinePage: 初始化，加载当天任务');
-    loadTasksByDate(selectedDate);
+    console.log('📅 TimelinePage: 初始化，检查是否需要清理缓存');
+    
+    // 检查是否需要清理缓存（用户刚登录）
+    const needClearCache = localStorage.getItem('clearCacheOnNextLoad');
+    if (needClearCache) {
+      console.log('🧹 TimelinePage: 检测到需要清理缓存标记，清理旧缓存数据');
+      // 清理可能的旧缓存数据，防止数据泄露
+      sessionStorage.removeItem('timeline-cache-metadata');
+      sessionStorage.removeItem('project-cache-metadata');
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('timeline-tasks-') || 
+            key.startsWith('project-category-tasks-') || 
+            key.includes('task') || 
+            key.includes('item') || 
+            key.includes('cache')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      // 移除标记，避免重复清理
+      localStorage.removeItem('clearCacheOnNextLoad');
+      console.log('✅ TimelinePage: 旧缓存清理完成，强制从后端加载');
+      loadTasksByDate(selectedDate, true); // 强制重新加载
+    } else {
+      console.log('📅 TimelinePage: 正常页面访问，使用缓存优化加载当天任务');
+      loadTasksByDate(selectedDate); // 正常加载，会自动检查缓存
+    }
   }, [loadTasksByDate]);
 
   // 监听页面焦点，返回页面时刷新缓存数据

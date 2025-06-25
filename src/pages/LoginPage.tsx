@@ -37,33 +37,111 @@ const LoginPage = () => {
   }, [state.isAuthenticated, state.user, navigate]);
 
   const handleTestLogin = () => {
-    // 创建测试用户数据
-    const testUser = {
-      id: uuidv4(),
-      username: 'Shell',
-      email: 'shell@test.com',
-      nickname: 'Shell',
-      gender: 'female' as const,
-      age: 25,
-      created_at: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+    try {
+      // 创建测试用户数据
+      const testUser = {
+        id: uuidv4(),
+        username: 'Shell',
+        email: 'shell@test.com',
+        nickname: 'Shell',
+        gender: 'female' as const,
+        age: 25,
+        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+
+      // 设置测试用户的access_token（确保AppContext能正常工作）
+      localStorage.setItem('access_token', 'test-token-' + Date.now());
+
+      // 清空所有表单状态
+      setUsername('');
+      setPassword('');
+      setLoginError('');
+      setRegisterError('');
+
+      // 分发登录操作
+      dispatch({ type: 'LOGIN', payload: testUser });
+      
+      console.log('✅ 测试用户登录成功', testUser);
+      
+      // 导航到主页 - 直接导航到/home避免重定向竞态
+      navigate('/home', { replace: true });
+    } catch (error) {
+      console.error('❌ 测试用户登录失败:', error);
+      setLoginError('测试用户登录失败，请稍后重试');
+      // 清除可能的问题状态
+      handleClearLoginState();
+    }
+  };
+
+  // 清除登录状态的辅助函数
+  const handleClearLoginState = () => {
+    try {
+      // 清除所有本地存储的认证信息
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      
+      // 清除测试数据（可选，避免污染下次登录）
+      localStorage.removeItem('mock_tasks');
+      localStorage.removeItem('mock_projects');
+      
+      // 清除缓存数据
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('timeline-tasks-') || key.startsWith('timeline-cache-metadata')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // 重置用户状态
+      dispatch({ type: 'LOGOUT' });
+      
+      console.log('🧹 已清除登录状态和缓存数据');
+    } catch (error) {
+      console.error('❌ 清除登录状态失败:', error);
+    }
+  };
+
+  // 在组件挂载时设置全局错误处理
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('🚨 全局错误捕获:', event.error);
+      
+      // 检查是否是时间相关的错误
+      if (event.error && (
+        event.error.message?.includes('Invalid time value') ||
+        event.error.message?.includes('format') ||
+        event.error.message?.includes('parseISO')
+      )) {
+        console.log('🔧 检测到时间格式错误，清除登录状态');
+        setLoginError('检测到数据格式错误，已自动清除登录状态，请重新登录');
+        handleClearLoginState();
+      }
     };
 
-    // 设置测试用户的access_token（确保AppContext能正常工作）
-    localStorage.setItem('access_token', 'test-token-' + Date.now());
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('🚨 未处理的Promise拒绝:', event.reason);
+      
+      // 检查是否是时间相关的错误
+      if (event.reason && (
+        event.reason.message?.includes('Invalid time value') ||
+        event.reason.message?.includes('format') ||
+        event.reason.message?.includes('parseISO')
+      )) {
+        console.log('🔧 检测到时间格式错误，清除登录状态');
+        setLoginError('检测到数据格式错误，已自动清除登录状态，请重新登录');
+        handleClearLoginState();
+      }
+    };
 
-    // 清空所有表单状态
-    setUsername('');
-    setPassword('');
-    setLoginError('');
-    setRegisterError('');
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-    // 分发登录操作
-    dispatch({ type: 'LOGIN', payload: testUser });
-    
-    // 导航到主页 - 直接导航到/home避免重定向竞态
-    navigate('/home', { replace: true });
-  };
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, [dispatch]);
 
   const handleTestConnection = async () => {
     setConnectionStatus('连接中...');
@@ -333,6 +411,14 @@ const LoginPage = () => {
               className="w-full border border-[var(--color-primary)] text-[var(--color-primary)] bg-transparent rounded-[var(--button-radius)] py-3 font-medium transition-all duration-[var(--transition-normal)] hover:bg-[var(--color-primary-light)/10] mt-2"
             >
               重置测试数据
+            </button>
+            
+            {/* 清除缓存数据按钮 */}
+            <button
+              onClick={handleClearLoginState}
+              className="w-full border border-orange-500 text-orange-500 bg-transparent rounded-[var(--button-radius)] py-3 font-medium transition-all duration-[var(--transition-normal)] hover:bg-orange-50 mt-2"
+            >
+              清除缓存数据
             </button>
           </div>
         ) : showLoginForm ? (

@@ -11,6 +11,8 @@ const mockDelay = (ms: number = 300) => new Promise(resolve => setTimeout(resolv
 
 // 获取测试用户的模拟任务数据
 const getMockTasks = (): Item[] => {
+  const today = new Date().toISOString().split('T')[0]; // 获取今天的日期部分
+  
   return [
     {
       id: 'task-1',
@@ -22,7 +24,7 @@ const getMockTasks = (): Item[] => {
       status_id: 1,
       time_slot_id: 1,
       estimated_duration: 120,
-      start_time: '09:00',
+      start_time: `${today}T09:00:00`, // 修复为完整的ISO格式
       is_overdue: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -37,7 +39,7 @@ const getMockTasks = (): Item[] => {
       status_id: 1,
       time_slot_id: 3,
       estimated_duration: 60,
-      start_time: '18:00',
+      start_time: `${today}T18:00:00`, // 修复为完整的ISO格式
       is_overdue: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -80,7 +82,7 @@ const getMockTasks = (): Item[] => {
       status_id: 1,
       time_slot_id: 4,
       estimated_duration: 90,
-      start_time: '20:00',
+      start_time: `${today}T20:00:00`, // 修复为完整的ISO格式
       is_overdue: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

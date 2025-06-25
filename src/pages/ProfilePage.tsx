@@ -26,22 +26,7 @@ const ProfilePage = () => {
   // 不强制重定向，而是显示未登录状态或登录界面
 
   const handleLogout = () => {
-    // 清除所有存储的数据
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('token_type');
-    localStorage.removeItem('access_token');
-    
-    // 清除应用状态数据
-    localStorage.removeItem('appState');
-    
-    // 如果是测试用户，也清除测试数据
-    if (userIsTest) {
-      localStorage.removeItem('mock_tasks');
-      localStorage.removeItem('mock_projects');
-    }
-    
-    // 分发登出操作
+    // 分发登出操作（会自动清理所有缓存）
     dispatch({ type: 'LOGOUT' });
     
     // 导航到登录页面

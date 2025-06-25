@@ -122,21 +122,40 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 页面加载时优先尝试从缓存加载，否则获取今日任务
+  // 页面加载时的数据获取策略
   useEffect(() => {
     console.log('🏠 HomePage: useEffect触发，检查状态', { isTestUser });
     
-    // 首先尝试从缓存刷新数据
-    console.log('🏠 HomePage: 优先尝试从缓存加载数据');
-    const refreshed = refreshFromCache();
-    if (!refreshed) {
-      // 如果缓存不可用，则调用loadTodayTasks
-      console.log('🏠 HomePage: 缓存不可用，开始加载今日任务');
-      loadTodayTasks();
+    // 检查是否需要清理缓存（用户刚登录）
+    const needClearCache = localStorage.getItem('clearCacheOnNextLoad');
+    if (needClearCache) {
+      console.log('🧹 HomePage: 检测到需要清理缓存标记，清理旧缓存数据');
+      // 清理可能的旧缓存数据，防止数据泄露
+      sessionStorage.removeItem('timeline-cache-metadata');
+      sessionStorage.removeItem('project-cache-metadata');
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('timeline-tasks-') || 
+            key.startsWith('project-category-tasks-') || 
+            key.includes('task') || 
+            key.includes('item') || 
+            key.includes('cache')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      // 移除标记，避免重复清理
+      localStorage.removeItem('clearCacheOnNextLoad');
+      console.log('✅ HomePage: 旧缓存清理完成，强制从后端加载');
+      loadTodayTasks(true); // 强制重新加载
     } else {
-      console.log('✅ HomePage: 使用缓存数据初始化页面');
+      console.log('🏠 HomePage: 正常页面访问，优先使用缓存');
+      // 先尝试从缓存刷新，如果没有缓存再从后端加载
+      const refreshed = refreshFromCache();
+      if (!refreshed) {
+        console.log('📡 HomePage: 缓存不可用，从后端加载');
+        loadTodayTasks();
+      }
     }
-  }, [loadTodayTasks, refreshFromCache]); // 依赖loadTodayTasks和refreshFromCache
+  }, [loadTodayTasks, refreshFromCache]);
 
   // 监听页面焦点，返回页面时尝试从缓存刷新数据
   useEffect(() => {

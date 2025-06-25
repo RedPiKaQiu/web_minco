@@ -162,28 +162,38 @@ export async function logout(): Promise<void> {
     await fetchApi<ApiResponse<void>>('/auth/logout', { 
       method: 'POST' 
     });
-    
-    // 清除本地存储的token
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('appState');
   } catch (error) {
-    console.error('登出失败:', error);
+    console.error('后端登出失败:', error);
+    // 继续执行本地清理，即使后端失败
+  } finally {
+    // 无论后端登出是否成功，都要清除本地数据，防止数据泄露
+    console.log('🧹 清理本地存储和缓存数据');
     
-    // 即使后端登出失败，也要清除本地token
+    // 清除localStorage中的用户数据
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     localStorage.removeItem('appState');
+    localStorage.removeItem('token');
+    localStorage.removeItem('token_type');
+    localStorage.removeItem('mock_tasks');
+    localStorage.removeItem('mock_projects');
     
-    if (error instanceof ApiError) {
-      // 如果是401错误，说明token已经无效，不需要抛出错误
-      if (error.statusCode === 401) {
-        return;
+    // 清除sessionStorage中的所有缓存
+    sessionStorage.removeItem('timeline-cache-metadata');
+    sessionStorage.removeItem('project-cache-metadata');
+    
+    // 清除所有任务相关缓存
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('timeline-tasks-') || 
+          key.startsWith('project-category-tasks-') || 
+          key.includes('task') || 
+          key.includes('item') || 
+          key.includes('cache')) {
+        sessionStorage.removeItem(key);
       }
-      throw new ApiError('登出失败，但已清除本地登录状态', error.code, error.statusCode);
-    }
+    });
     
-    throw new ApiError('登出失败，但已清除本地登录状态', 500, 500);
+    console.log('✅ 用户数据清理完成');
   }
 }
 

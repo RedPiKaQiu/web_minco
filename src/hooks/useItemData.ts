@@ -150,7 +150,7 @@ export const useHomePageTasks = () => {
     }
   }, [getCacheMetadata]);
 
-  const loadTodayTasks = useCallback(async () => {
+  const loadTodayTasks = useCallback(async (forceReload: boolean = false) => {
     const currentIsTestUser = isTestUserRef.current;
     
     // 防止重复调用
@@ -159,7 +159,21 @@ export const useHomePageTasks = () => {
       return;
     }
 
-    console.log('🏠 useHomePageTasks: 开始加载数据', { isTestUser: currentIsTestUser });
+    console.log('🏠 useHomePageTasks: 开始加载数据', { isTestUser: currentIsTestUser, forceReload });
+    
+    // 如果不是强制重新加载，先检查缓存
+    if (!forceReload) {
+      const cachedTasks = checkTodayCache();
+      if (cachedTasks) {
+        setTodayTasks(cachedTasks);
+        const recommendations = generateRecommendationsFromTasks(cachedTasks);
+        setRecommendedTasks(recommendations);
+        console.log('📦 useHomePageTasks: 使用今日缓存数据', { 
+          taskCount: cachedTasks.length 
+        });
+        return;
+      }
+    }
     
     isLoadingRef.current = true;
     setIsLoading(true);
@@ -206,7 +220,7 @@ export const useHomePageTasks = () => {
     setError(null);
     
     try {
-      console.log('🏠 useHomePageTasks: 开始加载今日任务');
+      console.log('🏠 useHomePageTasks: 开始从后端加载今日任务');
       
       // 只获取今日任务
       const todayResponse = await getTodayTasks();
@@ -475,12 +489,12 @@ export const useTimelineTasks = () => {
   }, [cleanupCache, updateCacheMetadata]);
 
   // 加载指定日期的任务
-  const loadTasksByDate = useCallback(async (date: Date) => {
+  const loadTasksByDate = useCallback(async (date: Date, forceReload: boolean = false) => {
     // 将本地时间转换为北京时间字符串
     const beijingDateStr = localDateToBeijingString(date);
     
-    // 如果已经加载过这个北京时间日期的数据，跳过
-    if (loadedDateRef.current === beijingDateStr && !isLoadingRef.current) {
+    // 如果已经加载过这个北京时间日期的数据，且不是强制重载，跳过
+    if (loadedDateRef.current === beijingDateStr && !isLoadingRef.current && !forceReload) {
       console.log('💾 TimelineTasks: 数据已加载，跳过重复调用', { 
         localDate: format(date, 'yyyy-MM-dd'),
         beijingDate: beijingDateStr 
@@ -497,12 +511,19 @@ export const useTimelineTasks = () => {
       return;
     }
     
-    // 检查是否可以复用缓存数据
-    const cachedTasks = checkCache(date);
-    if (cachedTasks) {
-      setAllTasks(cachedTasks);
-      loadedDateRef.current = beijingDateStr;
-      return;
+    // 如果不是强制重载，检查是否可以复用缓存数据
+    if (!forceReload) {
+      const cachedTasks = checkCache(date);
+      if (cachedTasks) {
+        setAllTasks(cachedTasks);
+        loadedDateRef.current = beijingDateStr;
+        console.log('📦 TimelineTasks: 使用缓存数据', { 
+          localDate: format(date, 'yyyy-MM-dd'),
+          beijingDate: beijingDateStr,
+          taskCount: cachedTasks.length 
+        });
+        return;
+      }
     }
     
     console.log('📅 TimelineTasks: 开始加载任务', { 
