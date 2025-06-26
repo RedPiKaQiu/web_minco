@@ -3,7 +3,27 @@
  * 在重构期间提供统一的转换逻辑
  */
 import { Item, ItemCategory } from '../types';
-import { formatBeijingTimeToLocal } from './timezone';
+
+/**
+ * 从ISO时间字符串中提取时间部分 (HH:MM格式)
+ */
+const extractTimeFromISO = (isoString: string): string | undefined => {
+  try {
+    if (!isoString) return undefined;
+    
+    // 直接从ISO字符串中提取时间部分
+    // 例如: "2025-06-25T09:00:00Z" -> "09:00"
+    const timePart = isoString.split('T')[1];
+    if (!timePart) return undefined;
+    
+    // 移除秒数和时区信息，只保留小时:分钟
+    const timeOnly = timePart.split(':').slice(0, 2).join(':');
+    return timeOnly;
+  } catch (error) {
+    console.error('❌ extractTimeFromISO: 时间提取失败', { isoString, error });
+    return undefined;
+  }
+};
 
 /**
  * Item到Task兼容格式的适配器
@@ -16,8 +36,8 @@ export const adaptItemToTask = (apiItem: Item) => {
       // 兼容字段的计算属性
       completed: apiItem.status_id === 3, // 3表示已完成
       dueDate: apiItem.start_time ? apiItem.start_time.split('T')[0] : undefined,
-      startTime: apiItem.start_time ? formatBeijingTimeToLocal(apiItem.start_time) : undefined,
-      endTime: apiItem.end_time ? formatBeijingTimeToLocal(apiItem.end_time) : undefined,
+      startTime: apiItem.start_time ? extractTimeFromISO(apiItem.start_time) : undefined,
+      endTime: apiItem.end_time ? extractTimeFromISO(apiItem.end_time) : undefined,
       category: mapCategoryIdToEnum(apiItem.category_id), // 从category_id转换
       duration: calculateDuration(apiItem), // 计算时长
       isAnytime: !apiItem.start_time,
@@ -48,8 +68,6 @@ export const adaptItemToTask = (apiItem: Item) => {
     };
   }
 };
-
-
 
 // 不再需要priority转换 - 统一使用Item.priority (number 1-5)
 
