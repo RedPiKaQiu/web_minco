@@ -332,15 +332,15 @@ export async function deleteItem(itemId: string): Promise<void> {
 } 
 
 /**
- * 获取今日任务（用于首页）
- * @returns 今日的待办任务
+ * 获取今日任务（用于首页和时间轴）
+ * @returns 今日的所有事项（包括已完成和未完成）
  */
 export async function getTodayTasks(): Promise<ItemListResponse> {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD格式
   
   return getItems({
     date: today,
-    is_completed: false,
+    // 移除 is_completed 筛选，获取所有事项
     sort_by: 'priority',
     order: 'desc',
     limit: 50

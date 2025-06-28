@@ -42,7 +42,8 @@ const timeOptions = [
   '2 小时', 
   '3 小时', 
   '4 小时',
-  '全天'
+  '全天',
+  '自定义时长'
 ];
 
 // 预设开始时间选项
@@ -61,7 +62,8 @@ const startTimeOptions = [
   '下午 6:00',
   '晚上 7:00',
   '晚上 8:00',
-  '晚上 9:00'
+  '晚上 9:00',
+  '自定义时间'
 ];
 
 // 日期选择选项
@@ -98,6 +100,14 @@ const NewItemPage = () => {
   const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 自定义时间选择状态
+  const [isCustomStartTimePickerOpen, setIsCustomStartTimePickerOpen] = useState(false);
+  const [isCustomDurationPickerOpen, setIsCustomDurationPickerOpen] = useState(false);
+  const [customStartHour, setCustomStartHour] = useState(9);
+  const [customStartMinute, setCustomStartMinute] = useState(0);
+  const [customDurationHour, setCustomDurationHour] = useState(0);
+  const [customDurationMinute, setCustomDurationMinute] = useState(30);
   
   // 在编辑模式下预填充表单数据
   useEffect(() => {
@@ -660,14 +670,24 @@ const NewItemPage = () => {
   
   // 处理时间选择
   const handleSelectTime = (selectedTime: string) => {
-    setTime(selectedTime);
-    setIsTimePickerOpen(false);
+    if (selectedTime === '自定义时长') {
+      setIsTimePickerOpen(false);
+      setIsCustomDurationPickerOpen(true);
+    } else {
+      setTime(selectedTime);
+      setIsTimePickerOpen(false);
+    }
   };
   
   // 处理开始时间选择
   const handleSelectStartTime = (selectedStartTime: string) => {
-    setStartTime(selectedStartTime);
-    setIsStartTimePickerOpen(false);
+    if (selectedStartTime === '自定义时间') {
+      setIsStartTimePickerOpen(false);
+      setIsCustomStartTimePickerOpen(true);
+    } else {
+      setStartTime(selectedStartTime);
+      setIsStartTimePickerOpen(false);
+    }
   };
 
   // 处理日期选择
@@ -681,10 +701,33 @@ const NewItemPage = () => {
     });
   };
 
+  // 处理自定义开始时间确认
+  const handleConfirmCustomStartTime = () => {
+    const period = customStartHour < 12 ? '上午' : '下午';
+    const displayHour = customStartHour === 0 ? 12 : (customStartHour > 12 ? customStartHour - 12 : customStartHour);
+    const customTimeStr = `${period} ${displayHour}:${customStartMinute.toString().padStart(2, '0')}`;
+    setStartTime(customTimeStr);
+    setIsCustomStartTimePickerOpen(false);
+  };
+
+  // 处理自定义持续时间确认
+  const handleConfirmCustomDuration = () => {
+    let customDurationStr = '';
+    if (customDurationHour > 0 && customDurationMinute > 0) {
+      customDurationStr = `${customDurationHour} 小时 ${customDurationMinute} 分钟`;
+    } else if (customDurationHour > 0) {
+      customDurationStr = `${customDurationHour} 小时`;
+    } else {
+      customDurationStr = `${customDurationMinute} 分钟`;
+    }
+    setTime(customDurationStr);
+    setIsCustomDurationPickerOpen(false);
+  };
+
   return (
     <div className="h-screen bg-white flex flex-col">
-      {/* 顶部导航栏 */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      {/* 顶部导航栏 - 固定不滚动 */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white z-10 flex-shrink-0">
         <button onClick={handleBack} className="p-2">
           <ArrowLeft size={24} className="text-gray-600" />
         </button>
@@ -702,174 +745,203 @@ const NewItemPage = () => {
         </button>
       </div>
       
-      {/* 事项标题输入 */}
-      <div className="p-4 border-b border-gray-100">
-        <input
-          type="text"
-          placeholder="添加标题..."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full text-lg px-2 py-3 border-0 focus:outline-none focus:ring-0"
-        />
-      </div>
-      
-      {/* 事项性质选择 */}
-      <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg mb-4">事项性质</h2>
-        <div className="grid grid-cols-4 gap-4">
-          {taskNatureOptions.map((option) => (
-            <div 
-              key={option.id}
-              onClick={() => setSelectedNature(option.id)}
-              className={`flex flex-col items-center justify-center border rounded-lg p-4 cursor-pointer ${
-                selectedNature === option.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-            >
-              <div className="mb-2">{option.icon}</div>
-              <span className="text-sm">{option.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* 事项分类 */}
-      <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg mb-4">事项分类</h2>
-        <div className="grid grid-cols-4 gap-4">
-          {taskCategoryOptions.map((option) => (
-            <div 
-              key={option.id}
-              onClick={() => setSelectedCategory(option.id)}
-              className={`flex flex-col items-center justify-center border rounded-lg p-4 cursor-pointer ${
-                selectedCategory === option.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-            >
-              <div className="text-2xl mb-2">{option.icon}</div>
-              <span className="text-sm">{option.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* 重复设置 */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <RefreshCw size={20} className="text-gray-500 mr-3" />
-            <span>重复</span>
-          </div>
-          <div className="flex items-center">
-            <span className="mr-2 text-gray-500">{isRepeating ? '不重复' : '不重复'}</span>
-            <button 
-              onClick={handleToggleRepeat}
-              className="w-10 h-6 bg-gray-200 rounded-full relative focus:outline-none"
-            >
-              <div className={`
-                absolute w-5 h-5 bg-white rounded-full shadow transition
-                ${isRepeating ? 'right-0.5 bg-blue-500' : 'left-0.5'}
-              `}></div>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* 日期设置 */}
+      {/* 可滚动的内容区域 */}
       <div 
-        className="p-4 border-b border-gray-100 cursor-pointer"
-        onClick={() => setIsDatePickerOpen(true)}
+        className="flex-1 overflow-y-auto overflow-x-hidden" 
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#cbd5e1 #f1f5f9'
+        }}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Calendar size={20} className="text-gray-500 mr-3" />
-            <span>日期</span>
-          </div>
-          <div className="flex items-center text-gray-500">
-            <span>{date}</span>
-            <ChevronRight size={18} className="ml-1" />
-          </div>
+        {/* 自定义滚动条样式 */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .flex-1.overflow-y-auto::-webkit-scrollbar {
+              width: 6px;
+            }
+            .flex-1.overflow-y-auto::-webkit-scrollbar-track {
+              background: #f1f5f9;
+              border-radius: 3px;
+            }
+            .flex-1.overflow-y-auto::-webkit-scrollbar-thumb {
+              background: #cbd5e1;
+              border-radius: 3px;
+            }
+            .flex-1.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+              background: #94a3b8;
+            }
+          `
+        }} />
+        
+        {/* 事项标题输入 */}
+        <div className="p-4 border-b border-gray-100">
+          <input
+            type="text"
+            placeholder="添加标题..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full text-lg px-2 py-3 border-0 focus:outline-none focus:ring-0"
+          />
         </div>
-      </div>
-      
-      {/* 开始时间设置 */}
-      <div 
-        className="p-4 border-b border-gray-100 cursor-pointer"
-        onClick={() => setIsStartTimePickerOpen(true)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <AlarmClock size={20} className="text-gray-500 mr-3" />
-            <span>开始时间</span>
-          </div>
-          <div className="flex items-center text-gray-500">
-            <span>{startTime}</span>
-            <ChevronRight size={18} className="ml-1" />
-          </div>
-        </div>
-      </div>
-      
-      {/* 时间设置 */}
-      <div 
-        className="p-4 border-b border-gray-100 cursor-pointer"
-        onClick={() => setIsTimePickerOpen(true)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Clock size={20} className="text-gray-500 mr-3" />
-            <span>估时</span>
-          </div>
-          <div className="flex items-center text-gray-500">
-            <span>{time}</span>
-            <ChevronRight size={18} className="ml-1" />
-          </div>
-        </div>
-      </div>
-      
-      {/* 优先级设置 */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Flag size={20} className="text-gray-500 mr-3" />
-            <span>优先级</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            {priorityOptions.map((option) => (
-              <button
+        
+        {/* 事项性质选择 */}
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-lg mb-4">事项性质</h2>
+          <div className="grid grid-cols-4 gap-4">
+            {taskNatureOptions.map((option) => (
+              <div 
                 key={option.id}
-                onClick={() => setPriority(option.id)}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  priority === option.id ? option.color : 'border-gray-300 bg-white'
+                onClick={() => setSelectedNature(option.id)}
+                className={`flex flex-col items-center justify-center border rounded-lg p-4 cursor-pointer ${
+                  selectedNature === option.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
                 }`}
-              ></button>
+              >
+                <div className="mb-2">{option.icon}</div>
+                <span className="text-sm">{option.label}</span>
+              </div>
             ))}
           </div>
         </div>
-      </div>
-      
-      {/* 子事项 */}
-      <div className="p-4 border-b border-gray-100">
-        <h2 className="text-lg mb-4">子事项</h2>
         
-        {/* AI生成子事项按钮 */}
-        <div 
-          className="bg-blue-50 py-3 px-4 rounded-lg mb-4 flex items-center justify-center cursor-pointer"
-          onClick={() => setShowAiGeneration(!showAiGeneration)}
-        >
-          <Edit size={18} className="text-blue-500 mr-2" />
-          <span className="text-blue-500">AI 生成子事项</span>
+        {/* 事项分类 */}
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-lg mb-4">事项分类</h2>
+          <div className="grid grid-cols-4 gap-4">
+            {taskCategoryOptions.map((option) => (
+              <div 
+                key={option.id}
+                onClick={() => setSelectedCategory(option.id)}
+                className={`flex flex-col items-center justify-center border rounded-lg p-4 cursor-pointer ${
+                  selectedCategory === option.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                }`}
+              >
+                <div className="text-2xl mb-2">{option.icon}</div>
+                <span className="text-sm">{option.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
         
-        {/* 手动添加子事项 */}
-        <div className="flex items-center border border-gray-200 rounded-lg p-2">
-          <input
-            type="checkbox"
-            className="rounded mr-3"
-            disabled
-          />
-          <input
-            type="text"
-            placeholder="添加子事项"
-            className="flex-1 border-0 focus:outline-none focus:ring-0"
-          />
+        {/* 重复设置 */}
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <RefreshCw size={20} className="text-gray-500 mr-3" />
+              <span>重复</span>
+            </div>
+            <div className="flex items-center">
+              <span className="mr-2 text-gray-500">{isRepeating ? '不重复' : '不重复'}</span>
+              <button 
+                onClick={handleToggleRepeat}
+                className="w-10 h-6 bg-gray-200 rounded-full relative focus:outline-none"
+              >
+                <div className={`
+                  absolute w-5 h-5 bg-white rounded-full shadow transition
+                  ${isRepeating ? 'right-0.5 bg-blue-500' : 'left-0.5'}
+                `}></div>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* 日期设置 */}
+        <div 
+          className="p-4 border-b border-gray-100 cursor-pointer"
+          onClick={() => setIsDatePickerOpen(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Calendar size={20} className="text-gray-500 mr-3" />
+              <span>日期</span>
+            </div>
+            <div className="flex items-center text-gray-500">
+              <span>{date}</span>
+              <ChevronRight size={18} className="ml-1" />
+            </div>
+          </div>
+        </div>
+        
+        {/* 开始时间设置 */}
+        <div 
+          className="p-4 border-b border-gray-100 cursor-pointer"
+          onClick={() => setIsStartTimePickerOpen(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <AlarmClock size={20} className="text-gray-500 mr-3" />
+              <span>开始时间</span>
+            </div>
+            <div className="flex items-center text-gray-500">
+              <span>{startTime}</span>
+              <ChevronRight size={18} className="ml-1" />
+            </div>
+          </div>
+        </div>
+        
+        {/* 时间设置 */}
+        <div 
+          className="p-4 border-b border-gray-100 cursor-pointer"
+          onClick={() => setIsTimePickerOpen(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Clock size={20} className="text-gray-500 mr-3" />
+              <span>估时</span>
+            </div>
+            <div className="flex items-center text-gray-500">
+              <span>{time}</span>
+              <ChevronRight size={18} className="ml-1" />
+            </div>
+          </div>
+        </div>
+        
+        {/* 优先级设置 */}
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Flag size={20} className="text-gray-500 mr-3" />
+              <span>优先级</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {priorityOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setPriority(option.id)}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    priority === option.id ? option.color : 'border-gray-300 bg-white'
+                  }`}
+                ></button>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        {/* 子事项 */}
+        <div className="p-4 border-b border-gray-100 mb-6">
+          <h2 className="text-lg mb-4">子事项</h2>
+          
+          {/* AI生成子事项按钮 */}
+          <div 
+            className="bg-blue-50 py-3 px-4 rounded-lg mb-4 flex items-center justify-center cursor-pointer"
+            onClick={() => setShowAiGeneration(!showAiGeneration)}
+          >
+            <Edit size={18} className="text-blue-500 mr-2" />
+            <span className="text-blue-500">AI 生成子事项</span>
+          </div>
+          
+          {/* 手动添加子事项 */}
+          <div className="flex items-center border border-gray-200 rounded-lg p-2">
+            <input
+              type="checkbox"
+              className="rounded mr-3"
+              disabled
+            />
+            <input
+              type="text"
+              placeholder="添加子事项"
+              className="flex-1 border-0 focus:outline-none focus:ring-0"
+            />
+          </div>
         </div>
       </div>
       
@@ -984,6 +1056,166 @@ const NewItemPage = () => {
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
               >
                 取消
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* 自定义开始时间选择对话框 */}
+      <Dialog
+        open={isCustomStartTimePickerOpen}
+        onClose={() => setIsCustomStartTimePickerOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6">
+            <Dialog.Title className="text-lg font-medium text-gray-900 mb-6 text-center">
+              自定义开始时间
+            </Dialog.Title>
+            
+            <div className="flex items-center justify-center mb-6">
+              {/* 小时选择器 */}
+              <div className="flex flex-col items-center mr-8">
+                <label className="text-sm text-gray-600 mb-2">小时</label>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => setCustomStartHour(Math.min(23, customStartHour + 1))}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    +
+                  </button>
+                  <div className="w-16 h-12 flex items-center justify-center text-xl font-mono my-2">
+                    {customStartHour.toString().padStart(2, '0')}
+                  </div>
+                  <button
+                    onClick={() => setCustomStartHour(Math.max(0, customStartHour - 1))}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+              
+              <div className="text-xl font-mono mx-2">:</div>
+              
+              {/* 分钟选择器 */}
+              <div className="flex flex-col items-center ml-8">
+                <label className="text-sm text-gray-600 mb-2">分钟</label>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => setCustomStartMinute((customStartMinute + 5) % 60)}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    +
+                  </button>
+                  <div className="w-16 h-12 flex items-center justify-center text-xl font-mono my-2">
+                    {customStartMinute.toString().padStart(2, '0')}
+                  </div>
+                  <button
+                    onClick={() => setCustomStartMinute((customStartMinute - 5 + 60) % 60)}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between">
+              <button
+                onClick={() => setIsCustomStartTimePickerOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmCustomStartTime}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
+              >
+                确认
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* 自定义持续时间选择对话框 */}
+      <Dialog
+        open={isCustomDurationPickerOpen}
+        onClose={() => setIsCustomDurationPickerOpen(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-md rounded-lg bg-white p-6">
+            <Dialog.Title className="text-lg font-medium text-gray-900 mb-6 text-center">
+              自定义持续时间
+            </Dialog.Title>
+            
+            <div className="flex items-center justify-center mb-6">
+              {/* 小时选择器 */}
+              <div className="flex flex-col items-center mr-8">
+                <label className="text-sm text-gray-600 mb-2">小时</label>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => setCustomDurationHour(Math.min(24, customDurationHour + 1))}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    +
+                  </button>
+                  <div className="w-16 h-12 flex items-center justify-center text-xl font-mono my-2">
+                    {customDurationHour}
+                  </div>
+                  <button
+                    onClick={() => setCustomDurationHour(Math.max(0, customDurationHour - 1))}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+              
+              <div className="text-xl font-mono mx-2">:</div>
+              
+              {/* 分钟选择器 */}
+              <div className="flex flex-col items-center ml-8">
+                <label className="text-sm text-gray-600 mb-2">分钟</label>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => setCustomDurationMinute(Math.min(59, customDurationMinute + 5))}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    +
+                  </button>
+                  <div className="w-16 h-12 flex items-center justify-center text-xl font-mono my-2">
+                    {customDurationMinute.toString().padStart(2, '0')}
+                  </div>
+                  <button
+                    onClick={() => setCustomDurationMinute(Math.max(5, customDurationMinute - 5))}
+                    className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between">
+              <button
+                onClick={() => setIsCustomDurationPickerOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmCustomDuration}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
+              >
+                确认
               </button>
             </div>
           </Dialog.Panel>

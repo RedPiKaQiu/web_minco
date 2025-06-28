@@ -4,12 +4,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { useTaskCompletion } from '../hooks/useItemCompletion';
 import { ArrowLeft, Play, Pause, Square } from 'lucide-react';
 
 const FocusPage = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
-  const { state, dispatch } = useAppContext();
+  const { state } = useAppContext();
+  const { toggleTaskCompletion } = useTaskCompletion();
   
   const [isRunning, setIsRunning] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0); // 秒数
@@ -56,9 +58,52 @@ const FocusPage = () => {
     setTimeElapsed(0);
   };
 
-  const handleComplete = () => {
-    if (task) {
-      dispatch({ type: 'COMPLETE_TASK', payload: task.id });
+  const handleComplete = async (e: React.MouseEvent) => {
+    if (!task) return;
+    
+    e.stopPropagation();
+
+    // 如果任务未完成，显示烟花特效
+    if (!task.completed) {
+      // 烟花特效
+      const button = e.currentTarget as HTMLElement;
+      for (let i = 0; i < 25; i++) {
+        const particle = document.createElement('div');
+        const colors = ['#FF5252', '#FFD740', '#64FFDA', '#448AFF', '#E040FB'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        particle.className = 'absolute rounded-full';
+        particle.style.backgroundColor = color;
+        particle.style.width = `${2 + Math.random() * 3}px`;
+        particle.style.height = `${2 + Math.random() * 3}px`;
+        button.appendChild(particle);
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 50;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
+
+        particle.animate([
+          { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+          { transform: `translate(${x}px, ${y}px) scale(0)`, opacity: 0 }
+        ], {
+          duration: 800 + Math.random() * 700,
+          easing: 'cubic-bezier(0, .9, .57, 1)'
+        });
+
+        setTimeout(() => particle.remove(), 1500);
+      }
+    }
+
+    try {
+      // 使用标准的任务完成逻辑
+      await toggleTaskCompletion(task.id, task.completed);
+      
+      // 任务完成后导航回首页
+      navigate('/home');
+    } catch (error) {
+      console.error('❌ 专注页面：任务完成操作失败', error);
+      // 即使失败也导航回首页，因为本地状态可能已更新
       navigate('/home');
     }
   };
@@ -96,7 +141,7 @@ const FocusPage = () => {
           <h1 className="text-lg font-medium">专注模式</h1>
           <button
             onClick={handleComplete}
-            className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm touch-target no-tap-highlight"
+            className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm touch-target no-tap-highlight hover:bg-green-600 transition-colors"
           >
             完成
           </button>
