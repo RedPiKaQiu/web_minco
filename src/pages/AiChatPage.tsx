@@ -2,27 +2,31 @@
  * AI对话页面，提供与AI助手进行智能对话的功能界面
  */
 import { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, Menu, Edit, Plus, Send } from 'lucide-react';
+import { ChevronLeft, Menu, Edit, Plus, Send, Loader, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { chatWithAi, type AiChatRequest, type AiChatResponse, type SuggestedAction } from '../api/ai';
+import { ApiError } from '../api';
+import { useAiChat } from '../hooks/useAiChat';
 
 type Message = {
   id: string;
   content: string;
   isUser: boolean;
   timestamp: Date;
+  suggestedActions?: SuggestedAction[];
+  quickReplies?: string[];
 };
 
 const AiChatPage = () => {
   const navigate = useNavigate();
+  const { getUserContext, getRecommendedQuestions, isAuthenticated } = useAiChat();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const quickQuestions = [
-    '今天有什么重要的事情要做？',
-    '帮我安排一下今天的时间',
-    '看看这周有什么事项',
-    '我想完成一个新项目',
-    '给我一些提高效率的建议'
-  ];
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+  
+  const quickQuestions = getRecommendedQuestions;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 隐藏底部导航栏
@@ -49,8 +53,11 @@ const AiChatPage = () => {
     navigate(-1);
   };
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
+    // 清除之前的错误
+    setError(null);
 
     // 添加用户消息
     const userMessage: Message = {
@@ -62,32 +69,104 @@ const AiChatPage = () => {
     
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
+    setIsLoading(true);
 
-    // 模拟机器人自动回复
-    setTimeout(() => {
+    try {
+      // 准备AI聊天请求
+      const userContext = getUserContext();
+      const chatRequest: AiChatRequest = {
+        message: text,
+        context: {
+          ...userContext,
+          user_mood: userContext.user_mood || 'focused',
+          available_time: userContext.available_time || 30
+        },
+        session_id: sessionId
+      };
+
+      // 调用AI聊天API
+      const aiResponse: AiChatResponse = await chatWithAi(chatRequest);
+
+      // 更新会话ID
+      if (aiResponse.session_id !== sessionId) {
+        setSessionId(aiResponse.session_id);
+      }
+
+      // 添加AI回复消息
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: '好的',
+        content: aiResponse.reply,
         isUser: false,
-        timestamp: new Date()
+        timestamp: new Date(),
+        suggestedActions: aiResponse.suggested_actions,
+        quickReplies: aiResponse.quick_replies
       };
+      
       setMessages(prev => [...prev, botMessage]);
-    }, 1000);
-  };
 
-  const handleSendMessage = () => {
-    sendMessage(inputText);
-  };
+    } catch (error) {
+      console.error('AI聊天失败:', error);
+      
+      let errorMessage = '抱歉，我暂时无法回复您的消息。';
+      
+      if (error instanceof ApiError) {
+        if (error.statusCode === 401) {
+          errorMessage = '登录已过期，请重新登录后再试。';
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
+      }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+      setError(errorMessage);
+
+      // 添加错误回复消息
+      const errorBotMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: errorMessage,
+        isUser: false,
+        timestamp: new Date(),
+        quickReplies: ['重新尝试', '查看任务']
+      };
+      
+      setMessages(prev => [...prev, errorBotMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    sendMessage(suggestion);
+  const handleSendMessage = async () => {
+    await sendMessage(inputText);
+  };
+
+  const handleKeyPress = async (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      await handleSendMessage();
+    }
+  };
+
+  const handleSuggestionClick = async (suggestion: string) => {
+    await sendMessage(suggestion);
+  };
+
+  const handleActionClick = async (action: SuggestedAction) => {
+    // 根据不同的建议操作类型执行相应的操作
+    switch (action.type) {
+      case 'task_breakdown':
+        await sendMessage(`请帮我拆解这个任务：${action.label}`);
+        break;
+      case 'create_task':
+        await sendMessage(`我想创建一个新任务：${action.label}`);
+        break;
+      case 'view_tasks':
+        await sendMessage('看看我的任务列表');
+        break;
+      case 'start_focus':
+        await sendMessage('开始专注模式');
+        break;
+      default:
+        await sendMessage(action.label);
+    }
   };
 
   return (
@@ -120,21 +199,69 @@ const AiChatPage = () => {
         {/* 消息列表 */}
         <div className="space-y-4">
           {messages.map(message => (
-            <div
-              key={message.id}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-            >
+            <div key={message.id} className="space-y-2">
               <div
-                className={`max-w-[80%] p-3 rounded-lg ${
-                  message.isUser
-                    ? 'bg-blue-500 text-white rounded-tr-none'
-                    : 'bg-white text-gray-800 rounded-tl-none shadow-sm'
-                }`}
+                className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
-                {message.content}
+                <div
+                  className={`max-w-[80%] p-3 rounded-lg ${
+                    message.isUser
+                      ? 'bg-blue-500 text-white rounded-tr-none'
+                      : 'bg-white text-gray-800 rounded-tl-none shadow-sm'
+                  }`}
+                >
+                  {message.content}
+                </div>
               </div>
+
+              {/* 建议操作按钮 */}
+              {message.suggestedActions && message.suggestedActions.length > 0 && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] space-y-2">
+                    {message.suggestedActions.map((action, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleActionClick(action)}
+                        disabled={isLoading}
+                        className="block w-full text-left px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 快速回复 */}
+              {message.quickReplies && message.quickReplies.length > 0 && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] flex flex-wrap gap-2">
+                    {message.quickReplies.map((reply, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestionClick(reply)}
+                        disabled={isLoading}
+                        className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reply}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
+          
+          {/* 加载指示器 */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-white text-gray-800 rounded-lg rounded-tl-none shadow-sm p-3 flex items-center space-x-2">
+                <Loader className="animate-spin" size={16} />
+                <span>正在思考中...</span>
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -146,8 +273,10 @@ const AiChatPage = () => {
             {quickQuestions.map((suggestion, index) => (
               <div
                 key={index}
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="inline-block bg-white p-3 rounded-lg text-right shadow-sm cursor-pointer hover:bg-gray-50"
+                onClick={() => !isLoading && handleSuggestionClick(suggestion)}
+                className={`inline-block bg-white p-3 rounded-lg text-right shadow-sm cursor-pointer hover:bg-gray-50 transition-opacity ${
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 {suggestion}
               </div>
@@ -156,10 +285,29 @@ const AiChatPage = () => {
         </div>
       )}
 
+      {/* 错误信息显示 */}
+      {error && (
+        <div className="px-4 py-2">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-red-700">
+            <AlertCircle size={20} />
+            <span className="text-sm">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 底部输入框 */}
       <div className="p-4 bg-gray-100 border-t border-gray-200">
         <div className="flex items-center bg-white rounded-full shadow-sm">
-          <button className="p-3 text-gray-500">
+          <button 
+            className="p-3 text-gray-500"
+            disabled={isLoading}
+          >
             <Plus size={24} />
           </button>
           <input
@@ -167,19 +315,29 @@ const AiChatPage = () => {
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="和MinCo聊聊吧"
-            className="flex-1 px-3 py-3 bg-transparent focus:outline-none"
+            placeholder={isLoading ? "AI正在回复中..." : "和MinCo聊聊吧"}
+            disabled={isLoading}
+            className="flex-1 px-3 py-3 bg-transparent focus:outline-none disabled:opacity-50"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!inputText.trim()}
-            className={`p-3 rounded-full ${
-              inputText.trim() ? 'text-blue-500' : 'text-gray-400'
+            disabled={!inputText.trim() || isLoading}
+            className={`p-3 rounded-full transition-colors ${
+              inputText.trim() && !isLoading 
+                ? 'text-blue-500 hover:text-blue-600' 
+                : 'text-gray-400'
             }`}
           >
-            <Send size={24} />
+            {isLoading ? <Loader className="animate-spin" size={24} /> : <Send size={24} />}
           </button>
         </div>
+        
+        {/* 用户登录状态提示 */}
+        {!isAuthenticated && (
+          <div className="mt-2 text-center text-sm text-gray-500">
+            请先登录以获得更好的AI体验
+          </div>
+        )}
       </div>
     </div>
   );

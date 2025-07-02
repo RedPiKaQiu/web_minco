@@ -996,40 +996,91 @@
 ```
 
 #### 3.4 [P1] AI助手对话
+
+**功能说明**: 与AI助手进行智能对话，支持上下文理解、意图识别和操作建议。集成阿里云千问大语言模型，提供任务管理相关的智能对话服务。
+
 - **请求方式**: `POST`
 - **请求地址**: `/ai/chat`
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  Content-Type: application/json
+  ```
 
 **请求体**:
 ```json
 {
-  "message": "我感觉有点卡住了",
-  "context": {
-    "recent_tasks": ["task_id1", "task_id2"],
-    "current_projects": ["project_id1"]
+  "message": "string", // 用户消息 (必填)
+  "context": { // 聊天上下文 (可选)
+    "recent_tasks": ["string"], // 最近的任务ID列表 (可选)
+    "current_projects": ["string"], // 当前项目ID列表 (可选)
+    "user_mood": "string", // 用户当前心情，如 "focused", "tired", "anxious" (可选)
+    "available_time": "integer" // 可用时间（分钟） (可选)
+  },
+  "session_id": "string" // 会话ID，用于维护上下文 (可选)
+}
+```
+
+**成功响应** (HTTP 200 OK):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "reply": "string", // AI回复内容
+    "suggested_actions": [ // 建议操作列表 (可选)
+      {
+        "type": "string", // 操作类型，如 "task_breakdown", "create_task", "start_focus"
+        "task_id": "string", // 相关任务ID (可选)
+        "project_id": "string", // 相关项目ID (可选)
+        "label": "string", // 操作标签
+        "payload": { // 操作参数 (可选)
+          "action": "string"
+        }
+      }
+    ],
+    "quick_replies": ["string"], // 快速回复选项 (可选)
+    "session_id": "string", // 会话ID
+    "context_updated": "boolean" // 上下文是否已更新
   }
 }
 ```
 
-**响应**:
+**错误响应** (HTTP 401 Unauthorized):
 ```json
 {
-  "code": 200,
+  "code": 401,
+  "message": "用户未登录",
+  "data": null
+}
+```
+
+**错误响应** (HTTP 500 Internal Server Error):
+```json
+{
+  "code": 500,
+  "message": "AI聊天暂时不可用",
   "data": {
-    "reply": "我理解你的感受。要不要试试把大任务拆解成小步骤？",
-    "suggested_actions": [
-      {
-        "type": "task_breakdown",
-        "task_id": "task_id1",
-        "label": "拆解这个任务"
-      }
-    ],
-    "quick_replies": [
-      "看看这周有什么事项",
-      "需要一点动力"
-    ]
+    "reply": "抱歉，我暂时无法处理您的请求。请稍后再试。",
+    "suggested_actions": [],
+    "quick_replies": ["重新尝试", "查看任务", "联系支持"],
+    "session_id": "string",
+    "context_updated": false
   }
 }
 ```
+
+**常见对话场景**:
+- `新用户引导`: "你好，我是新用户，不知道从哪里开始"
+- `任务管理困难`: "我有很多事情要做，感觉很混乱"
+- `寻求专注建议`: "我想开始工作，但不知道先做什么"
+- `情绪支持`: "今天工作压力很大，感觉有点焦虑"
+
+**建议操作类型**:
+- `task_breakdown`: 任务拆解
+- `create_task`: 创建新任务
+- `view_tasks`: 查看任务列表
+- `start_focus`: 开始专注模式
 
 #### 3.5 [P1] 事项智能分析
 - **请求方式**: `POST`

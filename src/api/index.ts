@@ -207,6 +207,7 @@ export interface PaginationInfo {
 export * from './interceptor';
 export * from './user';
 export * from './test';
+export * from './ai';
 
 // 同时导出原始API（用于特殊需求）
 export * as OriginalItemsAPI from './items'; 
