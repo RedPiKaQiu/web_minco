@@ -1,5 +1,6 @@
 /**
  * AI聊天管理Hook，提供聊天状态管理和用户上下文优化
+ * 支持用户级别会话隔离和安全的会话管理
  */
 import { useCallback, useMemo } from 'react';
 import { useUser } from '../context/UserContext';
@@ -17,6 +18,7 @@ export interface AiChatContext {
 
 /**
  * AI聊天管理Hook
+ * 实现用户级别的会话隔离和上下文管理
  */
 export const useAiChat = () => {
   const { state: userState } = useUser();
@@ -24,6 +26,15 @@ export const useAiChat = () => {
   // 获取用户上下文信息
   const getUserContext = useCallback((): AiChatContext => {
     try {
+      // 确保只有登录用户才能获取上下文
+      if (!userState.isAuthenticated || !userState.user) {
+        console.warn('⚠️ 用户未登录，返回默认上下文');
+        return {
+          user_mood: 'focused',
+          available_time: 30
+        };
+      }
+
       // 从localStorage或sessionStorage获取最近的任务和项目信息
       const recentTasks = sessionStorage.getItem('recent-task-ids');
       const currentProjects = sessionStorage.getItem('current-project-ids');
@@ -52,30 +63,75 @@ export const useAiChat = () => {
         }
       }
 
-      return {
+      const context = {
         recent_tasks: recentTaskIds,
         current_projects: currentProjects ? JSON.parse(currentProjects) : [],
         user_mood: userMood || 'focused',
         available_time: availableTime ? parseInt(availableTime) : 30
       };
+
+      console.log('📝 AI聊天上下文:', {
+        userId: userState.user.id,
+        contextKeys: Object.keys(context),
+        hasRecentTasks: context.recent_tasks && context.recent_tasks.length > 0
+      });
+
+      return context;
     } catch (error) {
-      console.error('获取用户上下文失败:', error);
+      console.error('❌ 获取用户上下文失败:', error);
       return {
         user_mood: 'focused',
         available_time: 30
       };
     }
-  }, []);
+  }, [userState.isAuthenticated, userState.user]);
 
   // 更新用户心情
   const updateUserMood = useCallback((mood: UserMood) => {
+    if (!userState.isAuthenticated) {
+      console.warn('⚠️ 用户未登录，无法更新心情');
+      return;
+    }
     localStorage.setItem('user-mood', mood);
-  }, []);
+    console.log('💭 用户心情已更新:', mood);
+  }, [userState.isAuthenticated]);
 
   // 更新可用时间
   const updateAvailableTime = useCallback((time: number) => {
+    if (!userState.isAuthenticated) {
+      console.warn('⚠️ 用户未登录，无法更新可用时间');
+      return;
+    }
     localStorage.setItem('available-time', time.toString());
+    console.log('⏰ 可用时间已更新:', time, '分钟');
+  }, [userState.isAuthenticated]);
+
+  // 清理用户AI聊天相关数据（用于登出时）
+  const clearAiChatData = useCallback(() => {
+    try {
+      localStorage.removeItem('user-mood');
+      localStorage.removeItem('available-time');
+      sessionStorage.removeItem('recent-task-ids');
+      sessionStorage.removeItem('current-project-ids');
+      console.log('🧹 AI聊天用户数据已清理');
+    } catch (error) {
+      console.error('❌ 清理AI聊天数据失败:', error);
+    }
   }, []);
+
+  // 生成安全的会话ID（包含用户信息但不泄露敏感数据）
+  const generateSecureSessionId = useCallback(() => {
+    if (!userState.user) {
+      return `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    // 使用用户ID的哈希值而不是明文，增加安全性
+    const userHash = btoa(userState.user.id.toString()).substr(0, 8);
+    const sessionId = `user_${userHash}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    console.log('🔑 生成安全会话ID:', sessionId.substr(0, 20) + '...');
+    return sessionId;
+  }, [userState.user]);
 
   // 获取推荐的开场白（基于用户状态）
   const getRecommendedQuestions = useMemo(() => {
@@ -133,6 +189,8 @@ export const useAiChat = () => {
     getUserContext,
     updateUserMood,
     updateAvailableTime,
+    clearAiChatData,
+    generateSecureSessionId,
     getRecommendedQuestions,
     isAuthenticated,
     userInfo

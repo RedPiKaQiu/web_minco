@@ -1,5 +1,6 @@
 /**
  * AI对话页面，提供与AI助手进行智能对话的功能界面
+ * 支持用户级别的会话隔离和安全的上下文管理
  */
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, Menu, Edit, Plus, Send, Loader, AlertCircle } from 'lucide-react';
@@ -19,7 +20,14 @@ type Message = {
 
 const AiChatPage = () => {
   const navigate = useNavigate();
-  const { getUserContext, getRecommendedQuestions, isAuthenticated } = useAiChat();
+  const { 
+    getUserContext, 
+    getRecommendedQuestions, 
+    isAuthenticated, 
+    userInfo,
+    generateSecureSessionId 
+  } = useAiChat();
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +36,18 @@ const AiChatPage = () => {
   
   const quickQuestions = getRecommendedQuestions;
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 初始化安全会话ID
+  useEffect(() => {
+    if (isAuthenticated && !sessionId) {
+      const newSessionId = generateSecureSessionId();
+      setSessionId(newSessionId);
+      console.log('🔐 初始化用户会话:', {
+        userId: userInfo?.id,
+        sessionPrefix: newSessionId.substr(0, 15) + '...'
+      });
+    }
+  }, [isAuthenticated, sessionId, generateSecureSessionId, userInfo]);
 
   // 隐藏底部导航栏
   useEffect(() => {
@@ -56,6 +76,12 @@ const AiChatPage = () => {
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
+    // 检查用户登录状态
+    if (!isAuthenticated) {
+      setError('请先登录以使用AI聊天功能');
+      return;
+    }
+
     // 清除之前的错误
     setError(null);
 
@@ -72,6 +98,13 @@ const AiChatPage = () => {
     setIsLoading(true);
 
     try {
+      // 确保有会话ID
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        currentSessionId = generateSecureSessionId();
+        setSessionId(currentSessionId);
+      }
+
       // 准备AI聊天请求
       const userContext = getUserContext();
       const chatRequest: AiChatRequest = {
@@ -81,15 +114,30 @@ const AiChatPage = () => {
           user_mood: userContext.user_mood || 'focused',
           available_time: userContext.available_time || 30
         },
-        session_id: sessionId
+        session_id: currentSessionId
       };
+
+      console.log('📤 发送AI聊天请求:', {
+        userId: userInfo?.id,
+        messageLength: text.length,
+        sessionId: currentSessionId.substr(0, 15) + '...',
+        hasContext: Object.keys(userContext).length > 0
+      });
 
       // 调用AI聊天API
       const aiResponse: AiChatResponse = await chatWithAi(chatRequest);
 
+      console.log('📥 收到AI回复:', {
+        replyLength: aiResponse.reply.length,
+        hasSuggestedActions: aiResponse.suggested_actions && aiResponse.suggested_actions.length > 0,
+        hasQuickReplies: aiResponse.quick_replies && aiResponse.quick_replies.length > 0,
+        sessionId: aiResponse.session_id.substr(0, 15) + '...'
+      });
+
       // 更新会话ID
-      if (aiResponse.session_id !== sessionId) {
+      if (aiResponse.session_id !== currentSessionId) {
         setSessionId(aiResponse.session_id);
+        console.log('🔄 会话ID已更新');
       }
 
       // 添加AI回复消息
@@ -105,13 +153,15 @@ const AiChatPage = () => {
       setMessages(prev => [...prev, botMessage]);
 
     } catch (error) {
-      console.error('AI聊天失败:', error);
+      console.error('❌ AI聊天失败:', error);
       
       let errorMessage = '抱歉，我暂时无法回复您的消息。';
       
       if (error instanceof ApiError) {
         if (error.statusCode === 401) {
           errorMessage = '登录已过期，请重新登录后再试。';
+          // 可以考虑自动跳转到登录页
+          // navigate('/login');
         } else {
           errorMessage = error.message || errorMessage;
         }
@@ -177,11 +227,17 @@ const AiChatPage = () => {
           <ChevronLeft size={24} />
           <span className="ml-1 text-lg">返回</span>
         </button>
-        <div className="flex">
+        <div className="flex items-center space-x-2">
+          {/* 显示用户信息（仅在登录时） */}
+          {isAuthenticated && userInfo && (
+            <span className="text-sm text-gray-600">
+              {userInfo.username}
+            </span>
+          )}
           <button className="p-2">
             <Menu size={24} />
           </button>
-          <button className="p-2 ml-2">
+          <button className="p-2">
             <Edit size={24} />
           </button>
         </div>
@@ -192,7 +248,14 @@ const AiChatPage = () => {
         {/* 默认欢迎消息 */}
         {messages.length === 0 && (
           <div className="py-6">
-            <h1 className="text-2xl font-bold mb-2">嗨！想聊点什么？😇</h1>
+            <h1 className="text-2xl font-bold mb-2">
+              {isAuthenticated ? `嗨${userInfo?.username ? ', ' + userInfo.username : ''}！想聊点什么？😇` : '请先登录使用AI聊天功能'}
+            </h1>
+            {isAuthenticated && (
+              <p className="text-gray-600 text-sm">
+                🔒 您的对话完全私密，其他用户无法访问
+              </p>
+            )}
           </div>
         )}
 
@@ -266,8 +329,8 @@ const AiChatPage = () => {
         </div>
       </div>
 
-      {/* 建议提示 - 只在初始状态显示 */}
-      {messages.length === 0 && (
+      {/* 建议提示 - 只在初始状态显示且用户已登录 */}
+      {messages.length === 0 && isAuthenticated && (
         <div className="px-4 py-2">
           <div className="flex flex-col items-end space-y-2">
             {quickQuestions.map((suggestion, index) => (
@@ -306,7 +369,7 @@ const AiChatPage = () => {
         <div className="flex items-center bg-white rounded-full shadow-sm">
           <button 
             className="p-3 text-gray-500"
-            disabled={isLoading}
+            disabled={isLoading || !isAuthenticated}
           >
             <Plus size={24} />
           </button>
@@ -315,15 +378,21 @@ const AiChatPage = () => {
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={isLoading ? "AI正在回复中..." : "和MinCo聊聊吧"}
-            disabled={isLoading}
+            placeholder={
+              !isAuthenticated 
+                ? "请先登录使用AI聊天"
+                : isLoading 
+                  ? "AI正在回复中..." 
+                  : "和MinCo聊聊吧"
+            }
+            disabled={isLoading || !isAuthenticated}
             className="flex-1 px-3 py-3 bg-transparent focus:outline-none disabled:opacity-50"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!inputText.trim() || isLoading}
+            disabled={!inputText.trim() || isLoading || !isAuthenticated}
             className={`p-3 rounded-full transition-colors ${
-              inputText.trim() && !isLoading 
+              inputText.trim() && !isLoading && isAuthenticated
                 ? 'text-blue-500 hover:text-blue-600' 
                 : 'text-gray-400'
             }`}
@@ -333,9 +402,13 @@ const AiChatPage = () => {
         </div>
         
         {/* 用户登录状态提示 */}
-        {!isAuthenticated && (
+        {!isAuthenticated ? (
+          <div className="mt-2 text-center text-sm text-red-500">
+            请先登录以获得完整的AI体验和数据隔离保护
+          </div>
+        ) : (
           <div className="mt-2 text-center text-sm text-gray-500">
-            请先登录以获得更好的AI体验
+            🔒 您的对话数据受到完全保护，仅您可见
           </div>
         )}
       </div>

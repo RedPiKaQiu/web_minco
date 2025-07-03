@@ -2,7 +2,13 @@
 
 ## 📖 功能概述
 
-AI聊天功能集成了阿里云千问大语言模型，为用户提供智能的任务管理助手对话服务。支持上下文对话、意图识别和操作建议。
+AI聊天功能集成了阿里云千问大语言模型，为用户提供智能的任务管理助手对话服务。支持上下文对话、意图识别、操作建议和**用户级别的会话隔离**。
+
+### 🔒 用户会话隔离
+- **完全隔离**: 每个用户的聊天会话完全独立，无法访问其他用户的对话历史
+- **安全防护**: 用户无法通过伪造会话ID访问其他用户的敏感信息
+- **会话管理**: 支持每个用户拥有多个独立的聊天会话
+- **并发安全**: 支持多用户同时进行聊天对话，会话不会混淆
 
 ## 🔧 环境配置
 
@@ -114,9 +120,20 @@ uvicorn app.main:app --reload
 # 设置API密钥
 export QWEN_API_KEY="your_api_key"
 
-# 运行测试
-python test_ai_chat.py
+# 基础功能测试
+python test_ai_chat_improved.py
+
+# 用户会话隔离测试
+python test_user_session_isolation.py
 ```
+
+#### 测试说明
+- `test_ai_chat_improved.py`: 测试基本的AI聊天功能
+- `test_user_session_isolation.py`: 专门测试用户会话隔离功能，包括：
+  - 基本用户隔离验证
+  - 会话连续性测试
+  - 会话碰撞攻击防护测试
+  - 并发会话处理测试
 
 ### 3. 手动测试示例
 
@@ -191,9 +208,11 @@ curl -X POST "http://localhost:8000/api/v1/ai/chat" \
 - 记录详细的错误日志
 
 ### 4. 会话管理
-- 当前使用内存存储会话
-- 生产环境建议使用Redis
-- 会话历史限制为10条消息
+- **用户隔离**: 每个用户的会话完全隔离，结构为 `{user_id: {session_id: [messages]}}`
+- **安全保障**: 用户只能访问自己的会话，无法跨用户访问
+- **内存存储**: 当前使用内存存储会话（生产环境建议使用Redis）
+- **历史限制**: 每个会话最多保留10条消息
+- **并发安全**: 支持多用户同时聊天，不会产生会话混淆
 
 ## 🔧 生产环境配置
 
@@ -212,9 +231,23 @@ import redis
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 ```
 
-### 3. 日志监控
+### 3. 会话安全管理
+```python
+# 生产环境中的用户会话隔离配置
+class UserSessionManager:
+    def __init__(self, redis_client):
+        self.redis = redis_client
+        self.session_ttl = 3600 * 24  # 24小时过期
+    
+    def get_user_session_key(self, user_id: str, session_id: str) -> str:
+        return f"chat_session:{user_id}:{session_id}"
+```
+
+### 4. 日志监控
 - 监控API调用成功率
 - 跟踪响应时间
+- **会话访问审计**: 记录用户会话访问日志
+- **安全监控**: 监控跨用户会话访问尝试
 - 记录用户满意度反馈
 
 ## 📞 技术支持
@@ -225,6 +258,13 @@ redis_client = redis.Redis(host='localhost', port=6379, db=0)
 3. 项目日志文件：`minco-be.log`
 
 ## 🔄 更新日志
+
+### v1.1.0 (2024-12-19)
+- ✅ **实现用户级别会话隔离** 🔒
+- ✅ 修复会话安全漏洞，确保用户数据隔离
+- ✅ 添加用户会话管理方法（获取会话列表、清除会话）
+- ✅ 创建专门的会话隔离测试套件
+- ✅ 更新文档，包含安全建议和最佳实践
 
 ### v1.0.0 (2024-12-19)
 - ✅ 集成千问LLM

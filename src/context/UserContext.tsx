@@ -45,7 +45,7 @@ const userReducer = (state: UserState, action: UserAction): UserState => {
         isAuthenticated: true
       };
     case 'LOGOUT':
-      // 用户退出时清理所有缓存
+      // 用户退出时清理所有缓存，包括AI聊天数据
       clearAllUserCache();
       return {
         ...state,
@@ -74,6 +74,10 @@ const clearAllUserCache = () => {
     localStorage.removeItem('token_type');
     localStorage.removeItem('appState');
     localStorage.removeItem('clearCacheOnNextLoad'); // 清理缓存标记
+    
+    // 清理AI聊天相关数据
+    localStorage.removeItem('user-mood');
+    localStorage.removeItem('available-time');
     
     // 清理测试用户数据
     localStorage.removeItem('mock_tasks');
@@ -106,7 +110,11 @@ const clearSessionStorageCache = () => {
     }
   });
   
-  // 3. 清理其他可能的缓存
+  // 3. 清理AI聊天相关的会话缓存
+  sessionStorage.removeItem('recent-task-ids');
+  sessionStorage.removeItem('current-project-ids');
+  
+  // 4. 清理其他可能的缓存
   Object.keys(sessionStorage).forEach(key => {
     // 清理所有task相关的缓存
     if (key.includes('task') || key.includes('item') || key.includes('cache')) {
