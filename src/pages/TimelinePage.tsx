@@ -14,6 +14,7 @@ import { adaptItemToTask } from '../utils/itemAdapters';
 
 
 
+
 const TimelinePage = () => {
   // 使用新的时间轴数据hook
   const {
@@ -45,6 +46,15 @@ const TimelinePage = () => {
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
+
+  // 下拉刷新相关状态
+  const [pullToRefreshState, setPullToRefreshState] = useState({
+    isPulling: false,
+    pullDistance: 0,
+    isRefreshing: false,
+    startY: 0
+  });
+  const PULL_THRESHOLD = 80;
 
   // 转换API数据为Task格式，并过滤掉"随时"任务（time_slot_id === 5）
   // 时间轴页面只显示有明确时间安排的任务，"随时"任务只在项目页面显示
@@ -88,32 +98,63 @@ const TimelinePage = () => {
 
   // 监听页面焦点，返回页面时刷新缓存数据
   useEffect(() => {
+    // 添加节流机制，避免频繁触发
+    let focusThrottleTimeout: number | null = null;
+    let visibilityThrottleTimeout: number | null = null;
+
     const handleFocus = () => {
-      console.log('👁️ TimelinePage: 页面重新获得焦点，尝试刷新缓存');
-      const refreshed = refreshFromCache();
-      if (!refreshed) {
-        console.log('📡 TimelinePage: 缓存刷新失败，重新加载数据');
-        loadTasksByDate(selectedDate);
+      // 节流处理：500ms内只处理一次焦点事件
+      if (focusThrottleTimeout) return;
+      
+      // 如果正在下拉刷新，跳过焦点事件处理
+      if (pullToRefreshState.isRefreshing) {
+        return; // 静默跳过，不输出日志
       }
+      
+      focusThrottleTimeout = setTimeout(() => {
+        // 简化日志输出
+        const refreshed = refreshFromCache();
+        if (!refreshed) {
+          console.log('📡 TimelinePage: 页面焦点事件触发数据重新加载');
+          loadTasksByDate(selectedDate);
+        }
+        focusThrottleTimeout = null;
+      }, 500);
     };
 
     const handleVisibilityChange = () => {
+      // 节流处理：500ms内只处理一次可见性变化事件
+      if (visibilityThrottleTimeout) return;
+      
       if (!document.hidden) {
-        console.log('🔄 TimelinePage: 页面变为可见，尝试刷新缓存');
-        const refreshed = refreshFromCache();
-        if (!refreshed) {
-          console.log('📡 TimelinePage: 缓存刷新失败，重新加载数据');
-          loadTasksByDate(selectedDate);
+        // 如果正在下拉刷新，跳过可见性变化事件处理
+        if (pullToRefreshState.isRefreshing) {
+          return; // 静默跳过，不输出日志
         }
+        
+        visibilityThrottleTimeout = setTimeout(() => {
+          // 简化日志输出
+          const refreshed = refreshFromCache();
+          if (!refreshed) {
+            console.log('📡 TimelinePage: 页面可见性变化触发数据重新加载');
+            loadTasksByDate(selectedDate);
+          }
+          visibilityThrottleTimeout = null;
+        }, 500);
       }
     };
 
     // 监听任务缓存更新事件
     const handleTaskCacheUpdated = (event: CustomEvent) => {
-      console.log('📢 TimelinePage: 收到任务缓存更新事件', event.detail);
+      // 如果正在下拉刷新，跳过任务缓存更新事件处理
+      if (pullToRefreshState.isRefreshing) {
+        return; // 静默跳过，不输出日志
+      }
+      
+      console.log('📢 TimelinePage: 收到任务缓存更新事件');
       const refreshed = refreshFromCache();
       if (!refreshed) {
-        console.log('📡 TimelinePage: 缓存刷新失败，重新加载数据');
+        console.log('📡 TimelinePage: 缓存更新事件触发数据重新加载');
         loadTasksByDate(selectedDate);
       }
     };
@@ -140,13 +181,21 @@ const TimelinePage = () => {
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      // 清理定时器
+      if (focusThrottleTimeout) {
+        clearTimeout(focusThrottleTimeout);
+      }
+      if (visibilityThrottleTimeout) {
+        clearTimeout(visibilityThrottleTimeout);
+      }
+      
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
       document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [refreshFromCache, loadTasksByDate, selectedDate, swipedTaskId]);
+  }, [refreshFromCache, loadTasksByDate, selectedDate, swipedTaskId, pullToRefreshState.isRefreshing]);
 
   // 时间段配置 - 移除"随时"选项，时间轴页面只显示有明确时间安排的任务
   const timeSlots = [
@@ -269,12 +318,12 @@ const TimelinePage = () => {
     }
     
     if (!hourStr) {
-      console.log('无法解析时间格式:', startTime);
+      // 移除重复的日志输出，减少控制台噪音
       return '晚上'; // 默认归到晚上
     }
     
     const hour = parseInt(hourStr);
-    console.log(`解析时间: "${startTime}" -> 小时: ${hour}`);
+    // 移除重复的日志输出，减少控制台噪音
     
     if (hour >= 6 && hour < 12) return '上午';
     if (hour >= 12 && hour < 14) return '中午';  
@@ -335,6 +384,133 @@ const TimelinePage = () => {
         晚上: true,
       });
     }
+  };
+
+  // 下拉刷新处理函数
+  const handlePullToRefresh = async () => {
+    console.log('🔄 TimelinePage: 下拉刷新开始');
+    
+    try {
+      // 清理当前日期的缓存
+      const dateKey = format(selectedDate, 'yyyy-MM-dd');
+      
+      // 移除当前日期的任务缓存
+      sessionStorage.removeItem(`timeline-tasks-${dateKey}`);
+      
+      // 更新缓存元数据，移除当前日期的记录
+      try {
+        const metadata = (() => {
+          try {
+            const existing = sessionStorage.getItem('timeline-cache-metadata');
+            return existing ? JSON.parse(existing) : {};
+          } catch {
+            return {};
+          }
+        })();
+        delete metadata[dateKey];
+        sessionStorage.setItem('timeline-cache-metadata', JSON.stringify(metadata));
+      } catch (error) {
+        console.error('清理缓存元数据失败:', error);
+      }
+      
+      // 强制从后端重新加载数据
+      await loadTasksByDate(selectedDate, true);
+      
+      console.log('✅ TimelinePage: 下拉刷新完成');
+    } catch (error) {
+      console.error('❌ TimelinePage: 下拉刷新失败', error);
+      throw error;
+    }
+  };
+
+  // 下拉刷新触摸事件处理 - 使用useEffect手动添加监听器以避免被动事件问题
+  useEffect(() => {
+    const containerElement = document.querySelector('.timeline-container');
+    if (!containerElement) return;
+
+    const handleTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      // 检查是否点击在任务卡片上，如果是则不处理下拉刷新
+      const target = touchEvent.target as HTMLElement;
+      if (target.closest('[data-task-item]')) {
+        return;
+      }
+      
+      // 只有在页面顶部时才能触发下拉刷新
+      if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
+        setPullToRefreshState(prev => ({
+          ...prev,
+          isPulling: true,
+          startY: touchEvent.touches[0].clientY,
+          pullDistance: 0
+        }));
+      }
+    };
+
+    const handleTouchMove = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      if (!pullToRefreshState.isPulling || pullToRefreshState.isRefreshing) return;
+      
+      // 检查是否在任务卡片上移动，如果是则不处理下拉刷新
+      const target = touchEvent.target as HTMLElement;
+      if (target.closest('[data-task-item]')) {
+        return;
+      }
+      
+      const currentY = touchEvent.touches[0].clientY;
+      const deltaY = currentY - pullToRefreshState.startY;
+      
+      if (deltaY > 0) {
+        e.preventDefault(); // 现在可以安全调用preventDefault了
+        const distance = Math.min(deltaY * 0.4, 100);
+        setPullToRefreshState(prev => ({
+          ...prev,
+          pullDistance: distance
+        }));
+      }
+    };
+
+    const handleTouchEnd = async () => {
+      if (!pullToRefreshState.isPulling) return;
+      
+      setPullToRefreshState(prev => ({ ...prev, isPulling: false }));
+      
+      if (pullToRefreshState.pullDistance >= PULL_THRESHOLD && !pullToRefreshState.isRefreshing) {
+        setPullToRefreshState(prev => ({ ...prev, isRefreshing: true }));
+        try {
+          await handlePullToRefresh();
+        } catch (error) {
+          console.error('下拉刷新失败:', error);
+        } finally {
+          setPullToRefreshState(prev => ({ 
+            ...prev, 
+            isRefreshing: false, 
+            pullDistance: 0 
+          }));
+        }
+      } else {
+        setPullToRefreshState(prev => ({ ...prev, pullDistance: 0 }));
+      }
+    };
+
+    // 添加事件监听器，指定passive: false以允许preventDefault
+    containerElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+    containerElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    containerElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      containerElement.removeEventListener('touchstart', handleTouchStart);
+      containerElement.removeEventListener('touchmove', handleTouchMove);
+      containerElement.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [pullToRefreshState.isPulling, pullToRefreshState.isRefreshing, pullToRefreshState.startY, pullToRefreshState.pullDistance, handlePullToRefresh]);
+
+  // 获取下拉刷新状态文本
+  const getPullToRefreshStatusText = () => {
+    if (pullToRefreshState.isRefreshing) return '正在刷新...';
+    if (pullToRefreshState.pullDistance >= PULL_THRESHOLD) return '松开刷新';
+    if (pullToRefreshState.pullDistance > 0) return '下拉刷新';
+    return '';
   };
 
   // 专门用于时间轴页面的任务完成函数
@@ -467,14 +643,20 @@ const TimelinePage = () => {
     }
   };
 
-  // 处理左滑删除（移动端）
+  // 处理左滑删除触摸事件 - 优化事件隔离
   const handleTouchStart = (e: React.TouchEvent, _taskId: string) => {
+    // 阻止事件冒泡到下拉刷新处理器
+    e.stopPropagation();
+    
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     isDragging.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent, taskId: string) => {
+    // 阻止事件冒泡到下拉刷新处理器
+    e.stopPropagation();
+    
     if (swipedTaskId && swipedTaskId !== taskId) {
       // 如果有其他任务正在滑动，先重置它
       setSwipedTaskId(null);
@@ -504,7 +686,10 @@ const TimelinePage = () => {
     }
   };
 
-  const handleTouchEnd = (_e: React.TouchEvent, _taskId: string) => {
+  const handleTouchEnd = (e: React.TouchEvent, _taskId: string) => {
+    // 阻止事件冒泡到下拉刷新处理器
+    e.stopPropagation();
+    
     if (isDragging.current) {
       // 如果滑动距离超过阈值，保持显示删除按钮
       if (swipePosition > 40) {
@@ -823,6 +1008,7 @@ const TimelinePage = () => {
                       <div
                         key={task.id}
                         className="relative overflow-hidden border-b border-gray-100 last:border-b-0"
+                        data-task-item
                       >
                         <div
                           className="p-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 no-tap-highlight"
@@ -926,6 +1112,7 @@ const TimelinePage = () => {
           <div
             key={task.id}
             className="relative overflow-hidden bg-white rounded-lg border"
+            data-task-item
           >
             <div
               className="p-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 no-tap-highlight"
@@ -1025,6 +1212,7 @@ const TimelinePage = () => {
           <div
             key={task.id}
             className="relative overflow-hidden bg-white rounded-lg shadow-sm border opacity-75"
+            data-task-item
           >
             <div
               className="p-3 cursor-pointer transition-all duration-200 hover:bg-gray-50"
@@ -1088,9 +1276,33 @@ const TimelinePage = () => {
     </div>
   );
 
-  return (
+    return (
     <>
-      <div className="page-content safe-area-top">
+      {/* 下拉刷新指示器 */}
+      {(pullToRefreshState.pullDistance > 0 || pullToRefreshState.isRefreshing) && (
+        <div 
+          className="fixed top-0 left-0 right-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 py-2 z-50 transition-all duration-200"
+          style={{ 
+            transform: `translateY(${pullToRefreshState.pullDistance - 60}px)`,
+            opacity: pullToRefreshState.pullDistance / PULL_THRESHOLD
+          }}
+        >
+          <div className="flex items-center space-x-2">
+            {pullToRefreshState.isRefreshing && (
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            )}
+            <span className="text-sm">{getPullToRefreshStatusText()}</span>
+          </div>
+        </div>
+      )}
+
+      <div 
+        className="page-content safe-area-top timeline-container"
+        style={{
+          transform: `translateY(${pullToRefreshState.pullDistance}px)`,
+          transition: pullToRefreshState.isPulling ? 'none' : 'transform 0.3s ease-out'
+        }}
+      >
         {renderHeader()}
         
         {activeTab === 'timeline' ? (

@@ -12,6 +12,7 @@ import ProjectDetailModal from '../components/ProjectDetailModal';
 
 
 
+
 // TaskCategory 到 category_id 的映射
 const getCategoryId = (category: ItemCategory): number => {
   switch (category) {
@@ -45,6 +46,15 @@ const ProjectsPage = () => {
   });
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  // 下拉刷新相关状态
+  const [pullToRefreshState, setPullToRefreshState] = useState({
+    isPulling: false,
+    pullDistance: 0,
+    isRefreshing: false,
+    startY: 0
+  });
+  const PULL_THRESHOLD = 80;
 
   // 使用统一的分类配置
   const categories = ITEM_CATEGORIES.map(category => ({
@@ -167,269 +177,412 @@ const ProjectsPage = () => {
     };
   };
 
+  // 下拉刷新处理函数
+  const handlePullToRefresh = async () => {
+    console.log('🔄 ProjectsPage: 开始下拉刷新');
+    
+    try {
+      // 清理当前分类的缓存
+      const categoryId = getCategoryId(activeCategory);
+      console.log('🧹 ProjectsPage: 清理缓存数据', { activeCategory, categoryId });
+      
+      // 移除当前分类的任务缓存
+      sessionStorage.removeItem(`project-category-tasks-${categoryId}`);
+      
+      // 更新缓存元数据，移除当前分类的记录
+      try {
+        const metadata = (() => {
+          try {
+            const existing = sessionStorage.getItem('project-cache-metadata');
+            return existing ? JSON.parse(existing) : {};
+          } catch {
+            return {};
+          }
+        })();
+        delete metadata[categoryId];
+        sessionStorage.setItem('project-cache-metadata', JSON.stringify(metadata));
+      } catch (error) {
+        console.error('清理缓存元数据失败:', error);
+      }
+      
+      // 强制从后端重新加载数据
+      console.log('📡 ProjectsPage: 强制从后端重新加载数据');
+      await loadCategoryTasks(categoryId, true);
+      
+      console.log('✅ ProjectsPage: 下拉刷新完成');
+    } catch (error) {
+      console.error('❌ ProjectsPage: 下拉刷新失败', error);
+      throw error;
+    }
+  };
+
+  // 下拉刷新触摸事件处理 - 使用useEffect手动添加监听器以避免被动事件问题
+  useEffect(() => {
+    const containerElement = document.querySelector('.projects-container');
+    if (!containerElement) return;
+
+    const handleTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      // 只有在页面顶部时才能触发下拉刷新
+      if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
+        setPullToRefreshState(prev => ({
+          ...prev,
+          isPulling: true,
+          startY: touchEvent.touches[0].clientY,
+          pullDistance: 0
+        }));
+      }
+    };
+
+    const handleTouchMove = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      if (!pullToRefreshState.isPulling || pullToRefreshState.isRefreshing) return;
+      
+      const currentY = touchEvent.touches[0].clientY;
+      const deltaY = currentY - pullToRefreshState.startY;
+      
+      if (deltaY > 0) {
+        e.preventDefault(); // 现在可以安全调用preventDefault了
+        const distance = Math.min(deltaY * 0.4, 100);
+        setPullToRefreshState(prev => ({
+          ...prev,
+          pullDistance: distance
+        }));
+      }
+    };
+
+    const handleTouchEnd = async () => {
+      if (!pullToRefreshState.isPulling) return;
+      
+      setPullToRefreshState(prev => ({ ...prev, isPulling: false }));
+      
+      if (pullToRefreshState.pullDistance >= PULL_THRESHOLD && !pullToRefreshState.isRefreshing) {
+        setPullToRefreshState(prev => ({ ...prev, isRefreshing: true }));
+        try {
+          await handlePullToRefresh();
+        } catch (error) {
+          console.error('下拉刷新失败:', error);
+        } finally {
+          setPullToRefreshState(prev => ({ 
+            ...prev, 
+            isRefreshing: false, 
+            pullDistance: 0 
+          }));
+        }
+      } else {
+        setPullToRefreshState(prev => ({ ...prev, pullDistance: 0 }));
+      }
+    };
+
+    // 添加事件监听器，指定passive: false以允许preventDefault
+    containerElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+    containerElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    containerElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      containerElement.removeEventListener('touchstart', handleTouchStart);
+      containerElement.removeEventListener('touchmove', handleTouchMove);
+      containerElement.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [pullToRefreshState.isPulling, pullToRefreshState.isRefreshing, pullToRefreshState.startY, pullToRefreshState.pullDistance, handlePullToRefresh]);
+
+  // 获取下拉刷新状态文本
+  const getPullToRefreshStatusText = () => {
+    if (pullToRefreshState.isRefreshing) return '正在刷新...';
+    if (pullToRefreshState.pullDistance >= PULL_THRESHOLD) return '松开刷新';
+    if (pullToRefreshState.pullDistance > 0) return '下拉刷新';
+    return '';
+  };
+
   // 使用新的loading和error状态
   const isLoading = projectsLoading;
   const error = projectsError;
 
   return (
-    <div className="page-content safe-area-top bg-gray-50">
-      {/* Tab 标签栏 */}
-      <div className="px-4 mb-6 pt-4">
-        <div className="bg-white rounded-lg p-1 shadow-sm">
-          <div className="grid grid-cols-6 gap-0">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategoryChange(category.label as ItemCategory)}
-                disabled={isLoading}
-                className={`py-3 px-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
-                  activeCategory === category.label
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex flex-col items-center">
-                  <span className="text-lg mb-1">{category.emoji}</span>
-                  <span>{category.label}</span>
-                </div>
-              </button>
-            ))}
+    <>
+      {/* 下拉刷新指示器 */}
+      {(pullToRefreshState.pullDistance > 0 || pullToRefreshState.isRefreshing) && (
+        <div 
+          className="fixed top-0 left-0 right-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 py-2 z-50 transition-all duration-200"
+          style={{ 
+            transform: `translateY(${pullToRefreshState.pullDistance - 60}px)`,
+            opacity: pullToRefreshState.pullDistance / PULL_THRESHOLD
+          }}
+        >
+          <div className="flex items-center space-x-2">
+            {pullToRefreshState.isRefreshing && (
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            )}
+            <span className="text-sm">{getPullToRefreshStatusText()}</span>
           </div>
         </div>
-        
-        {/* 加载状态指示器 */}
-        {isLoading && (
-          <div className="mt-2 text-center">
-            <div className="inline-flex items-center text-sm text-gray-500">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
-              正在加载{activeCategory}数据...
-            </div>
-          </div>
-        )}
-        
-        {/* 错误状态 */}
-        {error && (
-          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-red-600">加载失败: {error}</p>
-              <button 
-                onClick={() => loadCategoryTasks(getCategoryId(activeCategory))}
-                className="text-sm text-red-600 hover:text-red-800 underline"
-              >
-                重试
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
-      <div className="px-4 space-y-6">
-        {/* 项目部分 */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => toggleSection('projects')}
-              className="flex items-center text-left"
-            >
-              <span className="text-sm font-medium text-gray-600">项目 ({categoryProjects.length})</span>
-              <div className="ml-2">
-                {expandedSections.projects ? (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                )}
+      <div 
+        className="page-content safe-area-top bg-gray-50 projects-container"
+        style={{
+          transform: `translateY(${pullToRefreshState.pullDistance}px)`,
+          transition: pullToRefreshState.isPulling ? 'none' : 'transform 0.3s ease-out'
+        }}
+      >
+        {/* Tab 标签栏 */}
+        <div className="px-4 mb-6 pt-4">
+          <div className="bg-white rounded-lg p-1 shadow-sm">
+            <div className="grid grid-cols-6 gap-0">
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryChange(category.label as ItemCategory)}
+                  disabled={isLoading}
+                  className={`py-3 px-1 text-xs rounded-md transition-colors disabled:opacity-50 ${
+                    activeCategory === category.label
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg mb-1">{category.emoji}</span>
+                    <span>{category.label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* 加载状态指示器 */}
+          {isLoading && (
+            <div className="mt-2 text-center">
+              <div className="inline-flex items-center text-sm text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                正在加载{activeCategory}数据...
               </div>
-            </button>
-            <button 
-              onClick={handleAddProject}
-              className="h-7 w-7 rounded-full hover:bg-gray-100 flex items-center justify-center"
-            >
-              <Plus className="h-4 w-4 text-gray-500" />
-            </button>
-          </div>
-
-          {expandedSections.projects && (
-            <div className="grid grid-cols-1 gap-3">
-              {categoryProjects.length > 0 ? (
-                categoryProjects.map((project) => {
-                  const updatedProject = getUpdatedProject(project);
-                  return (
-                    <div
-                      key={project.id}
-                      className="bg-white rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden"
-                      onClick={() => handleProjectClick(updatedProject)}
-                      style={{ borderLeft: `4px solid ${project.color || "#e5e7eb"}` }}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-start">
-                          <div className="text-2xl mr-3">{project.icon || "📁"}</div>
-                          <div>
-                            <h3 className="font-medium text-lg">{project.title}</h3>
-                            <p className="text-gray-500 text-sm">{project.description}</p>
-                          </div>
-                        </div>
-                        <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium">
-                          {project.category}
-                        </span>
-                      </div>
-
-                      {project.hasProgress && (
-                        <div className="mt-4">
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-gray-600">进度</span>
-                            <span className="font-medium">{updatedProject.progress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${updatedProject.progress}%`,
-                                backgroundColor: project.color || '#3b82f6'
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                        <div>{updatedProject.taskCount} 个事项</div>
-                        {project.dueDate && <div>截止: {project.dueDate}</div>}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="bg-white rounded-lg border border-dashed border-gray-300 p-6 text-center">
-                  <p className="text-gray-500 mb-2">暂无{activeCategory}项目</p>
-                  <button 
-                    onClick={handleAddProject}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    创建第一个项目
-                  </button>
-                </div>
-              )}
+            </div>
+          )}
+          
+          {/* 错误状态 */}
+          {error && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-red-600">加载失败: {error}</p>
+                <button 
+                  onClick={() => loadCategoryTasks(getCategoryId(activeCategory))}
+                  className="text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  重试
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* 事项部分 */}
-        {!isLoading && incompleteTasks.length > 0 && (
+        <div className="px-4 space-y-6">
+          {/* 项目部分 */}
           <div className="space-y-3">
-            <button
-              onClick={() => toggleSection('tasks')}
-              className="flex items-center w-full justify-start"
-            >
-              <span className="text-sm font-medium text-gray-600">未分配事项 ({incompleteTasks.length})</span>
-              <div className="ml-2">
-                {expandedSections.tasks ? (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                )}
-              </div>
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => toggleSection('projects')}
+                className="flex items-center text-left"
+              >
+                <span className="text-sm font-medium text-gray-600">项目 ({categoryProjects.length})</span>
+                <div className="ml-2">
+                  {expandedSections.projects ? (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              </button>
+              <button 
+                onClick={handleAddProject}
+                className="h-7 w-7 rounded-full hover:bg-gray-100 flex items-center justify-center"
+              >
+                <Plus className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
 
-            {expandedSections.tasks && (
-              <div className="space-y-2">
-                {incompleteTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center flex-1">
-                        <span className="text-lg mr-2">{task.icon || "📌"}</span>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{task.title}</h4>
-                          {task.startTime && (
-                            <p className="text-xs text-gray-500 mt-1">{task.startTime}</p>
-                          )}
+            {expandedSections.projects && (
+              <div className="grid grid-cols-1 gap-3">
+                {categoryProjects.length > 0 ? (
+                  categoryProjects.map((project) => {
+                    const updatedProject = getUpdatedProject(project);
+                    return (
+                      <div
+                        key={project.id}
+                        className="bg-white rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden"
+                        onClick={() => handleProjectClick(updatedProject)}
+                        style={{ borderLeft: `4px solid ${project.color || "#e5e7eb"}` }}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-start">
+                            <div className="text-2xl mr-3">{project.icon || "📁"}</div>
+                            <div>
+                              <h3 className="font-medium text-lg">{project.title}</h3>
+                              <p className="text-gray-500 text-sm">{project.description}</p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium">
+                            {project.category}
+                          </span>
+                        </div>
+
+                        {project.hasProgress && (
+                          <div className="mt-4">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-gray-600">进度</span>
+                              <span className="font-medium">{updatedProject.progress}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="h-2 rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${updatedProject.progress}%`,
+                                  backgroundColor: project.color || '#3b82f6'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                          <div>{updatedProject.taskCount} 个事项</div>
+                          {project.dueDate && <div>截止: {project.dueDate}</div>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {task.duration && (
-                          <span className="px-2 py-1 bg-white border border-gray-200 rounded text-xs">
-                            {task.duration}
-                          </span>
-                        )}
+                    );
+                  })
+                ) : (
+                  <div className="bg-white rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                    <p className="text-gray-500 mb-2">暂无{activeCategory}项目</p>
+                    <button 
+                      onClick={handleAddProject}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      创建第一个项目
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 事项部分 */}
+          {!isLoading && incompleteTasks.length > 0 && (
+            <div className="space-y-3">
+              <button
+                onClick={() => toggleSection('tasks')}
+                className="flex items-center w-full justify-start"
+              >
+                <span className="text-sm font-medium text-gray-600">未分配事项 ({incompleteTasks.length})</span>
+                <div className="ml-2">
+                  {expandedSections.tasks ? (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.tasks && (
+                <div className="space-y-2">
+                  {incompleteTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center flex-1">
+                          <span className="text-lg mr-2">{task.icon || "📌"}</span>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm">{task.title}</h4>
+                            {task.startTime && (
+                              <p className="text-xs text-gray-500 mt-1">{task.startTime}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {task.duration && (
+                            <span className="px-2 py-1 bg-white border border-gray-200 rounded text-xs">
+                              {task.duration}
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => handleComplete(task.id, e)}
+                            className="h-6 w-6 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center"
+                          >
+                            {task.completed && <Check className="h-3 w-3 text-green-500" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 已完成事项部分 */}
+          {!isLoading && completedTasks.length > 0 && (
+            <div className="space-y-3">
+              <button
+                onClick={() => toggleSection('completed')}
+                className="flex items-center w-full justify-start"
+              >
+                <span className="text-sm font-medium text-gray-600">已完成 ({completedTasks.length})</span>
+                <div className="ml-2">
+                  {expandedSections.completed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              </button>
+
+              {expandedSections.completed && (
+                <div className="space-y-2">
+                  {completedTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="bg-gray-50 rounded-lg p-3 opacity-60"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center flex-1">
+                          <span className="text-lg mr-2">{task.icon || "📌"}</span>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm line-through">{task.title}</h4>
+                            {task.startTime && (
+                              <p className="text-xs text-gray-500 mt-1">{task.startTime}</p>
+                            )}
+                          </div>
+                        </div>
                         <button
                           onClick={(e) => handleComplete(task.id, e)}
-                          className="h-6 w-6 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center"
+                          className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center"
                         >
-                          {task.completed && <Check className="h-3 w-3 text-green-500" />}
+                          <Check className="h-3 w-3 text-white" />
                         </button>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* 已完成事项部分 */}
-        {!isLoading && completedTasks.length > 0 && (
-          <div className="space-y-3">
-            <button
-              onClick={() => toggleSection('completed')}
-              className="flex items-center w-full justify-start"
-            >
-              <span className="text-sm font-medium text-gray-600">已完成 ({completedTasks.length})</span>
-              <div className="ml-2">
-                {expandedSections.completed ? (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                )}
-              </div>
-            </button>
-
-            {expandedSections.completed && (
-              <div className="space-y-2">
-                {completedTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="bg-gray-50 rounded-lg p-3 opacity-60"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center flex-1">
-                        <span className="text-lg mr-2">{task.icon || "📌"}</span>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm line-through">{task.title}</h4>
-                          {task.startTime && (
-                            <p className="text-xs text-gray-500 mt-1">{task.startTime}</p>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => handleComplete(task.id, e)}
-                        className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center"
-                      >
-                        <Check className="h-3 w-3 text-white" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 空状态 */}
-        {!isLoading && !error && categoryProjects.length === 0 && incompleteTasks.length === 0 && completedTasks.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-2">📋</div>
-            <p className="mb-4">暂无{activeCategory}相关的项目或事项</p>
-            <button 
-              onClick={handleAddProject}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              创建第一个项目
-            </button>
-          </div>
-        )}
+          {/* 空状态 */}
+          {!isLoading && !error && categoryProjects.length === 0 && incompleteTasks.length === 0 && completedTasks.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-2">📋</div>
+              <p className="mb-4">暂无{activeCategory}相关的项目或事项</p>
+              <button 
+                onClick={handleAddProject}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                创建第一个项目
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 添加项目弹框 */}
@@ -448,7 +601,7 @@ const ProjectsPage = () => {
           onClose={() => setSelectedProject(null)}
         />
       )}
-    </div>
+    </>
   );
 };
 
