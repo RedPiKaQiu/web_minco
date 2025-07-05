@@ -1,5 +1,6 @@
 /**
- * 时间轴页面，按日期展示任务时间线，支持日期切换和任务状态管理
+ * 时间轴页面，按日期展示有明确时间安排的任务，支持日期切换和任务状态管理
+ * 注意：过滤掉"随时"任务（time_slot_id=5），这类任务只在项目页面显示
  */
 import { useState, useEffect, useRef } from 'react';
 import { useTimelineTasks } from '../hooks/useItemData';
@@ -36,7 +37,6 @@ const TimelinePage = () => {
     中午: true,
     下午: true,
     晚上: true,
-    随时: true,
   });
 
   // 左滑删除相关状态
@@ -46,9 +46,14 @@ const TimelinePage = () => {
   const touchStartY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
 
-  // 转换API数据为Task格式
-  const incompleteTasks = apiIncompleteTasks.map(adaptItemToTask);
-  const completedTasks = apiCompletedTasks.map(adaptItemToTask);
+  // 转换API数据为Task格式，并过滤掉"随时"任务（time_slot_id === 5）
+  // 时间轴页面只显示有明确时间安排的任务，"随时"任务只在项目页面显示
+  const incompleteTasks = apiIncompleteTasks
+    .filter(apiItem => apiItem.time_slot_id !== 5) // 过滤掉随时任务
+    .map(adaptItemToTask);
+  const completedTasks = apiCompletedTasks
+    .filter(apiItem => apiItem.time_slot_id !== 5) // 过滤掉随时任务
+    .map(adaptItemToTask);
   const allTasks = [...incompleteTasks, ...completedTasks];
 
   // 页面初始化时的数据获取策略
@@ -143,13 +148,12 @@ const TimelinePage = () => {
     };
   }, [refreshFromCache, loadTasksByDate, selectedDate, swipedTaskId]);
 
-  // 时间段配置
+  // 时间段配置 - 移除"随时"选项，时间轴页面只显示有明确时间安排的任务
   const timeSlots = [
     { id: '上午', label: '上午', emoji: '🌅' },
     { id: '中午', label: '中午', emoji: '🌞' },
     { id: '下午', label: '下午', emoji: '☀️' },
     { id: '晚上', label: '晚上', emoji: '🌙' },
-    { id: '随时', label: '随时', emoji: '⏰' },
   ];
 
   // 根据事项分组
@@ -171,7 +175,7 @@ const TimelinePage = () => {
 
   // 解析时间为数字，用于排序
   function parseTime(startTime?: string): number {
-    if (!startTime || startTime === '随时') return 2400; // 随时放在最后
+    if (!startTime) return 2400; // 没有时间信息的任务放在最后
     
     let hour = 0;
     
@@ -224,7 +228,7 @@ const TimelinePage = () => {
   const weekDates = getWeekDates();
 
   function getTimeOfDay(startTime?: string): string {
-    if (!startTime || startTime === '随时') return '随时';
+    if (!startTime) return '晚上'; // 没有时间信息的任务默认归到晚上
     
     // 处理多种时间格式
     let hourStr = '';
@@ -266,7 +270,7 @@ const TimelinePage = () => {
     
     if (!hourStr) {
       console.log('无法解析时间格式:', startTime);
-      return '随时';
+      return '晚上'; // 默认归到晚上
     }
     
     const hour = parseInt(hourStr);
@@ -276,7 +280,7 @@ const TimelinePage = () => {
     if (hour >= 12 && hour < 14) return '中午';  
     if (hour >= 14 && hour < 18) return '下午';
     if (hour >= 18 || hour < 6) return '晚上';
-    return '随时';
+    return '晚上'; // 默认情况
   }
 
   const handlePrevDay = () => {
@@ -321,7 +325,6 @@ const TimelinePage = () => {
         中午: false,
         下午: false,
         晚上: false,
-        随时: false,
       });
     } else {
       // 展开模式下不需要区域展开状态，因为直接平铺显示
@@ -330,7 +333,6 @@ const TimelinePage = () => {
         中午: true,
         下午: true,
         晚上: true,
-        随时: true,
       });
     }
   };
@@ -779,7 +781,13 @@ const TimelinePage = () => {
           </button>
         </div>
       ) : incompleteTasks.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">暂无事项</div>
+        <div className="text-center py-8 text-gray-500">
+          <div className="mb-2">暂无已安排时间的事项</div>
+          <div className="text-sm text-gray-400">
+            提示：时间轴只显示有明确时间安排的事项<br/>
+            "随时"事项请在项目页面查看
+          </div>
+        </div>
       ) : (
         timeSlots.map(slot => {
           const sectionTasks = groupedTasks[slot.id] || [];
@@ -906,7 +914,13 @@ const TimelinePage = () => {
           </button>
         </div>
       ) : incompleteTasks.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">暂无事项</div>
+        <div className="text-center py-8 text-gray-500">
+          <div className="mb-2">暂无已安排时间的事项</div>
+          <div className="text-sm text-gray-400">
+            提示：时间轴只显示有明确时间安排的事项<br/>
+            "随时"事项请在项目页面查看
+          </div>
+        </div>
       ) : (
         sortedTasks.map(task => (
           <div
@@ -999,7 +1013,13 @@ const TimelinePage = () => {
           </button>
         </div>
       ) : completedTasks.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">暂无已完成事项</div>
+        <div className="text-center py-8 text-gray-500">
+          <div className="mb-2">暂无已完成的事项</div>
+          <div className="text-sm text-gray-400">
+            提示：时间轴只显示有明确时间安排的事项<br/>
+            "随时"事项请在项目页面查看
+          </div>
+        </div>
       ) : (
         completedTasks.map(task => (
           <div
