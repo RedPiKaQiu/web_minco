@@ -17,6 +17,13 @@ import { Item } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { localDateToBeijingString } from '../utils/timezone';
 import { ApiError } from '../api/index';
+import { useRecommendation } from './useRecommendation';
+import { 
+  getRecommendationCache, 
+  cacheRecommendations, 
+  shouldUpdateRecommendations, 
+  clearRecommendationCache 
+} from '../utils/recommendationCache';
 
 /**
  * 前端推荐算法 - 从今日任务中筛选推荐
@@ -66,6 +73,10 @@ const generateRecommendationsFromTasks = (allTasks: Item[]): Item[] => {
   return [...withTime, ...withoutTime].slice(0, 5);
 };
 
+// 全局推荐状态，防止并发调用
+let isGeneratingRecommendations = false;
+let lastRecommendationPromise: Promise<Item[]> | null = null;
+
 // 首页数据hook
 export const useHomePageTasks = () => {
   const { isTestUser } = useAppContext();
@@ -73,6 +84,12 @@ export const useHomePageTasks = () => {
   const [recommendedTasks, setRecommendedTasks] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // 使用推荐服务
+  const recommendation = useRecommendation({
+    method: 'ai', // 默认使用AI推荐，失败时自动降级到本地推荐
+    count: 3
+  });
   
   // 使用与时间轴页面相同的缓存配置
   const TASK_CACHE_PREFIX = 'timeline-tasks-';
@@ -150,6 +167,68 @@ export const useHomePageTasks = () => {
     }
   }, [getCacheMetadata]);
 
+  // 智能推荐生成函数（带缓存和去重）
+  const getRecommendationsWithCache = useCallback(async (tasks: Item[]): Promise<Item[]> => {
+    // 如果正在生成推荐，返回当前Promise
+    if (isGeneratingRecommendations && lastRecommendationPromise) {
+      console.log('🔄 推荐正在生成中，复用当前请求');
+      return lastRecommendationPromise;
+    }
+    
+    const currentMethod = isTestUserRef.current ? 'local' : 'ai';
+    const userContext = recommendation.getUserContext();
+    
+    // 检查是否需要更新推荐
+    if (!shouldUpdateRecommendations(tasks, currentMethod, userContext)) {
+      const cached = getRecommendationCache();
+      if (cached) {
+        console.log('💾 使用缓存的推荐结果', {
+          count: cached.count,
+          method: cached.method,
+          age: Math.round((Date.now() - cached.timestamp) / 1000) + 's'
+        });
+        return cached.recommendations;
+      }
+    }
+    
+    // 生成新推荐
+    isGeneratingRecommendations = true;
+    lastRecommendationPromise = (async () => {
+      try {
+        console.log('🎯 生成新推荐', { method: currentMethod, taskCount: tasks.length });
+        
+        const recommendationResult = await recommendation.getRecommendations(tasks);
+        const recommendedItems = recommendationResult.recommendations.map(rec => rec.item);
+        
+        // 缓存推荐结果
+        cacheRecommendations(recommendedItems, tasks, recommendationResult.method as 'ai' | 'local', userContext);
+        
+        console.log('✅ 新推荐生成完成', {
+          count: recommendedItems.length,
+          method: recommendationResult.method,
+          message: recommendationResult.message
+        });
+        
+        return recommendedItems;
+      } catch (recError) {
+        console.error('❌ 推荐生成失败，使用降级算法:', recError);
+        // 降级到原有算法
+        const fallbackRecommendations = generateRecommendationsFromTasks(tasks);
+        // 缓存降级推荐
+        cacheRecommendations(fallbackRecommendations, tasks, 'local', userContext);
+        return fallbackRecommendations;
+      }
+    })();
+    
+    try {
+      const result = await lastRecommendationPromise;
+      return result;
+    } finally {
+      isGeneratingRecommendations = false;
+      lastRecommendationPromise = null;
+    }
+  }, [recommendation]);
+
   const loadTodayTasks = useCallback(async (forceReload: boolean = false) => {
     const currentIsTestUser = isTestUserRef.current;
     
@@ -166,10 +245,14 @@ export const useHomePageTasks = () => {
       const cachedTasks = checkTodayCache();
       if (cachedTasks) {
         setTodayTasks(cachedTasks);
-        const recommendations = generateRecommendationsFromTasks(cachedTasks);
-        setRecommendedTasks(recommendations);
+        
+        // 使用智能推荐函数（带缓存）
+        const recommendedItems = await getRecommendationsWithCache(cachedTasks);
+        setRecommendedTasks(recommendedItems);
+        
         console.log('📦 useHomePageTasks: 使用今日缓存数据', { 
-          taskCount: cachedTasks.length 
+          taskCount: cachedTasks.length,
+          recommendationCount: recommendedItems.length
         });
         return;
       }
@@ -200,10 +283,9 @@ export const useHomePageTasks = () => {
         // 缓存mock数据
         cacheTodayTasks(tasks);
         
-        // 从今日任务中生成推荐
-        const recommendations = generateRecommendationsFromTasks(tasks);
-        console.log('🎯 生成推荐任务:', { count: recommendations.length });
-        setRecommendedTasks(recommendations);
+        // 使用智能推荐函数（测试用户优先使用本地推荐）
+        const recommendedItems = await getRecommendationsWithCache(tasks);
+        setRecommendedTasks(recommendedItems);
         
         setError(null);
       } catch (err: unknown) {
@@ -232,10 +314,9 @@ export const useHomePageTasks = () => {
       // 缓存今日任务数据供时间轴页面使用
       cacheTodayTasks(tasks);
       
-      // 从今日任务中生成推荐
-      const recommendations = generateRecommendationsFromTasks(tasks);
-      console.log('🎯 生成推荐任务:', { count: recommendations.length });
-      setRecommendedTasks(recommendations);
+      // 使用智能推荐函数（正式用户优先使用AI推荐）
+      const recommendedItems = await getRecommendationsWithCache(tasks);
+      setRecommendedTasks(recommendedItems);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '获取今日任务失败';
       setError(errorMessage);
@@ -244,43 +325,64 @@ export const useHomePageTasks = () => {
       isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [checkTodayCache, cacheTodayTasks]); // 依赖缓存相关函数
+  }, [checkTodayCache, cacheTodayTasks]); // 推荐服务实例是稳定的，不需要作为依赖
 
-  // 获取更多推荐任务
+  // 获取更多推荐任务（强制刷新）
   const getMoreRecommendations = useCallback(async () => {
-    try {
-      console.log('🔄 刷新推荐任务');
-      
-      // 重新从今日任务中生成推荐
-      const newRecommendations = generateRecommendationsFromTasks(todayTasks);
-      console.log('🎯 刷新后的推荐:', { count: newRecommendations.length });
-      
-      return newRecommendations;
-    } catch (err: unknown) {
-      console.error('❌ 获取更多推荐失败:', err);
-      return [];
-    }
-  }, [todayTasks]); // 依赖todayTasks，当今日任务变化时重新生成推荐
+    console.log('🔄 用户主动获取更多推荐，清除缓存');
+    
+    // 清除推荐缓存，强制生成新推荐
+    clearRecommendationCache();
+    
+    // 使用智能推荐函数生成新推荐
+    const newRecommendations = await getRecommendationsWithCache(todayTasks);
+    console.log('🎯 新推荐获取完成:', { 
+      count: newRecommendations.length
+    });
+    
+    return newRecommendations;
+  }, [todayTasks, getRecommendationsWithCache]); // 只依赖todayTasks，推荐服务实例是稳定的
 
-  // 强制刷新缓存数据到状态
-  const refreshFromCache = useCallback(() => {
+  // 只刷新任务缓存，智能检测是否需要更新推荐
+  const refreshTaskCacheOnly = useCallback(async (): Promise<boolean> => {
     try {
       const cachedTasks = checkTodayCache();
       if (cachedTasks) {
         setTodayTasks(cachedTasks);
-        const recommendations = generateRecommendationsFromTasks(cachedTasks);
-        setRecommendedTasks(recommendations);
-        console.log('🔄 useHomePageTasks: 从缓存刷新今日任务', { 
-          taskCount: cachedTasks.length 
+        
+        // 智能检测是否需要更新推荐
+        const currentMethod = isTestUserRef.current ? 'local' : 'ai';
+        const userContext = recommendation.getUserContext();
+        
+        if (shouldUpdateRecommendations(cachedTasks, currentMethod, userContext)) {
+          console.log('🔄 任务数据或用户状态已变化，更新推荐');
+          const recommendedItems = await getRecommendationsWithCache(cachedTasks);
+          setRecommendedTasks(recommendedItems);
+        } else {
+          console.log('📋 任务数据未变化，保持当前推荐');
+          const cached = getRecommendationCache();
+          if (cached) {
+            setRecommendedTasks(cached.recommendations);
+          }
+        }
+        
+        console.log('🔄 useHomePageTasks: 任务缓存刷新完成', { 
+          taskCount: cachedTasks.length
         });
+        
         return true;
       }
       return false;
     } catch (error) {
-      console.error('从缓存刷新失败:', error);
+      console.error('任务缓存刷新失败:', error);
       return false;
     }
-  }, [checkTodayCache]);
+  }, [checkTodayCache, getRecommendationsWithCache, recommendation]);
+
+  // 强制刷新缓存数据到状态（兼容性保持）
+  const refreshFromCache = useCallback(async () => {
+    return refreshTaskCacheOnly();
+  }, [refreshTaskCacheOnly]);
 
   // 在认证失败时清理所有缓存
   const handleAuthError = useCallback(() => {
@@ -291,6 +393,9 @@ export const useHomePageTasks = () => {
         sessionStorage.removeItem(key);
       }
     });
+    
+    // 清理推荐缓存
+    clearRecommendationCache();
   }, []);
 
   return {
@@ -302,7 +407,18 @@ export const useHomePageTasks = () => {
     getMoreRecommendations,
     setRecommendedTasks,
     refreshFromCache,
-    handleAuthError
+    refreshTaskCacheOnly, // 新增：只刷新任务缓存的函数
+    handleAuthError,
+    
+    // 推荐相关功能
+    recommendation: {
+      currentMethod: recommendation.currentMethod,
+      isAiSupported: recommendation.isAiSupported,
+      updateUserContext: recommendation.updateUserContext,
+      getUserContext: recommendation.getUserContext,
+      generateRecommendReason: recommendation.generateRecommendReason,
+      clearCache: clearRecommendationCache // 新增：清除推荐缓存的函数
+    }
   };
 };
 

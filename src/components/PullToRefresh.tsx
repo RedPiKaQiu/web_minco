@@ -1,7 +1,7 @@
 /**
  * 通用下拉刷新组件，支持触摸手势和loading状态显示
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { RotateCcw } from 'lucide-react';
 
 interface PullToRefreshProps {

@@ -1,7 +1,7 @@
 /**
  * 首页页面，导航栏点击首页显示，展示今日推荐任务和快速操作
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useTaskCompletion } from '../hooks/useItemCompletion';
 import { useHomePageTasks } from '../hooks/useItemData';
@@ -101,7 +101,9 @@ const HomePage = () => {
     loadTodayTasks,
     getMoreRecommendations,
     setRecommendedTasks: setApiRecommendedTasks,
-    refreshFromCache
+    refreshFromCache,
+    refreshTaskCacheOnly, // 新增：只刷新任务缓存
+    recommendation
   } = useHomePageTasks();
   
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -109,6 +111,14 @@ const HomePage = () => {
   const [showFireworks, setShowFireworks] = useState(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'card' | 'sticky'>('card');
+
+  // 创建稳定的函数引用
+  const loadTodayTasksRef = useRef(loadTodayTasks);
+  const refreshFromCacheRef = useRef(refreshFromCache);
+  
+  // 更新ref中的函数引用
+  loadTodayTasksRef.current = loadTodayTasks;
+  refreshFromCacheRef.current = refreshFromCache;
 
   // 转换API数据为Task格式
   const todayTasks = apiTodayTasks.map(adaptItemToTask);
@@ -122,83 +132,118 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 页面加载时的数据获取策略
+  // 页面加载时的数据获取策略（只在组件挂载时执行一次）
   useEffect(() => {
-    console.log('🏠 HomePage: useEffect触发，检查状态', { isTestUser });
-    
-    // 检查是否需要清理缓存（用户刚登录）
-    const needClearCache = localStorage.getItem('clearCacheOnNextLoad');
-    if (needClearCache) {
-      console.log('🧹 HomePage: 检测到需要清理缓存标记，清理旧缓存数据');
-      // 清理可能的旧缓存数据，防止数据泄露
-      sessionStorage.removeItem('timeline-cache-metadata');
-      sessionStorage.removeItem('project-cache-metadata');
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('timeline-tasks-') || 
-            key.startsWith('project-category-tasks-') || 
-            key.includes('task') || 
-            key.includes('item') || 
-            key.includes('cache')) {
-          sessionStorage.removeItem(key);
+    // 创建稳定的函数引用，避免闭包问题
+    const initializeData = async () => {
+      console.log('🏠 HomePage: 组件挂载，初始化数据加载');
+      
+      // 检查是否需要清理缓存（用户刚登录）
+      const needClearCache = localStorage.getItem('clearCacheOnNextLoad');
+      if (needClearCache) {
+        console.log('🧹 HomePage: 检测到需要清理缓存标记，清理旧缓存数据');
+        // 清理可能的旧缓存数据，防止数据泄露
+        sessionStorage.removeItem('timeline-cache-metadata');
+        sessionStorage.removeItem('project-cache-metadata');
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('timeline-tasks-') || 
+              key.startsWith('project-category-tasks-') || 
+              key.includes('task') || 
+              key.includes('item') || 
+              key.includes('cache')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+        // 移除标记，避免重复清理
+        localStorage.removeItem('clearCacheOnNextLoad');
+        console.log('✅ HomePage: 旧缓存清理完成，强制从后端加载');
+        await loadTodayTasksRef.current(true); // 强制重新加载
+      } else {
+        console.log('🏠 HomePage: 正常页面访问，优先使用缓存');
+        // 先尝试从缓存刷新，如果没有缓存再从后端加载
+        try {
+          const refreshed = await refreshFromCacheRef.current();
+          if (!refreshed) {
+            console.log('📡 HomePage: 缓存不可用，从后端加载');
+            await loadTodayTasksRef.current();
+          } else {
+            console.log('✅ HomePage: 缓存数据加载完成');
+          }
+        } catch (error) {
+          console.error('❌ HomePage: 缓存刷新失败，从后端加载', error);
+          await loadTodayTasksRef.current();
         }
-      });
-      // 移除标记，避免重复清理
-      localStorage.removeItem('clearCacheOnNextLoad');
-      console.log('✅ HomePage: 旧缓存清理完成，强制从后端加载');
-      loadTodayTasks(true); // 强制重新加载
-    } else {
-      console.log('🏠 HomePage: 正常页面访问，优先使用缓存');
-      // 先尝试从缓存刷新，如果没有缓存再从后端加载
-      const refreshed = refreshFromCache();
-      if (!refreshed) {
-        console.log('📡 HomePage: 缓存不可用，从后端加载');
-        loadTodayTasks();
-      }
-    }
-  }, [loadTodayTasks, refreshFromCache]);
-
-  // 监听页面焦点，返回页面时尝试从缓存刷新数据
-  useEffect(() => {
-    const handleFocus = () => {
-      console.log('👁️ HomePage: 页面重新获得焦点，尝试刷新缓存');
-      const refreshed = refreshFromCache();
-      if (!refreshed) {
-        console.log('📡 HomePage: 缓存刷新失败，重新加载数据');
-        loadTodayTasks();
       }
     };
 
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('🔄 HomePage: 页面变为可见，尝试刷新缓存');
-        const refreshed = refreshFromCache();
+    initializeData();
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+
+  // 智能事件监听，大幅减少不必要的推荐接口调用
+  useEffect(() => {
+    let isHandling = false;
+    let lastRefreshTime = 0;
+    const REFRESH_THROTTLE = 5 * 60 * 1000; // 提升到5分钟节流
+    let lastVisibilityState = document.visibilityState;
+
+    const handleRefresh = async () => {
+      const now = Date.now();
+      
+      // 更严格的节流控制
+      if (isHandling || now - lastRefreshTime < REFRESH_THROTTLE) {
+        console.log('🏠 HomePage: 刷新被节流，跳过（上次刷新：%ds前）', 
+          Math.round((now - lastRefreshTime) / 1000));
+        return;
+      }
+      
+      isHandling = true;
+      lastRefreshTime = now;
+      
+      try {
+        // 只刷新任务缓存，推荐通过智能检测决定是否更新
+        const refreshed = await refreshTaskCacheOnly();
         if (!refreshed) {
-          console.log('📡 HomePage: 缓存刷新失败，重新加载数据');
-          loadTodayTasks();
+          console.log('📡 HomePage: 缓存不可用，重新加载任务');
+          await loadTodayTasksRef.current();
         }
+      } catch (error) {
+        console.error('❌ HomePage: 智能刷新失败', error);
+      } finally {
+        isHandling = false;
       }
     };
 
-    // 监听任务缓存更新事件
+    // 更智能的可见性监听
+    const handleVisibilityChange = () => {
+      const currentState = document.visibilityState;
+      
+      // 只在真正从隐藏变为可见时才处理
+      if (lastVisibilityState === 'hidden' && currentState === 'visible') {
+        console.log('🔄 HomePage: 页面变为可见（从隐藏状态）');
+        handleRefresh();
+      }
+      
+      lastVisibilityState = currentState;
+    };
+
+    // 任务缓存更新事件（降低频率）
     const handleTaskCacheUpdated = (event: CustomEvent) => {
-      console.log('📢 HomePage: 收到任务缓存更新事件', event.detail);
-      const refreshed = refreshFromCache();
-      if (!refreshed) {
-        console.log('📡 HomePage: 缓存刷新失败，重新加载数据');
-        loadTodayTasks();
+      // 只处理来自其他页面的缓存更新
+      if (event.detail && event.detail.source !== 'homepage') {
+        console.log('📢 HomePage: 收到来自其他页面的任务更新事件');
+        handleRefresh();
       }
     };
 
-    window.addEventListener('focus', handleFocus);
+    // 移除focus监听，只保留visibility监听
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('taskCacheUpdated', handleTaskCacheUpdated as EventListener);
     };
-  }, [refreshFromCache, loadTodayTasks]);
+  }, []); // 空依赖数组，避免重复创建监听器
 
   // 设置问候语
   useEffect(() => {
@@ -216,17 +261,7 @@ const HomePage = () => {
     }
   }, [currentTime]);
 
-  // 生成推荐理由
-  const generateRecommendReason = () => {
-    const reasons = [
-      '现在是完成这个事项的好时机',
-      '这个事项优先级较高',
-      '完成这个事项会让你感觉很棒',
-      '这个事项不会花费太多时间',
-      '现在精力充沛，适合处理这个事项'
-    ];
-    return reasons[Math.floor(Math.random() * reasons.length)];
-  };
+
 
   // 处理卡片模式的滑动
   const handleCardSwipe = (dir: 'left' | 'right') => {
@@ -282,10 +317,28 @@ const HomePage = () => {
         await toggleTaskCompletion(id, currentTask.completed);
         
         // 从推荐列表中移除已完成的事项
-        setApiRecommendedTasks(prev => prev.filter(task => task.id !== id));
+        setApiRecommendedTasks(prev => {
+          const newList = prev.filter(task => task.id !== id);
+          
+          // 如果推荐列表变少，智能补充
+          if (newList.length <= 1 && todayTasks.length > 0) {
+            console.log('📋 推荐数量不足，智能补充新推荐');
+            // 清除推荐缓存，确保获取新推荐
+            recommendation.clearCache();
+            // 触发异步补充推荐
+            setTimeout(async () => {
+              try {
+                const newRecommendations = await getMoreRecommendations();
+                setApiRecommendedTasks(newRecommendations);
+              } catch (error) {
+                console.error('智能补充推荐失败:', error);
+              }
+            }, 100);
+          }
+          
+          return newList;
+        });
         
-        // 不再重新加载今日任务，避免重复API调用
-        // 任务状态已通过toggleTaskCompletion更新，推荐列表已通过setApiRecommendedTasks更新
         console.log('✅ HomePage: 任务完成状态更新成功');
       } catch (error) {
         console.error('❌ HomePage: 更新任务完成状态失败', error);
@@ -345,7 +398,19 @@ const HomePage = () => {
       {/* 决策区域 */}
       <div className="py-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">现在可以做什么？</h2>
+          <div className="flex flex-col">
+            <h2 className="text-lg font-medium text-gray-900">现在可以做什么？</h2>
+            {/* 推荐方法指示器 - 仅显示当前方法 */}
+            <div className="flex items-center mt-1 text-xs text-gray-500">
+              <span className={`px-2 py-1 rounded ${
+                recommendation.currentMethod === 'ai' 
+                  ? 'bg-purple-100 text-purple-700' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {recommendation.currentMethod === 'ai' ? '🤖 AI智能推荐' : '💻 本地推荐'}
+              </span>
+            </div>
+          </div>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setViewMode('card')}
@@ -416,7 +481,7 @@ const HomePage = () => {
             tasks={recommendedTasks}
             onComplete={handleComplete}
             onSwipe={handleCardSwipe}
-            generateRecommendReason={generateRecommendReason}
+            generateRecommendReason={recommendation.generateRecommendReason}
           />
         )}
       </div>

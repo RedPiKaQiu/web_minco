@@ -89,26 +89,58 @@ export async function chatWithAi(chatData: AiChatRequest): Promise<AiChatRespons
 
 // AI推荐请求参数
 export interface AiRecommendationRequest {
-  user_context?: {
-    current_time?: string; // ISO 8601格式
-    mood?: 'focused' | 'tired' | 'energetic';
-    available_time?: number; // 分钟
+  task_ids?: string[]; // 可选：指定事项ID列表，为空则获取今日所有事项
+  user_context?: { // 可选：用户上下文
+    mood?: 'focused' | 'tired' | 'energetic' | 'anxious'; // 心情：focused, tired, energetic, anxious
+    energy_level?: number; // 精力水平：1-10
+    available_time?: number; // 可用时间（分钟）
+    location?: string; // 位置
+    current_time?: string; // 当前时间(ISO格式)
   };
-  count?: number; // 期望推荐数量，默认3
+  count?: number; // 推荐数量：1-10，默认3
+  recommendation_type?: 'smart' | 'priority' | 'time_based' | 'mood_based'; // 推荐类型
+}
+
+// AI推荐响应中的单个推荐项
+export interface AiRecommendationItem {
+  item: {
+    id: string;
+    title: string;
+    description?: string;
+    emoji?: string;
+    category_id: number;
+    project_id?: string;
+    start_time?: string;
+    end_time?: string;
+    estimated_duration?: number;
+    time_slot_id?: number;
+    priority: number;
+    status_id: number;
+    is_overdue?: boolean;
+    sub_tasks?: any[];
+    created_at: string;
+    updated_at: string;
+    completed_at?: string;
+  };
+  reason: string; // AI推荐理由
+  confidence_score: number; // 置信度
+  priority_score?: number; // 优先级评分
+  time_match_score?: number; // 时间匹配评分
+  suggested_duration?: number; // 建议时长
 }
 
 // AI推荐响应
 export interface AiRecommendationResponse {
-  recommendations: Array<{
-    task: {
-      id: string;
-      title: string;
-      category_id: number;
-    };
-    reason: string; // AI推荐理由
-    confidence: number; // 置信度
-  }>;
+  recommendations: AiRecommendationItem[];
+  message: string; // AI推荐说明
   total_available: number; // 可用任务总数
+  recommendation_metadata?: {
+    recommendation_type: string;
+    ai_model_used: string;
+    user_context_provided: boolean;
+  };
+  ai_model_used: string; // AI模型名称
+  processing_time_ms: number; // 处理时间
 }
 
 /**

@@ -145,7 +145,7 @@ const TimelinePage = () => {
     };
 
     // 监听任务缓存更新事件
-    const handleTaskCacheUpdated = (event: CustomEvent) => {
+    const handleTaskCacheUpdated = (_event: CustomEvent) => {
       // 如果正在下拉刷新，跳过任务缓存更新事件处理
       if (pullToRefreshState.isRefreshing) {
         return; // 静默跳过，不输出日志

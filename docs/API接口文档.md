@@ -987,37 +987,158 @@ CHAT_SESSIONS = {
 ```
 
 #### 3.2 [P0] 智能推荐
+
+**功能说明**: 基于用户当前状态和任务优先级，使用AI智能推荐最适合处理的事项。集成阿里云千问大语言模型，提供个性化的任务推荐服务。
+
 - **请求方式**: `POST`
 - **请求地址**: `/ai/recommendations`
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  Content-Type: application/json
+  ```
 
 **请求体**:
 ```json
 {
-  "user_context": {
-    "current_time": "2024-05-24T09:00:00Z",
-    "mood": "focused|tired|energetic",
-    "available_time": 120
+  "task_ids": ["string"], // 指定事项ID列表，如果为空则获取今日所有事项 (可选)
+  "user_context": { // 用户上下文信息 (可选)
+    "mood": "string", // 用户心情：focused, tired, energetic, anxious (可选)
+    "available_time": "integer", // 可用时间（分钟） (可选)
+    "current_time": "string", // 当前时间(ISO格式) (可选)
+    "location": "string", // 用户位置 (可选)
+    "energy_level": "integer" // 精力水平(1-10) (可选)
   },
+  "count": "integer", // 推荐数量，默认3，范围1-10 (必填)
+  "recommendation_type": "string" // 推荐类型：smart(智能), priority(优先级), time_based(时间), mood_based(心情)，默认smart (可选)
+}
+```
+
+**成功响应** (HTTP 200 OK):
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "recommendations": [
+      {
+        "item": {
+          "id": "string",
+          "title": "string",
+          "description": "string",
+          "emoji": "string",
+          "category_id": "integer",
+          "project_id": "string",
+          "start_time": "string",
+          "end_time": "string",
+          "estimated_duration": "integer",
+          "time_slot_id": "integer",
+          "priority": "integer",
+          "status_id": "integer",
+          "is_overdue": "boolean",
+          "sub_tasks": ["string"],
+          "created_at": "string",
+          "updated_at": "string",
+          "completed_at": "string"
+        },
+        "reason": "string", // AI推荐该事项的理由
+        "confidence_score": "number", // AI对推荐的置信度(0-1)
+        "priority_score": "number", // 优先级评分(0-1) (可选)
+        "time_match_score": "number", // 时间匹配度评分(0-1) (可选)
+        "suggested_duration": "integer" // 建议专注时长(分钟) (可选)
+      }
+    ],
+    "message": "string", // 整体推荐的提示信息
+    "total_available": "integer", // 可推荐的事项总数
+    "recommendation_metadata": { // 推荐元数据 (可选)
+      "recommendation_type": "string", // 使用的推荐类型
+      "ai_model_used": "string", // 使用的AI模型
+      "user_context_provided": "boolean" // 是否提供了用户上下文
+    },
+    "ai_model_used": "string", // 使用的AI模型名称
+    "processing_time_ms": "number" // 处理时间(毫秒)
+  }
+}
+```
+
+**错误响应** (HTTP 401 Unauthorized):
+```json
+{
+  "code": 401,
+  "message": "用户未登录",
+  "data": null
+}
+```
+
+**错误响应** (HTTP 500 Internal Server Error):
+```json
+{
+  "code": 500,
+  "message": "AI推荐服务异常",
+  "data": {
+    "recommendations": [],
+    "message": "AI推荐服务暂时不可用，请稍后再试",
+    "total_available": 0
+  }
+}
+```
+
+**常见使用场景**:
+
+1. **基础推荐** (获取今日事项推荐):
+```json
+{
   "count": 3
 }
 ```
 
-**响应**:
+2. **基于心情推荐**:
 ```json
 {
-  "code": 200,
-  "data": {
-    "recommendations": [
-      {
-        "task": "Task",
-        "reason": "现在是上午，精力充沛，适合处理重要工作",
-        "confidence": 0.85
-      }
-    ],
-    "total_available": 12
+  "count": 5,
+  "user_context": {
+    "mood": "tired",
+    "available_time": 30,
+    "energy_level": 3
   }
 }
 ```
+
+3. **指定事项推荐**:
+```json
+{
+  "task_ids": ["task1", "task2", "task3"],
+  "count": 2,
+  "user_context": {
+    "mood": "focused",
+    "available_time": 120
+  }
+}
+```
+
+4. **时间优先推荐**:
+```json
+{
+  "count": 3,
+  "recommendation_type": "time_based",
+  "user_context": {
+    "current_time": "2024-05-24T14:00:00Z",
+    "available_time": 60
+  }
+}
+```
+
+**AI推荐算法说明**:
+- **智能推荐**: 综合考虑优先级、时间、用户状态等因素
+- **优先级推荐**: 主要基于事项优先级进行推荐
+- **时间推荐**: 基于当前时间和可用时间进行推荐
+- **心情推荐**: 根据用户当前心情状态推荐适合的事项类型
+
+**推荐因素权重**:
+- 优先级权重: 40%
+- 时间紧迫性: 30%
+- 用户状态匹配: 20%
+- 事项类型适配: 10%
 
 #### 3.3 [P1] 项目自动归集
 - **请求方式**: `POST`
