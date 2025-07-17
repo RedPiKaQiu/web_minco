@@ -26,6 +26,13 @@ export interface Item {
   created_at: string;
   updated_at: string;
   completed_at?: string;
+  
+  // 推荐信息扩展字段（仅在推荐场景下存在）
+  _recommendationReason?: string;
+  _confidence?: number;
+  _priorityScore?: number;
+  _timeMatchScore?: number;
+  _suggestedDuration?: number;
 }
 
 // 项目 (Project)
@@ -166,6 +173,15 @@ export interface Task extends Partial<Item> {
   isAnytime?: boolean;
   postponedToTomorrow?: boolean;
   subtasks?: {id: string, title: string, completed: boolean}[];
+}
+
+// 包含推荐理由的任务类型
+export interface RecommendedTask extends Task {
+  recommendationReason?: string;
+  confidence?: number;
+  priorityScore?: number;
+  timeMatchScore?: number;
+  suggestedDuration?: number;
 }
 
 export interface Ticket {

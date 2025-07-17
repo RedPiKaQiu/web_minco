@@ -1,11 +1,13 @@
 /**
  * 个人资料页面，显示用户信息、使用统计和账户设置功能
  */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { resetMockData, isTestUser } from '../api/mock';
+import PullToRefreshIndicator from '../components/PullToRefreshIndicator';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -22,6 +24,31 @@ const ProfilePage = () => {
 
   // 检查是否为测试用户
   const userIsTest = isTestUser();
+  
+  // Profile页面的智能刷新：主要是模拟刷新体验
+  const handleSmartRefresh = useCallback(async () => {
+    console.log('👤 ProfilePage: 开始智能下拉刷新');
+    
+    // Profile页面数据相对静态，大部分时候可以跳过真实刷新
+    // 模拟延迟让用户感觉刷新了
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    console.log('✅ ProfilePage: 刷新完成');
+  }, []);
+  
+  // 获取缓存时间戳（Profile页面不需要复杂缓存策略）
+  const getCacheTimestamp = useCallback(() => {
+    // 返回当前时间，让节流机制正常工作
+    return Date.now();
+  }, []);
+  
+  // 使用下拉刷新hook
+  const { pullToRefreshState, getPullToRefreshStatusText } = usePullToRefresh({
+    onRefresh: handleSmartRefresh,
+    getCacheTimestamp,
+    pageKey: 'profile',
+    containerSelector: '.profile-container'
+  });
 
   // 不强制重定向，而是显示未登录状态或登录界面
 
@@ -54,9 +81,23 @@ const ProfilePage = () => {
   const user = state.user!;
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      <div className="flex-1 overflow-y-auto scroll-smooth">
-        <div className="max-w-md mx-auto px-4 pb-20">
+    <>
+      {/* 下拉刷新指示器 */}
+      <PullToRefreshIndicator 
+        pullState={pullToRefreshState}
+        getStatusText={getPullToRefreshStatusText}
+        threshold={80}
+      />
+      
+      <div 
+        className="h-screen bg-gray-50 flex flex-col profile-container"
+        style={{
+          transform: `translateY(${pullToRefreshState.pullDistance}px)`,
+          transition: pullToRefreshState.isPulling ? 'none' : 'transform 0.3s ease-out'
+        }}
+      >
+        <div className="flex-1 overflow-y-auto scroll-smooth">
+          <div className="max-w-md mx-auto px-4 pb-20">
 
           {/* 测试用户提示卡片 */}
           {userIsTest && (
@@ -237,7 +278,8 @@ const ProfilePage = () => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -67,9 +67,15 @@ export const useTaskCompletion = () => {
         }
       }
 
+      // 记录重要数据变化时间戳（用于下拉刷新智能检测）
+      const now = Date.now();
+      localStorage.setItem('last-important-update-homepage', now.toString());
+      localStorage.setItem('last-important-update-timeline', now.toString());
+      localStorage.setItem('last-important-update-profile', now.toString());
+      
       // 触发缓存更新事件，通知其他页面
       const event = new CustomEvent('taskCacheUpdated', {
-        detail: { taskId, taskDate, newStatusId, source: 'useTaskCompletion' }
+        detail: { taskId, taskDate, newStatusId, source: 'useTaskCompletion', action: 'statusChange' }
       });
       window.dispatchEvent(event);
       

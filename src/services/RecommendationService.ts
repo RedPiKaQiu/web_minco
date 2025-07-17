@@ -72,16 +72,41 @@ export class RecommendationService {
       config: finalConfig
     });
 
+    // 🚀 早期检查：如果没有任务，直接返回空结果，避免不必要的API调用
+    if (tasks.length === 0) {
+      console.log('📋 RecommendationService: 任务数量为0，跳过推荐计算');
+      return {
+        recommendations: [],
+        message: '今日暂无事项，享受这难得的悠闲时光吧！ 🌸',
+        totalAvailable: 0,
+        method: finalConfig.method || 'ai',
+        processingTime: Date.now() - startTime
+      };
+    }
+
+    // 🔍 过滤未完成的任务
+    const incompleteTasks = tasks.filter(task => task.status_id !== 3);
+    if (incompleteTasks.length === 0) {
+      console.log('🎉 RecommendationService: 所有任务都已完成');
+      return {
+        recommendations: [],
+        message: '🎉 太棒了！所有事项都已完成，今天真是高效的一天！',
+        totalAvailable: 0,
+        method: finalConfig.method || 'ai',
+        processingTime: Date.now() - startTime
+      };
+    }
+
          try {
        let result: RecommendationResult;
 
        switch (finalConfig.method) {
          case 'ai':
-           result = await this.getAiRecommendations(tasks, finalConfig as Required<RecommendationConfig>);
+           result = await this.getAiRecommendations(incompleteTasks, finalConfig as Required<RecommendationConfig>);
            break;
          case 'local':
          default:
-           result = await this.getLocalRecommendations(tasks, finalConfig as Required<RecommendationConfig>);
+           result = await this.getLocalRecommendations(incompleteTasks, finalConfig as Required<RecommendationConfig>);
            break;
        }
 
@@ -100,7 +125,7 @@ export class RecommendationService {
              // 降级到本地推荐
        if (finalConfig.method === 'ai') {
          console.log('🔄 RecommendationService: AI推荐失败，降级到本地推荐');
-         return this.getLocalRecommendations(tasks, { ...finalConfig, method: 'local' } as Required<RecommendationConfig>);
+         return this.getLocalRecommendations(incompleteTasks, { ...finalConfig, method: 'local' } as Required<RecommendationConfig>);
        }
       
       throw error;
@@ -164,19 +189,9 @@ export class RecommendationService {
 
     const startTime = Date.now();
     
-    // 只筛选未完成的任务
-    const incompleteTasks = tasks.filter(task => task.status_id !== 3);
+    // 注意：传入的tasks已经是过滤后的未完成任务
+    const incompleteTasks = tasks;
     
-    if (incompleteTasks.length === 0) {
-      return {
-        recommendations: [],
-        message: '🎉 太棒了！所有事项都已完成',
-        totalAvailable: 0,
-        method: 'local',
-        processingTime: Date.now() - startTime
-      };
-    }
-
     let recommendedTasks: Item[] = [];
     let strategy = '';
 
@@ -389,6 +404,8 @@ export class RecommendationService {
       completed_at: aiItem.completed_at || null
     };
   }
+
+
 
 
 

@@ -132,6 +132,84 @@ export const useHomePageTasks = () => {
       const cachedData = sessionStorage.getItem(TASK_CACHE_PREFIX + today);
       if (cachedData) {
         const tasks = JSON.parse(cachedData) as Item[];
+        
+        // 🔍 数据验证：检查缓存数据是否异常
+        if (tasks.length > 0) {
+          // 检查是否有明显错误的数据
+          const invalidTasks = tasks.filter(task => 
+            !task.id || 
+            !task.title || 
+            typeof task.category_id !== 'number' ||
+            typeof task.priority !== 'number'
+          );
+          
+          if (invalidTasks.length > 0) {
+            console.warn('⚠️ useHomePageTasks: 发现无效任务数据，清理缓存', { 
+              invalidCount: invalidTasks.length,
+              totalCount: tasks.length 
+            });
+            sessionStorage.removeItem(TASK_CACHE_PREFIX + today);
+            return null;
+          }
+          
+          // 检查任务日期是否合理（避免跨日期数据污染）
+          const todayTasks = tasks.filter(task => {
+            if (!task.start_time) {
+              // 对于没有时间的任务，进一步检查是否应该属于今日
+              // 检查任务标题是否明确表示不是今日任务
+              const titleLower = task.title.toLowerCase();
+              const isFutureTask = titleLower.includes('明天') || 
+                                 titleLower.includes('下周') || 
+                                 titleLower.includes('明日') ||
+                                 titleLower.includes('tomorrow') ||
+                                 titleLower.includes('next');
+              
+              if (isFutureTask) {
+                console.warn('⚠️ useHomePageTasks: 发现明确的未来任务，已过滤', { 
+                  taskTitle: task.title,
+                  taskId: task.id 
+                });
+                return false;
+              }
+              
+              // 检查任务的创建时间或更新时间是否是今日
+              const taskCreatedDate = task.created_at ? task.created_at.split('T')[0] : null;
+              const taskUpdatedDate = task.updated_at ? task.updated_at.split('T')[0] : null;
+              
+              // 如果任务是今日创建或更新的，且没有明确的未来时间指示，认为是今日任务
+              const isCreatedToday = taskCreatedDate === today;
+              const isUpdatedToday = taskUpdatedDate === today;
+              
+              if (!isCreatedToday && !isUpdatedToday) {
+                console.warn('⚠️ useHomePageTasks: 发现不属于今日的无日期任务，已过滤', { 
+                  taskTitle: task.title,
+                  taskId: task.id,
+                  createdDate: taskCreatedDate,
+                  updatedDate: taskUpdatedDate
+                });
+                return false;
+              }
+              
+              return true; // 没有时间但是今日创建/更新的任务保留
+            } else {
+              // 有明确时间的任务，检查日期是否是今日
+              const taskDate = task.start_time.split('T')[0];
+              return taskDate === today;
+            }
+          });
+          
+          if (todayTasks.length !== tasks.length) {
+            console.warn('⚠️ useHomePageTasks: 发现跨日期任务数据，过滤后返回', { 
+              originalCount: tasks.length,
+              filteredCount: todayTasks.length,
+              today 
+            });
+            // 更新缓存为过滤后的数据
+            sessionStorage.setItem(TASK_CACHE_PREFIX + today, JSON.stringify(todayTasks));
+            return todayTasks;
+          }
+        }
+        
         console.log('📦 useHomePageTasks: 使用今日缓存数据', { 
           taskCount: tasks.length,
           cacheAge: Math.round(age / 1000) + 's'
@@ -140,6 +218,8 @@ export const useHomePageTasks = () => {
       }
     } catch (error) {
       console.error('读取今日缓存失败:', error);
+      // 缓存数据损坏时，清理缓存
+      sessionStorage.removeItem(TASK_CACHE_PREFIX + today);
     }
     
     return null;
@@ -175,6 +255,12 @@ export const useHomePageTasks = () => {
       return lastRecommendationPromise;
     }
     
+    // 🚀 早期检查：如果没有任务，直接返回空数组，避免推荐计算
+    if (tasks.length === 0) {
+      console.log('📋 useHomePageTasks: 任务数量为0，跳过推荐计算和API调用');
+      return [];
+    }
+    
     const currentMethod = isTestUserRef.current ? 'local' : 'ai';
     const userContext = recommendation.getUserContext();
     
@@ -198,7 +284,16 @@ export const useHomePageTasks = () => {
         console.log('🎯 生成新推荐', { method: currentMethod, taskCount: tasks.length });
         
         const recommendationResult = await recommendation.getRecommendations(tasks);
-        const recommendedItems = recommendationResult.recommendations.map(rec => rec.item);
+        // 在Item上附加推荐信息，保持兼容性
+        const recommendedItems = recommendationResult.recommendations.map(rec => ({
+          ...rec.item,
+          // 添加推荐相关信息作为扩展属性
+          _recommendationReason: rec.reason,
+          _confidence: rec.confidence,
+          _priorityScore: rec.priorityScore,
+          _timeMatchScore: rec.timeMatchScore,
+          _suggestedDuration: rec.suggestedDuration
+        }));
         
         // 缓存推荐结果
         cacheRecommendations(recommendedItems, tasks, recommendationResult.method as 'ai' | 'local', userContext);
@@ -414,9 +509,9 @@ export const useHomePageTasks = () => {
     recommendation: {
       currentMethod: recommendation.currentMethod,
       isAiSupported: recommendation.isAiSupported,
+      lastResult: recommendation.lastResult, // 新增：最后一次推荐结果
       updateUserContext: recommendation.updateUserContext,
       getUserContext: recommendation.getUserContext,
-      generateRecommendReason: recommendation.generateRecommendReason,
       clearCache: clearRecommendationCache // 新增：清除推荐缓存的函数
     }
   };

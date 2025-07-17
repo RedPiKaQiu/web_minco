@@ -3,17 +3,29 @@
  */
 import { useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { Task } from '../types';
+import { RecommendedTask } from '../types';
 import { getItemIcon } from '../utils/taskIcons';
 
+// 获取分类名称的辅助函数
+const getCategoryName = (categoryId: number): string => {
+  const categories: Record<number, string> = {
+    1: '生活',
+    2: '健康', 
+    3: '工作',
+    4: '学习',
+    5: '放松',
+    6: '探索'
+  };
+  return categories[categoryId] || '未分类';
+};
+
 interface CardModeProps {
-  tasks: Task[];
+  tasks: RecommendedTask[];
   onComplete: (id: string, e: React.MouseEvent) => void;
   onSwipe: (direction: 'left' | 'right') => void;
-  generateRecommendReason: () => string;
 }
 
-export const CardMode = ({ tasks, onComplete, onSwipe, generateRecommendReason }: CardModeProps) => {
+export const CardMode = ({ tasks, onComplete, onSwipe }: CardModeProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [exitX, setExitX] = useState(0);
@@ -146,21 +158,21 @@ export const CardMode = ({ tasks, onComplete, onSwipe, generateRecommendReason }
 
             <div className="flex items-center gap-2 mb-4">
               <span className="px-2 py-1 bg-gray-100 rounded-full text-sm border">
-                {currentItem.category || '未分类'}
+                {getCategoryName(currentItem.category_id || 1)}
               </span>
             </div>
 
-            {currentItem.duration && (
+            {currentItem.estimated_duration && (
               <div className="flex items-center text-sm text-gray-500 mb-2">
                 <Clock className="h-4 w-4 mr-1" />
-                {currentItem.duration}
+                {currentItem.estimated_duration}分钟
               </div>
             )}
 
             <div className="border-t border-gray-100 pt-3 mt-auto">
               <p className="text-sm text-gray-500">
                 <span className="font-medium">推荐理由：</span>
-                {generateRecommendReason()}
+                {currentItem.recommendationReason || '现在是完成这个事项的好时机'}
               </p>
             </div>
           </div>

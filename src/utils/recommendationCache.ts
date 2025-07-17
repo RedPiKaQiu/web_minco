@@ -123,7 +123,9 @@ export const shouldUpdateRecommendations = (
   if (cached.taskHash !== currentHash) {
     console.log('📋 任务数据已变化，需要更新推荐', {
       oldHash: cached.taskHash,
-      newHash: currentHash
+      newHash: currentHash,
+      taskCount: tasks.length,
+      oldTaskCount: cached.recommendations?.length || 0
     });
     return true;
   }

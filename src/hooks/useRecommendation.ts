@@ -169,17 +169,7 @@ export const useRecommendation = (initialConfig?: Partial<RecommendationConfig>)
     return !isTestUser; // 测试用户不支持AI推荐
   }, [isTestUser]);
 
-  // 生成推荐理由（用于显示）
-  const generateRecommendReason = useCallback(() => {
-    const reasons = [
-      '现在是完成这个事项的好时机',
-      '这个事项优先级较高',
-      '完成这个事项会让你感觉很棒',
-      '这个事项不会花费太多时间',
-      '现在精力充沛，适合处理这个事项'
-    ];
-    return reasons[Math.floor(Math.random() * reasons.length)];
-  }, []);
+
 
   return {
     // 状态
@@ -196,7 +186,6 @@ export const useRecommendation = (initialConfig?: Partial<RecommendationConfig>)
     getLocalRecommendations,
     updateUserContext,
     getUserContext,
-    generateRecommendReason,
 
     // 清理
     clearError: () => setError(null),

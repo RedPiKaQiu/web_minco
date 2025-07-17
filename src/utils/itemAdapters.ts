@@ -2,7 +2,8 @@
  * 事项适配器工具 - 处理Item和Task之间的转换
  * 在重构期间提供统一的转换逻辑
  */
-import { Item, ItemCategory } from '../types';
+import { Item, ItemCategory, RecommendedTask } from '../types';
+import type { RecommendationItem } from '../services/RecommendationService';
 
 /**
  * 从ISO时间字符串中提取时间部分 (HH:MM格式)
@@ -119,4 +120,67 @@ const calculateDuration = (item: any): string | undefined => {
   }
 
   return undefined;
+};
+
+/**
+ * 推荐项到包含推荐理由的任务的适配器
+ * 优先从Item的扩展字段中读取推荐信息，如果不存在则从RecommendationItem中获取
+ */
+export const adaptRecommendationItemToTask = (itemOrRecommendation: Item | RecommendationItem): RecommendedTask => {
+  try {
+    let item: Item;
+    let reason: string;
+    let confidence: number | undefined;
+    let priorityScore: number | undefined;
+    let timeMatchScore: number | undefined;
+    let suggestedDuration: number | undefined;
+    
+    // 判断输入类型并提取数据
+    if ('item' in itemOrRecommendation) {
+      // 输入是 RecommendationItem
+      const recommendationItem = itemOrRecommendation as RecommendationItem;
+      item = recommendationItem.item;
+      reason = recommendationItem.reason;
+      confidence = recommendationItem.confidence;
+      priorityScore = recommendationItem.priorityScore;
+      timeMatchScore = recommendationItem.timeMatchScore;
+      suggestedDuration = recommendationItem.suggestedDuration;
+    } else {
+      // 输入是 Item，检查是否有推荐扩展字段
+      item = itemOrRecommendation as Item;
+      reason = item._recommendationReason || '现在是完成这个事项的好时机';
+      confidence = item._confidence;
+      priorityScore = item._priorityScore;
+      timeMatchScore = item._timeMatchScore;
+      suggestedDuration = item._suggestedDuration;
+    }
+    
+    // 先使用标准适配器转换Item
+    const task = adaptItemToTask(item);
+    
+    // 添加推荐相关的扩展字段
+    return {
+      ...task,
+      recommendationReason: reason,
+      confidence: confidence,
+      priorityScore: priorityScore,
+      timeMatchScore: timeMatchScore,
+      suggestedDuration: suggestedDuration
+    };
+  } catch (error) {
+    console.error('❌ adaptRecommendationItemToTask: 推荐项数据转换失败', {
+      input: itemOrRecommendation,
+      error
+    });
+    
+    // 降级处理：只进行基本的Item适配，不包含推荐信息
+    const fallbackItem = 'item' in itemOrRecommendation 
+      ? (itemOrRecommendation as RecommendationItem).item 
+      : itemOrRecommendation as Item;
+    const task = adaptItemToTask(fallbackItem);
+    return {
+      ...task,
+      recommendationReason: '现在是完成这个事项的好时机'
+    };
+  }
 }; 

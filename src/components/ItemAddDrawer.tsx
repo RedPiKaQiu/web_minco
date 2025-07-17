@@ -344,7 +344,13 @@ const ItemAddDrawer = ({ isOpen, onClose }: ItemAddDrawerProps) => {
             }
           }
           
-          // 4. 发送全局事件通知所有页面刷新
+          // 4. 记录重要数据变化时间戳（用于下拉刷新智能检测）
+          const now = Date.now();
+          localStorage.setItem('last-important-update-homepage', now.toString());
+          localStorage.setItem('last-important-update-timeline', now.toString());
+          localStorage.setItem('last-important-update-profile', now.toString());
+          
+          // 5. 发送全局事件通知所有页面刷新
           console.log('📢 ItemAddDrawer: 发送缓存更新事件');
           window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
             detail: { 

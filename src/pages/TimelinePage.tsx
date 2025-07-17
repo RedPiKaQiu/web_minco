@@ -774,6 +774,12 @@ const TimelinePage = () => {
         console.error('更新删除事项缓存失败:', cacheError);
       }
       
+      // 记录重要数据变化时间戳（用于下拉刷新智能检测）
+      const now = Date.now();
+      localStorage.setItem('last-important-update-homepage', now.toString());
+      localStorage.setItem('last-important-update-timeline', now.toString());
+      localStorage.setItem('last-important-update-profile', now.toString());
+      
       // 发送全局事件通知其他页面
       window.dispatchEvent(new CustomEvent('taskCacheUpdated', {
         detail: { action: 'delete', taskId }
